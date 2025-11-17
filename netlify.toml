@@ -6,21 +6,26 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Force HTTPS redirects for security
-[[redirects]]
-  from = "http://www.td1.world/*"
-  to = "https://www.td1.world/:splat"
-  status = 301
-  force = true
+# Force HTTPS and www redirects
+# All traffic should go to https://www.td1.world
 
+# Redirect http://td1.world to https://www.td1.world
 [[redirects]]
   from = "http://td1.world/*"
   to = "https://www.td1.world/:splat"
   status = 301
   force = true
 
+# Redirect https://td1.world to https://www.td1.world
 [[redirects]]
   from = "https://td1.world/*"
+  to = "https://www.td1.world/:splat"
+  status = 301
+  force = true
+
+# Redirect http://www.td1.world to https://www.td1.world
+[[redirects]]
+  from = "http://www.td1.world/*"
   to = "https://www.td1.world/:splat"
   status = 301
   force = true
