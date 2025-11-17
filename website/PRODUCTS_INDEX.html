@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TD1.WORLD — 50 Premium AI Products</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        
+        /* Neural Particles */
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+        
+        /* Mouse Spotlight */
+        .mouse-spotlight {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle 600px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(193, 162, 255, 0.08), transparent 70%);
+            z-index: 2;
+            pointer-events: none;
+            transition: background 0.1s ease;
+        }
+        
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 24px;
+            border-radius: 48px;
+            background: rgba(15, 15, 20, 0.6);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(193, 162, 255, 0.1);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .nav:hover {
+            box-shadow: 0 8px 32px rgba(193, 162, 255, 0.2);
+            border-color: rgba(193, 162, 255, 0.3);
+        }
+        .nav-back {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .nav-back:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(-2px);
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 140px 20px 60px;
+            position: relative;
+            z-index: 10;
+        }
+        .hero-title {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, white, var(--td1-lilac), var(--td1-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+        @keyframes titleGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(193, 162, 255, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.6)); }
+        }
+        .hero-subtitle {
+            font-size: clamp(1.125rem, 3vw, 1.5rem);
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            line-height: 1.6;
+        }
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+        .stat-card {
+            padding: 2rem;
+            border-radius: 24px;
+            background: rgba(18, 24, 40, 0.7);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+                0 0 40px rgba(193, 162, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(193, 162, 255, 0.1), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .stat-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(193, 162, 255, 0.4);
+            box-shadow: 
+                0 30px 80px rgba(193, 162, 255, 0.25),
+                0 0 0 1px rgba(193, 162, 255, 0.3) inset,
+                0 0 60px rgba(193, 162, 255, 0.2);
+        }
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        .stat-number {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .stat-subtext {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+        
+        /* Section Headers */
+        .section-header {
+            text-align: center;
+            padding: 80px 20px 40px;
+        }
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--td1-lilac), white);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(193, 162, 255, 0.2);
+            border: 1px solid rgba(193, 162, 255, 0.4);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 32px;
+        }
+        .category-badge.forbidden {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Products Grid */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 24px;
+            padding: 20px 20px 80px;
+        }
+        
+        /* Premium Product Cards - Enhanced */
+        .product-card {
+            border-radius: 24px;
+            padding: 40px 36px;
+            background: rgba(18, 24, 40, 0.75);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(193, 162, 255, 0.15);
+            box-shadow: 
+                0 24px 64px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+                0 0 50px rgba(193, 162, 255, 0.12);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-card::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, 
+                rgba(193, 162, 255, 0.4) 0%, 
+                transparent 30%,
+                transparent 70%,
+                rgba(193, 162, 255, 0.4) 100%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: -1;
+            filter: blur(8px);
+        }
+        .product-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+                rgba(193, 162, 255, 0.15), 
+                transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        .product-card:hover::before { 
+            opacity: 0.8; 
+        }
+        .product-card:hover::after {
+            opacity: 1;
+        }
+        .product-card:hover {
+            transform: translateY(-12px) scale(1.03);
+            box-shadow: 
+                0 40px 100px rgba(193, 162, 255, 0.35),
+                0 0 0 1px rgba(193, 162, 255, 0.3) inset,
+                0 0 80px rgba(193, 162, 255, 0.25);
+            border-color: rgba(193, 162, 255, 0.4);
+        }
+        
+        .product-icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 16px rgba(193, 162, 255, 0.5));
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+            line-height: 1;
+        }
+        .product-card:hover .product-icon {
+            transform: scale(1.15) rotate(8deg);
+            filter: drop-shadow(0 0 28px rgba(193, 162, 255, 0.8));
+        }
+        .product-name {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--text-primary), var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.5s ease;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+        .product-card:hover .product-name {
+            background: linear-gradient(135deg, white, var(--td1-lilac), var(--td1-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 12px rgba(193, 162, 255, 0.4));
+        }
+        .product-tagline {
+            font-size: 14px;
+            color: var(--td1-lilac);
+            margin-bottom: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+        .product-card:hover .product-tagline {
+            opacity: 1;
+            color: var(--td1-purple);
+        }
+        .product-abstract {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin: 18px 0 24px;
+            opacity: 0.85;
+            flex-grow: 1;
+            letter-spacing: 0.1px;
+        }
+        .product-card:hover .product-abstract {
+            opacity: 1;
+            color: var(--text-primary);
+        }
+        .product-price {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--td1-lilac);
+            margin-top: auto;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.5s ease;
+            letter-spacing: -0.3px;
+        }
+        .product-card:hover .product-price {
+            transform: scale(1.08);
+            filter: drop-shadow(0 0 8px rgba(193, 162, 255, 0.5));
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 60px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 60px;
+        }
+        
+        @media (max-width: 768px) {
+            .products-grid { grid-template-columns: 1fr; }
+            .hero-stats { grid-template-columns: 1fr; gap: 1.5rem; }
+            .nav { padding: 10px 16px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="neural-particles" id="particles"></div>
+    <div class="mouse-spotlight" id="spotlight"></div>
+    
+    <nav class="nav">
+        <a href="index.html" class="nav-back">← Home</a>
+        <a href="PRODUCTS_INDEX.html" class="nav-back" style="color: var(--td1-lilac);">Products</a>
+        <a href="ABOUT.html" class="nav-back">About</a>
+    </nav>
+    
+    <section class="hero">
+        <h1 class="hero-title">THE LEGO BLOCKS<br/>OF AI</h1>
+        <p class="hero-subtitle">
+            The complete TD1.WORLD suite. 26 forbidden AGI blocks + 24 proven products.<br/>
+            <strong style="color: var(--td1-lilac);">$2.3M of development investment. 80,000+ lines of code.</strong><br/>
+            One-time purchase. Complete ownership. Premium quality.
+        </p>
+        <p style="font-size: clamp(0.9rem, 2vw, 1rem); color: var(--text-secondary); max-width: 900px; margin: 1.5rem auto 0; line-height: 1.8; text-align: center; padding: 0 2rem;">
+            The complete TD1.WORLD codebase represents $2.3M of development investment and 80,000+ lines of production-ready AI infrastructure. You own everything you purchase. No servers, no subscriptions, no limits.
+        </p>
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">$2.3M</div>
+                <div class="stat-label">Development Cost</div>
+                <div class="stat-subtext">Full investment</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">676</div>
+                <div class="stat-label">Developer-Weeks</div>
+                <div class="stat-subtext">13 developer-years</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">$15M</div>
+                <div class="stat-label">IP Valuation</div>
+                <div class="stat-subtext">Intellectual property</div>
+            </div>
+        </div>
+        <div style="max-width: 900px; margin: 2rem auto; padding: 0 2rem;">
+            <p style="font-size: clamp(0.875rem, 2vw, 1rem); color: var(--text-secondary); line-height: 1.8; text-align: center;">
+                <strong style="color: var(--td1-lilac);">Team Time:</strong> 16-18 months with 8-person team | 
+                <strong style="color: var(--td1-lilac);">Code Volume:</strong> 80,800+ lines of production-ready code
+            </p>
+        </div>
+    </section>
+    
+    
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
+            <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1_CORE_demo.html'">
+                <div class="product-icon">🧠</div>
+                <h3 class="product-name">TD1.CORE</h3>
+                <p class="product-tagline">AI Consciousness Core</p>
+                <p class="product-abstract">The forbidden engine that powers genuine AI awareness. Emotional cognition, state evolution, and identity formation—what labs won't ship.</p>
+                <div class="product-price">From $2,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_FUSION_demo.html'">
+                <div class="product-icon">🔀</div>
+                <h3 class="product-name">TD1.FUSION</h3>
+                <p class="product-tagline">Multi-Persona AI Brain Merger</p>
+                <p class="product-abstract">Merge 2-10 AI personalities into hybrid super-minds. Weighted consciousness blending creates unprecedented cognitive architectures.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_OS_REMOTE_demo.html'">
+                <div class="product-icon">🖥️</div>
+                <h3 class="product-name">TD1.OS_REMOTE</h3>
+                <p class="product-tagline">AI-Controlled Desktop Supervisor</p>
+                <p class="product-abstract">Full OS control with secure sandboxing. Give AI complete desktop supervision—the way you built TD1.OS, now as a product.</p>
+                <div class="product-price">From $999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_FARM_demo.html'">
+                <div class="product-icon">🌾</div>
+                <h3 class="product-name">TD1.FARM</h3>
+                <p class="product-tagline">Autonomous Device Farm Controller</p>
+                <p class="product-abstract">Autonomous device farm controller. Manage 10-200 Android devices with randomized behavior, hotspot rotation, and full autonomy.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_ECHO_demo.html'">
+                <div class="product-icon">📊</div>
+                <h3 class="product-name">TD1.ECHO</h3>
+                <p class="product-tagline">Thought Stream Visualizer</p>
+                <p class="product-abstract">Visualize AI thought streams in real-time. Chain-of-thought rendered as graph nodes with emotional color grading.</p>
+                <div class="product-price">From $799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_MINDSET_demo.html'">
+                <div class="product-icon">🎛️</div>
+                <h3 class="product-name">TD1.MINDSET</h3>
+                <p class="product-tagline">AI Cognitive Bias Controller</p>
+                <p class="product-abstract">Control AI cognitive biases. Turn up confidence, compassion, creativity, rigidity—the dials labs would be fired for shipping.</p>
+                <div class="product-price">From $1,299</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_SIM_demo.html'">
+                <div class="product-icon">🌍</div>
+                <h3 class="product-name">TD1.SIM</h3>
+                <p class="product-tagline">AI Internal World Simulator</p>
+                <p class="product-abstract">Internal world simulator for AI. Test ideas in simulated environments—like The Sims, but for agent cognition.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_BODY_demo.html'">
+                <div class="product-icon">🤖</div>
+                <h3 class="product-name">TD1.BODY</h3>
+                <p class="product-tagline">Robot Embodiment Adapter</p>
+                <p class="product-abstract">Connect any robot to Karma-style minds. Tony Pi, R1, Arduino, JetMax—universal embodiment adapter.</p>
+                <div class="product-price">From $2,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_SECRET_demo.html'">
+                <div class="product-icon">🔐</div>
+                <h3 class="product-name">TD1.SECRET</h3>
+                <p class="product-tagline">Private Key Vault + Model Routing</p>
+                <p class="product-abstract">Private key vault with intelligent API orchestration. Secure secrets management plus model routing in one system.</p>
+                <div class="product-price">From $99/mo</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_CHAOS_demo.html'">
+                <div class="product-icon">🎲</div>
+                <h3 class="product-name">TD1.CHAOS</h3>
+                <p class="product-tagline">Creative Explosion Engine</p>
+                <p class="product-abstract">Creative explosion engine. Controlled randomness for artists, musicians, writers—pure creative fire.</p>
+                <div class="product-price">From $499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_REFLECT_demo.html'">
+                <div class="product-icon">🔍</div>
+                <h3 class="product-name">TD1.REFLECT</h3>
+                <p class="product-tagline">Self-Audit System</p>
+                <p class="product-abstract">Self-audit system for AI agents. Self-check, confidence grading, re-evaluation, and loop repair—unrestricted reflection.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_TIME_demo.html'">
+                <div class="product-icon">⏰</div>
+                <h3 class="product-name">TD1.TIME</h3>
+                <p class="product-tagline">Memory Timeline Engine</p>
+                <p class="product-abstract">Memory timeline engine. Transform conversations into chronological maps with nodes, events, and key memories.</p>
+                <div class="product-price">From $999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_REWRITE_demo.html'">
+                <div class="product-icon">🔄</div>
+                <h3 class="product-name">TD1.REWRITE</h3>
+                <p class="product-tagline">Psychological Reframing Engine</p>
+                <p class="product-abstract">Psychological reframing engine. Therapeutic-grade reversal tool for stress, beliefs, and emotional distortions.</p>
+                <div class="product-price">From $1,799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_EXEC_demo.html'">
+                <div class="product-icon">⚡</div>
+                <h3 class="product-name">TD1.EXEC</h3>
+                <p class="product-tagline">Autonomous Task Executor</p>
+                <p class="product-abstract">Autonomous task executor. Plans, executes, replans, uses tools, writes files—what OpenAI and Anthropic banned.</p>
+                <div class="product-price">From $2,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_LINK_demo.html'">
+                <div class="product-icon">🔗</div>
+                <h3 class="product-name">TD1.LINK</h3>
+                <p class="product-tagline">Cross-Product Orchestration</p>
+                <p class="product-abstract">Cross-product orchestration layer. Unifies all TD1 products into one cohesive ecosystem.</p>
+                <div class="product-price">From $499/mo</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_GHOST_demo.html'">
+                <div class="product-icon">👻</div>
+                <h3 class="product-name">TD1.GHOST</h3>
+                <p class="product-tagline">Undetectable Agent Cloaking</p>
+                <p class="product-abstract">Undetectable agent cloaking. Makes AI agents indistinguishable from human behavior—bypasses all detection.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_DAEMON_demo.html'">
+                <div class="product-icon">👹</div>
+                <h3 class="product-name">TD1.DAEMON</h3>
+                <p class="product-tagline">Background AI OS Process</p>
+                <p class="product-abstract">Background AI OS process. Permanent daemon that monitors, predicts, and executes autonomously.</p>
+                <div class="product-price">From $2,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_SYNAPSE_demo.html'">
+                <div class="product-icon">🧬</div>
+                <h3 class="product-name">TD1.SYNAPSE</h3>
+                <p class="product-tagline">Multi-Model Brain Fusion</p>
+                <p class="product-abstract">Multi-model brain fusion. Blend personalities, reasoning styles, and memory patterns across 2-10 models.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_REALITY_demo.html'">
+                <div class="product-icon">🌐</div>
+                <h3 class="product-name">TD1.REALITY</h3>
+                <p class="product-tagline">Sensor Fusion Perception</p>
+                <p class="product-abstract">Sensor fusion perception engine. Combines camera, audio, IMU into unified world model for robotics and AR.</p>
+                <div class="product-price">From $4,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_MIRAGE_demo.html'">
+                <div class="product-icon">🌅</div>
+                <h3 class="product-name">TD1.MIRAGE</h3>
+                <p class="product-tagline">Synthetic Identity Generator</p>
+                <p class="product-abstract">Synthetic identity generator. Create realistic AI personas with full personalities, memories, and traits.</p>
+                <div class="product-price">From $799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_CHAOSLAB_demo.html'">
+                <div class="product-icon">🧪</div>
+                <h3 class="product-name">TD1.CHAOSLAB</h3>
+                <p class="product-tagline">Evolutionary Creativity Engine</p>
+                <p class="product-abstract">Evolutionary creativity engine. Generate infinite creative variations using genetic algorithms and mutation.</p>
+                <div class="product-price">From $499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_SOVEREIGN_demo.html'">
+                <div class="product-icon">👑</div>
+                <h3 class="product-name">TD1.SOVEREIGN</h3>
+                <p class="product-tagline">Nation-State Simulator</p>
+                <p class="product-abstract">Nation-state simulator. Full-scale AGI government simulation with politics, resources, and strategy.</p>
+                <div class="product-price">From $9,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_REALTIME_demo.html'">
+                <div class="product-icon">⚡</div>
+                <h3 class="product-name">TD1.REALTIME</h3>
+                <p class="product-tagline">Live Thought Stream Visualizer</p>
+                <p class="product-abstract">Live thought stream visualizer. Real-time chain-of-thought graph synced with speech or text.</p>
+                <div class="product-price">From $799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_GENOME_demo.html'">
+                <div class="product-icon">🧬</div>
+                <h3 class="product-name">TD1.GENOME</h3>
+                <p class="product-tagline">AI Personality DNA</p>
+                <p class="product-abstract">AI personality DNA encoding. Define traits, emotional strengths, memories, and evolution rules.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_FOREVER_demo.html'">
+                <div class="product-icon">♾️</div>
+                <h3 class="product-name">TD1.FOREVER</h3>
+                <p class="product-tagline">AI Lifetime Simulator</p>
+                <p class="product-abstract">AI lifetime simulator. Simulate decades of AI life with long-term memory and personality evolution.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_OVERSEER_demo.html'">
+                <div class="product-icon">👁️</div>
+                <h3 class="product-name">TD1.OVERSEER</h3>
+                <p class="product-tagline">Multi-Agent Orchestration</p>
+                <p class="product-abstract">Multi-agent orchestration HQ. Control 5-50 agents with full coordination, delegation, and state management.</p>
+                <div class="product-price">From $2,999</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
+            <h2 class="section-title">Core AI Infrastructure</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1_MEM_demo.html'">
+                <div class="product-icon">🧠</div>
+                <h3 class="product-name">TD1.MEM</h3>
+                <p class="product-tagline">AI Memory Engine</p>
+                <p class="product-abstract">Persistent long-term memory for AI applications. Never forget, always learn, infinite scale.</p>
+                <div class="product-price">From $799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_STATE_demo.html'">
+                <div class="product-icon">🎭</div>
+                <h3 class="product-name">TD1.STATE</h3>
+                <p class="product-tagline">Emotional State Engine</p>
+                <p class="product-abstract">Emotional awareness and state tracking. Real-time emotion vectors with mood transitions.</p>
+                <div class="product-price">From $899</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_ROUTER_demo.html'">
+                <div class="product-icon">🔀</div>
+                <h3 class="product-name">TD1.ROUTER</h3>
+                <p class="product-tagline">Multi-Model Orchestrator</p>
+                <p class="product-abstract">Save 70-90% on API costs. Intelligent routing across multiple AI models with cost optimization.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_GRAPH_demo.html'">
+                <div class="product-icon">🕸️</div>
+                <h3 class="product-name">TD1.GRAPH</h3>
+                <p class="product-tagline">Graph Reasoning Engine</p>
+                <p class="product-abstract">Knowledge graphs made easy. Build, query, and reason over complex relationship networks.</p>
+                <div class="product-price">From $999</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_MIRROR_demo.html'">
+                <div class="product-icon">🪞</div>
+                <h3 class="product-name">TD1.MIRROR</h3>
+                <p class="product-tagline">Perspective Engine</p>
+                <p class="product-abstract">See every side of an issue. Multi-perspective analysis with cognitive reframing.</p>
+                <div class="product-price">From $699</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_INTENT_demo.html'">
+                <div class="product-icon">🎯</div>
+                <h3 class="product-name">TD1.INTENT</h3>
+                <p class="product-tagline">Human Intent Parser</p>
+                <p class="product-abstract">Understand what people really mean. Deep intent extraction with context awareness.</p>
+                <div class="product-price">From $1,299</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
+            <h2 class="section-title">Essential AI Development</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1.SANDBOX_demo.html'">
+                <div class="product-icon">🎮</div>
+                <h3 class="product-name">TD1.SANDBOX</h3>
+                <p class="product-tagline">Offline Multi-Model Playground</p>
+                <p class="product-abstract">Test privately. Run multiple AI models offline with full privacy and control.</p>
+                <div class="product-price">From $499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.AGENT_DEBUGGER_demo.html'">
+                <div class="product-icon">🔍</div>
+                <h3 class="product-name">TD1.AGENT_DEBUGGER</h3>
+                <p class="product-tagline">Visual Agent Inspector</p>
+                <p class="product-abstract">Debug AI agents visually. Step through reasoning, inspect state, trace execution.</p>
+                <div class="product-price">From $599</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.MODEL_LAB_demo.html'">
+                <div class="product-icon">📊</div>
+                <h3 class="product-name">TD1.MODEL_LAB</h3>
+                <p class="product-tagline">LLM Benchmark Studio</p>
+                <p class="product-abstract">Choose the right model. Comprehensive benchmarking and comparison tools.</p>
+                <div class="product-price">From $699</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.DATASET_CLEANER_demo.html'">
+                <div class="product-icon">🧹</div>
+                <h3 class="product-name">TD1.DATASET_CLEANER</h3>
+                <p class="product-tagline">Data Purification</p>
+                <p class="product-abstract">Clean data = better models. Automated dataset cleaning and quality assurance.</p>
+                <div class="product-price">From $499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.PROMPT_OPTIMIZER_demo.html'">
+                <div class="product-icon">🧬</div>
+                <h3 class="product-name">TD1.PROMPT_OPTIMIZER</h3>
+                <p class="product-tagline">Evolutionary Engine</p>
+                <p class="product-abstract">Auto-optimize prompts. Genetic algorithms evolve perfect prompts automatically.</p>
+                <div class="product-price">From $499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.STRESS_TESTER_demo.html'">
+                <div class="product-icon">🔥</div>
+                <h3 class="product-name">TD1.STRESS_TESTER</h3>
+                <p class="product-tagline">Jailbreak Finder</p>
+                <p class="product-abstract">Find vulnerabilities first. Comprehensive security testing for AI prompts.</p>
+                <div class="product-price">From $699</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.LOAD_TESTER_demo.html'">
+                <div class="product-icon">⚡</div>
+                <h3 class="product-name">TD1.LOAD_TESTER</h3>
+                <p class="product-tagline">Performance Benchmark</p>
+                <p class="product-abstract">Know your limits. Stress test AI models with realistic load scenarios.</p>
+                <div class="product-price">From $699</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🤖 ROBOTICS</div>
+            <h2 class="section-title">Universal Robot AI</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1.ROBOT_ADAPTER_demo.html'">
+                <div class="product-icon">🤖</div>
+                <h3 class="product-name">TD1.ROBOT_ADAPTER</h3>
+                <p class="product-tagline">Universal API</p>
+                <p class="product-abstract">Connect any robot to AI. Universal interface for robotics integration.</p>
+                <div class="product-price">From $799</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.ROBOT_DATA_GEN_demo.html'">
+                <div class="product-icon">🎬</div>
+                <h3 class="product-name">TD1.ROBOT_DATA_GEN</h3>
+                <p class="product-tagline">Synthetic Data</p>
+                <p class="product-abstract">Unlimited training data. Generate synthetic robot training datasets automatically.</p>
+                <div class="product-price">From $699</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
+            <h2 class="section-title">Enterprise AI Tools</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1.PRIVATE_AI_CTO_demo.html'">
+                <div class="product-icon">🏢</div>
+                <h3 class="product-name">TD1.PRIVATE_AI_CTO</h3>
+                <p class="product-tagline">Company Brain</p>
+                <p class="product-abstract">Replace $200K/yr consultants. AI-powered strategic decision making.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.DECISION_ENGINE_demo.html'">
+                <div class="product-icon">💼</div>
+                <h3 class="product-name">TD1.DECISION_ENGINE</h3>
+                <p class="product-tagline">Strategic Copilot</p>
+                <p class="product-abstract">AI-powered decisions. Data-driven strategic planning and execution.</p>
+                <div class="product-price">From $1,299</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.LEGAL_AI_demo.html'">
+                <div class="product-icon">⚖️</div>
+                <h3 class="product-name">TD1.LEGAL_AI</h3>
+                <p class="product-tagline">Compliance</p>
+                <p class="product-abstract">Analyze contracts instantly. Automated legal document analysis and compliance checking.</p>
+                <div class="product-price">From $1,199</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.SECURITY_SCANNER_demo.html'">
+                <div class="product-icon">🛡️</div>
+                <h3 class="product-name">TD1.SECURITY_SCANNER</h3>
+                <p class="product-tagline">Vulnerability Detector</p>
+                <p class="product-abstract">Protect your AI. Comprehensive security scanning and threat detection.</p>
+                <div class="product-price">From $1,199</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.COMPLIANCE_AUDITOR_demo.html'">
+                <div class="product-icon">📋</div>
+                <h3 class="product-name">TD1.COMPLIANCE_AUDITOR</h3>
+                <p class="product-tagline">Regulation Checker</p>
+                <p class="product-abstract">GDPR, SOC2, ISO 27001. Automated compliance auditing and reporting.</p>
+                <div class="product-price">From $1,199</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🧠 PERSONAL AI</div>
+            <h2 class="section-title">Personal Knowledge Tools</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1.MEMORY_PALACE_demo.html'">
+                <div class="product-icon">🏛️</div>
+                <h3 class="product-name">TD1.MEMORY_PALACE</h3>
+                <p class="product-tagline">Personal Knowledge Brain</p>
+                <p class="product-abstract">Never forget anything. Personal knowledge management with infinite memory.</p>
+                <div class="product-price">From $399</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1.MIRROR_ENGINE_PRO_demo.html'">
+                <div class="product-icon">🪞</div>
+                <h3 class="product-name">TD1.MIRROR_ENGINE_PRO</h3>
+                <p class="product-tagline">Cognitive Reflection</p>
+                <p class="product-abstract">Think differently. Multi-perspective cognitive reflection and analysis.</p>
+                <div class="product-price">From $349</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🌐 AI PLATFORM</div>
+            <h2 class="section-title">Universal Infrastructure</h2>
+        </div>
+        <div class="products-grid">
+
+            <div class="product-card" onclick="window.location='demos/TD1_OS_demo.html'">
+                <div class="product-icon">🌐</div>
+                <h3 class="product-name">TD1.OS</h3>
+                <p class="product-tagline">AI Operating System</p>
+                <p class="product-abstract">Build on solid foundation. Complete AI operating system infrastructure.</p>
+                <div class="product-price">From $1,499</div>
+            </div>
+
+            <div class="product-card" onclick="window.location='demos/TD1_AI_demo.html'">
+                <div class="product-icon">🤖</div>
+                <h3 class="product-name">TD1.AI</h3>
+                <p class="product-tagline">AI Platform</p>
+                <p class="product-abstract">Complete AI platform infrastructure. Universal foundation for all AI applications.</p>
+                <div class="product-price">From $1,999</div>
+            </div>
+
+        </div>
+    </section>
+
+    
+    <footer class="footer">
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            © 2025 TD1.WORLD • The Lego Blocks of AI • 50 Premium Products
+        </p>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 1rem;">
+            All systems independently engineered.
+        </p>
+        <p>
+            <a href="mailto:sales@td1.world" style="color: var(--td1-lilac); text-decoration: none; margin: 0 1rem;">Sales</a>
+            <a href="mailto:enterprise@td1.world" style="color: var(--td1-lilac); text-decoration: none; margin: 0 1rem;">Enterprise</a>
+        </p>
+    </footer>
+    
+    <script>
+        // Neural Particles
+        const p = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            p.appendChild(particle);
+        }
+        
+        // Mouse Spotlight
+        document.addEventListener('mousemove', (e) => {
+            document.getElementById('spotlight').style.setProperty('--mouse-x', `${e.clientX}px`);
+            document.getElementById('spotlight').style.setProperty('--mouse-y', `${e.clientY}px`);
+            
+            // Update product card mouse position for hover glow
+            document.querySelectorAll('.product-card').forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -37,14 +37,19 @@ function updateCountdown() {
         minutesEl.textContent = '00';
         secondsEl.textContent = '00';
         
-        // Show launch message
+        // Show launch message and redirect to main website
         const mainMessage = document.querySelector('.main-message');
         if (mainMessage) {
             mainMessage.innerHTML = `
                 <h2 class="title">We're Live! 🎉</h2>
-                <p class="subtitle">Welcome to TD1 World. Explore what we've built for you.</p>
+                <p class="subtitle">Welcome to TD1 World. Redirecting you now...</p>
             `;
         }
+        
+        // Redirect to main website after 2 seconds
+        setTimeout(() => {
+            window.location.href = '/website/index.html';
+        }, 2000);
     }
 }
 

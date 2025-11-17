@@ -1,0 +1,138 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>TD1.ROUTER — TD1.ROUTER | Live Demo</title><style> * { margin: 0; padding: 0; box-sizing: border-box; } :root { --td1-lilac: #C1A2FF; --td1-purple: #B38DFF; --bg-dark: #050507; --text-primary: #EAEAEA; --text-secondary: #A0A0A0; --accent: #C1A2FF; --accent-light: #B38DFF; --text-night: #EAEAEA; --glass-night: rgba(15, 15, 20, 0.6); --border-night: rgba(193, 162, 255, 0.1); } body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden; } /* Neural Particles Background */ @keyframes float-particle { 0%, 100% { opacity: 0; transform: translateY(0) translateX(0); } 25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); } 50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); } 75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); } } .neural-particles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; } .particle { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%); animation: float-particle 12s infinite ease-in-out; } /* Mouse Spotlight Effect */ .mouse-spotlight { position: fixed; inset: 0; background: radial-gradient(circle 600px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(193, 162, 255, 0.08), transparent 70%); z-index: 2; pointer-events: none; transition: background 0.1s ease; } /* Glass Morphism */ .glass { background: var(--glass-night); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid var(--border-night); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; } /* Navigation */ .nav { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; border-radius: 48px; display: flex; gap: 20px; align-items: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .nav:hover { box-shadow: 0 8px 32px rgba(193, 162, 255, 0.2); border-color: rgba(193, 162, 255, 0.3); } .nav-back { color: var(--text-primary); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 8px; transition: all 0.2s ease; } .nav-back:hover { background: rgba(255, 255, 255, 0.1); transform: translateX(-2px); } /* Hero Section */ .hero { text-align: center; padding: 140px 20px 60px; position: relative; z-index: 10; } .product-icon-large { font-size: 88px; margin-bottom: 24px; animation: float-forbidden 3s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(193, 162, 255, 0.4)); } @keyframes floatForbidden { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(0deg); } } .hero-title { font-size: clamp(3rem, 8vw, 5rem); font-weight: 700; margin-bottom: 16px; background: linear-gradient(135deg, white, var(--td1-lilac)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -1px; animation: glow-forbidden 3s ease-in-out infinite; } @keyframes glowForbidden { 0%, 100% { filter: drop-shadow(0 0 10px rgba(193, 162, 255, 0.3)); } 50% { filter: drop-shadow(0 0 20px rgba(193, 162, 255, 0.6)); } } .hero-tagline { font-size: clamp(1.125rem, 3vw, 1.5rem); color: var(--text-secondary); max-width: 800px; margin: 0 auto 32px; opacity: 0.85; } /* Demo Container */ .demo-container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 10; } .demo-panel { padding: 32px; border-radius: 24px; margin-bottom: 32px; min-height: 400px; position: relative; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); } .demo-panel::before { content: ''; position: absolute; inset: -2px; border-radius: 24px; background: linear-gradient(135deg, var(--td1-lilac), transparent, var(--td1-lilac)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; opacity: 0; transition: opacity 0.4s; z-index: -1; } .demo-panel:hover::before { opacity: 0.4; } .demo-panel:hover { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(193, 162, 255, 0.2); } .panel-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--td1-lilac); background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; } /* Pricing Section */ .
+    <!-- From Vision to Intelligence Section -->
+    <section class="vision-section" style="max-width: 1400px; margin: 60px auto; padding: 60px 40px; position: relative; z-index: 10;">
+        <div style="text-align: center; margin-bottom: 60px;">
+            <div style="display: inline-block; padding: 8px 20px; border-radius: 48px; background: rgba(193, 162, 255, 0.2); border: 1px solid rgba(193, 162, 255, 0.4); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2rem; color: var(--td1-lilac);">
+                HOW WE WORK
+            </div>
+            <h2 style="font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 700; margin-bottom: 1.5rem; background: linear-gradient(135deg, white, var(--td1-lilac)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                From Vision to Living Intelligence
+            </h2>
+            <p style="font-size: clamp(1.125rem, 2.5vw, 1.5rem); color: var(--text-secondary); max-width: 800px; margin: 0 auto; line-height: 1.6;">
+                Our integration process transforms your vision into autonomous reality.
+            </p>
+        </div>
+        
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 40px; align-items: center; padding: 40px; margin-bottom: 30px; border-radius: 24px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--td1-lilac); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; background: rgba(193, 162, 255, 0.1); box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">01</div>
+                <div>
+                    <h3 style="font-size: 28px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Discovery</h3>
+                    <p style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">We analyze your needs, infrastructure, and vision to architect the perfect AI system.</p>
+                </div>
+                <div style="font-size: 14px; color: var(--td1-lilac); font-weight: 600; white-space: nowrap;">1-2 weeks</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 40px; align-items: center; padding: 40px; margin-bottom: 30px; border-radius: 24px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--td1-lilac); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; background: rgba(193, 162, 255, 0.1); box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">02</div>
+                <div>
+                    <h3 style="font-size: 28px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Architecture</h3>
+                    <p style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">Custom system design integrating the optimal AI frameworks for your use case.</p>
+                </div>
+                <div style="font-size: 14px; color: var(--td1-lilac); font-weight: 600; white-space: nowrap;">2-3 weeks</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 40px; align-items: center; padding: 40px; margin-bottom: 30px; border-radius: 24px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--td1-lilac); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; background: rgba(193, 162, 255, 0.1); box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">03</div>
+                <div>
+                    <h3 style="font-size: 28px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Engineering</h3>
+                    <p style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">Building your autonomous system with TD1's core consciousness architecture.</p>
+                </div>
+                <div style="font-size: 14px; color: var(--td1-lilac); font-weight: 600; white-space: nowrap;">4-6 weeks</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 40px; align-items: center; padding: 40px; margin-bottom: 30px; border-radius: 24px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--td1-lilac); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; background: rgba(193, 162, 255, 0.1); box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">04</div>
+                <div>
+                    <h3 style="font-size: 28px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Integration</h3>
+                    <p style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">Seamless deployment and integration into your existing infrastructure.</p>
+                </div>
+                <div style="font-size: 14px; color: var(--td1-lilac); font-weight: 600; white-space: nowrap;">1-2 weeks</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 80px 1fr auto; gap: 40px; align-items: center; padding: 40px; margin-bottom: 30px; border-radius: 24px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--td1-lilac); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; background: rgba(193, 162, 255, 0.1); box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">05</div>
+                <div>
+                    <h3 style="font-size: 28px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Evolution</h3>
+                    <p style="font-size: 16px; color: var(--text-secondary); line-height: 1.6;">Continuous learning and optimization as your system grows with your business.</p>
+                </div>
+                <div style="font-size: 14px; color: var(--td1-lilac); font-weight: 600; white-space: nowrap;">Ongoing</div>
+            </div>
+        </div>
+    </section>
+    pricing-section { margin-top: 48px; padding: 40px; border-radius: 24px; position: relative; } .pricing-section h2 { font-size: clamp(2rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 8px; text-align: center; background: linear-gradient(135deg, white, var(--td1-lilac)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; } .pricing-section > p { text-align: center; opacity: 0.8; margin-bottom: 32px; color: var(--text-secondary); } .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 32px; } .pricing-card { padding: 32px; border-radius: 20px; background: rgba(15, 15, 20, 0.6); backdrop-filter: blur(24px); border: 1px solid var(--border-night); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; cursor: pointer; } .pricing-card::before { content: ''; position: absolute; inset: -2px; border-radius: 20px; background: linear-gradient(135deg, var(--td1-lilac), transparent, var(--td1-lilac)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; opacity: 0; transition: opacity 0.4s; z-index: -1; } .pricing-card:hover::before { opacity: 0.6; } .pricing-card:hover { transform: translateY(-8px); box-shadow: 0 30px 80px rgba(193, 162, 255, 0.3); border-color: rgba(193, 162, 255, 0.4); } .pricing-card.featured { border-color: var(--td1-lilac); box-shadow: 0 0 24px rgba(193, 162, 255, 0.3); } .pricing-card.featured::before { opacity: 0.3; } .pricing-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); } .pricing-price { font-size: clamp(2rem, 4vw, 2.5rem); font-weight: 800; color: var(--td1-lilac); margin-bottom: 20px; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; } .pricing-features { list-style: none; margin-bottom: 24px; } .pricing-features li { padding: 8px 0; opacity: 0.8; color: var(--text-secondary); font-size: 14px; } /* Premium Purchase Button */ .purchase-btn { width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple)); border: none; color: white; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; } .purchase-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--td1-purple), var(--td1-lilac)); opacity: 0; transition: opacity 0.3s; } .purchase-btn:hover::before { opacity: 1; } .purchase-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(193, 162, 255, 0.4); } .purchase-btn:active { transform: translateY(0); } .purchase-btn span { position: relative; z-index: 1; } /* Demo Content */ .demo-content { padding: 24px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; min-height: 300px; } @media (max-width: 768px) { .pricing-grid { grid-template-columns: 1fr; } .hero-title { font-size: 2.5rem; } .product-icon-large { font-size: 64px; } } /* Premium Animations - Outstanding */ @keyframes titleGlow { 0%, 100% { filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.5)) drop-shadow(0 0 80px rgba(193, 162, 255, 0.3)) drop-shadow(0 0 120px rgba(193, 162, 255, 0.1)); transform: scale(1); } 50% { filter: drop-shadow(0 0 60px rgba(193, 162, 255, 0.8)) drop-shadow(0 0 120px rgba(193, 162, 255, 0.5)) drop-shadow(0 0 180px rgba(193, 162, 255, 0.2)); transform: scale(1.02); } } @keyframes iconFloat { 0%, 100% { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 30px rgba(193, 162, 255, 0.5)); } 25% { transform: translateY(-8px) scale(1.05) rotate(-2deg); filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.7)); } 50% { transform: translateY(-12px) scale(1.08) rotate(0deg); filter: drop-shadow(0 0 50px rgba(193, 162, 255, 0.9)); } 75% { transform: translateY(-8px) scale(1.05) rotate(2deg); filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.7)); } } @keyframes particlePulse { 0%, 100% { opacity: 0; transform: scale(0.8); } 50% { opacity: 0.8; transform: scale(1.2); } } @keyframes cardHover { 0% { transform: translateY(0) scale(1); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); } 100% { transform: translateY(-12px) scale(1.03); box-shadow: 0 40px 100px rgba(193, 162, 255, 0.35); } } .product-icon-large { animation: iconFloat 4s ease-in-out infinite !important; } .hero-title { animation: titleGlow 3s ease-in-out infinite !important; } .product-card { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important; } .product-card:hover { animation: cardHover 0.5s ease-out forwards !important; } .particle { animation: float-particle 12s infinite ease-in-out, particlePulse 3s infinite ease-in-out !important; } 
+        /* Enhanced Premium Animations */
+        @keyframes pulseGlow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 20px rgba(193, 162, 255, 0.4)) 
+                        drop-shadow(0 0 40px rgba(193, 162, 255, 0.2));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.8)) 
+                        drop-shadow(0 0 80px rgba(193, 162, 255, 0.4))
+                        drop-shadow(0 0 120px rgba(193, 162, 255, 0.2));
+                transform: scale(1.05);
+            }
+        }
+        
+        @keyframes float3D {
+            0%, 100% { 
+                transform: translateY(0) translateX(0) rotateZ(0deg);
+            }
+            25% { 
+                transform: translateY(-15px) translateX(10px) rotateZ(2deg);
+            }
+            50% { 
+                transform: translateY(-25px) translateX(-10px) rotateZ(-2deg);
+            }
+            75% { 
+                transform: translateY(-15px) translateX(5px) rotateZ(1deg);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { 
+                background-position: 0% 50%;
+            }
+            50% { 
+                background-position: 100% 50%;
+            }
+        }
+        
+        .product-icon-large {
+            animation: float3D 4s ease-in-out infinite, pulseGlow 3s ease-in-out infinite !important;
+        }
+        
+        .hero-title {
+            animation: pulseGlow 4s ease-in-out infinite !important;
+            background-size: 200% 200% !important;
+            animation: gradientShift 5s ease infinite, pulseGlow 4s ease-in-out infinite !important;
+        }
+        
+        .pricing-card:hover {
+            animation: pulseGlow 1s ease-in-out !important;
+        }
+        
+        .purchase-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .purchase-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+    </style>
