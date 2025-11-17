@@ -1,14 +1,10 @@
-# Netlify configuration for TD1 World (Next.js)
+# Netlify configuration for TD1 World Launch Page (Static HTML)
 [build]
-  command = "npm run build"
-  publish = ".next"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+  publish = "."
+  command = ""
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_VERSION = "9"
 
 # Force HTTPS redirects for security
 [[redirects]]
@@ -23,5 +19,9 @@
   status = 301
   force = true
 
-# Next.js redirects and rewrites are handled by the plugin
+# Handle SPA routing (if needed later)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
