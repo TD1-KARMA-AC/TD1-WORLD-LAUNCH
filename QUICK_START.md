@@ -68,18 +68,18 @@ git push -u origin main
 
 ⏱️ Your site will be live in ~30 seconds at a URL like: `https://amazing-site-12345.netlify.app`
 
-## ✅ Step 4: Connect Domain (td1.world)
+## ✅ Step 4: Connect Domain (www.td1.world)
 
 1. In Netlify dashboard: Click **"Site settings"** → **"Domain management"**
 2. Click **"Add custom domain"**
-3. Enter: **`td1.world`**
+3. Enter: **`www.td1.world`**
 4. Click **"Verify"**
 
 **Now configure DNS** (Netlify will show you which option to use):
 
 ### Option A: Use Netlify DNS (Easiest)
 1. Netlify will show you nameservers (like `dns1.p01.nsone.net`)
-2. Go to your domain registrar (where you bought td1.world)
+2. Go to your domain registrar (where you bought www.td1.world)
 3. Find DNS settings / Nameserver settings
 4. Change nameservers to Netlify's nameservers
 5. Wait 24-48 hours for DNS propagation
@@ -88,7 +88,7 @@ git push -u origin main
 1. Netlify will show you a DNS record to add
 2. Go to your domain registrar's DNS settings
 3. Add a **CNAME** record:
-   - **Name**: `@` or `td1.world`
+   - **Name**: `www` or `www.td1.world`
    - **Value**: Your Netlify site URL (e.g., `td1-world-launch.netlify.app`)
 4. Wait 5-60 minutes for DNS to propagate
 
@@ -96,7 +96,7 @@ git push -u origin main
 
 ## 🎉 Done!
 
-Your launch page will be live at: **https://td1.world**
+Your launch page will be live at: **https://www.td1.world**
 
 The countdown timer will automatically show time until **November 22, 2025 at 11:22 AM**
 

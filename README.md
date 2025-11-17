@@ -4,7 +4,7 @@ A beautiful, modern launch page for TD1 World with countdown timer.
 
 ## Launch Details
 
-- **Domain**: td1.world
+- **Domain**: www.td1.world
 - **Launch Date**: November 22, 2025 at 11:22 AM
 - **Countdown Timer**: Automatically displays time remaining until launch
 
@@ -35,7 +35,7 @@ A beautiful, modern launch page for TD1 World with countdown timer.
    - Publish directory: `.`
 6. Click "Deploy site"
 7. Go to Site settings → Domain management → Add custom domain
-8. Add `td1.world` and follow DNS configuration instructions
+8. Add `www.td1.world` and follow DNS configuration instructions
 
 ### Option 2: Vercel
 
@@ -48,7 +48,7 @@ A beautiful, modern launch page for TD1 World with countdown timer.
    - Output Directory: `.`
 6. Click "Deploy"
 7. Go to Project Settings → Domains
-8. Add `td1.world` and configure DNS
+8. Add `www.td1.world` and configure DNS
 
 ### Option 3: GitHub Pages
 
@@ -58,31 +58,31 @@ A beautiful, modern launch page for TD1 World with countdown timer.
 4. Branch: `main` / `master`
 5. Folder: `/ (root)`
 6. Save
-7. For custom domain, add `CNAME` file with content: `td1.world`
+7. For custom domain, add `CNAME` file with content: `www.td1.world`
 8. Configure DNS: Add CNAME record pointing to `username.github.io`
 
 ### Option 4: Traditional Web Hosting
 
 1. Upload all files (`index.html`, `styles.css`, `script.js`) to your web hosting root directory
-2. Point your domain `td1.world` to your hosting server via DNS
+2. Point your domain `www.td1.world` to your hosting server via DNS
 
 ## DNS Configuration
 
-To connect `td1.world` to your hosting provider, you'll need to add DNS records:
+To connect `www.td1.world` to your hosting provider, you'll need to add DNS records:
 
 ### For Netlify/Vercel:
 - **Type**: CNAME
-- **Name**: @ or td1.world
+- **Name**: www or www.td1.world
 - **Value**: Provided by hosting platform (e.g., `your-site.netlify.app`)
 
 ### For GitHub Pages:
 - **Type**: CNAME
-- **Name**: @ or td1.world  
+- **Name**: www or www.td1.world  
 - **Value**: `username.github.io`
 
 ### For Traditional Hosting:
 - **Type**: A
-- **Name**: @ or td1.world
+- **Name**: www or www.td1.world
 - **Value**: Your server IP address
 
 ## Customization

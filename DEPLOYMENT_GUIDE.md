@@ -1,6 +1,6 @@
 # Deployment Guide: TD1 World Launch Page to GitHub & Netlify
 
-Follow these steps to deploy your launch page to td1.world via Netlify.
+Follow these steps to deploy your launch page to www.td1.world via Netlify.
 
 ## Step 1: Push to GitHub
 
@@ -64,14 +64,14 @@ Netlify will automatically:
 - Generate a URL like: `https://random-name-12345.netlify.app`
 - Your site will be live in 30-60 seconds!
 
-## Step 3: Connect Custom Domain (td1.world)
+## Step 3: Connect Custom Domain (www.td1.world)
 
 ### 3.1 Add Domain in Netlify
 
 1. Go to your site dashboard in Netlify
 2. Click "Site settings" → "Domain management"
 3. Click "Add custom domain"
-4. Enter: `td1.world`
+4. Enter: `www.td1.world`
 5. Click "Verify" or "Add domain"
 
 ### 3.2 Configure DNS
@@ -81,7 +81,7 @@ Netlify will show you DNS configuration. You have two options:
 **Option A: Use Netlify DNS (Recommended - Easy)**
 1. In Netlify domain settings, click "Configure Netlify DNS"
 2. You'll get nameservers (e.g., `dns1.p01.nsone.net`)
-3. Go to your domain registrar (where you bought td1.world)
+3. Go to your domain registrar (where you bought www.td1.world)
 4. Update nameservers to the ones Netlify provided
 5. Wait 24-48 hours for DNS propagation
 
@@ -89,13 +89,13 @@ Netlify will show you DNS configuration. You have two options:
 1. In Netlify domain settings, click "Set up Netlify DNS"
 2. You'll see DNS records to add:
    - Type: **A**
-   - Name: `@` or `td1.world`
+   - Name: `www` or `www.td1.world`
    - Value: Netlify IP (e.g., `75.2.60.5`)
    
    OR
 
    - Type: **CNAME**
-   - Name: `@` or `td1.world`
+   - Name: `www` or `www.td1.world`
    - Value: Your Netlify site URL (e.g., `your-site-name.netlify.app`)
 
 3. Add these records in your domain registrar's DNS settings
@@ -107,11 +107,11 @@ Netlify automatically provides free SSL certificates via Let's Encrypt:
 1. Go to "Domain settings" → "HTTPS"
 2. Click "Verify DNS configuration"
 3. Once verified, Netlify will automatically provision SSL
-4. Your site will be accessible at `https://td1.world`!
+4. Your site will be accessible at `https://www.td1.world`!
 
 ## Step 4: Test Your Site
 
-1. Visit `https://td1.world` (or your Netlify URL while DNS propagates)
+1. Visit `https://www.td1.world` (or your Netlify URL while DNS propagates)
 2. Verify the countdown timer is working
 3. Test the email form
 4. Check mobile responsiveness
@@ -143,7 +143,7 @@ Netlify will automatically rebuild and redeploy!
 
 **Netlify Dashboard**: `https://app.netlify.com`
 
-**Your Site**: `https://td1.world`
+**Your Site**: `https://www.td1.world`
 
 ## Need Help?
 
