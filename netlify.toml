@@ -1,13 +1,27 @@
-# Netlify configuration for TD1 World
+# Netlify configuration for TD1 World (Next.js)
 [build]
-  publish = "."
-  command = ""
+  command = "npm run build"
+  publish = ".next"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+# Force HTTPS redirects for security
+[[redirects]]
+  from = "http://www.td1.world/*"
+  to = "https://www.td1.world/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://td1.world/*"
+  to = "https://www.td1.world/:splat"
+  status = 301
+  force = true
+
+# Next.js redirects and rewrites are handled by the plugin
 
