@@ -19,6 +19,12 @@
   status = 301
   force = true
 
+[[redirects]]
+  from = "https://td1.world/*"
+  to = "https://www.td1.world/:splat"
+  status = 301
+  force = true
+
 # Handle SPA routing (if needed later)
 [[redirects]]
   from = "/*"
