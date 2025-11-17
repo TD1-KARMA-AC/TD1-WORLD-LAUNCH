@@ -55,7 +55,7 @@ updateCountdown();
 const countdownInterval = setInterval(updateCountdown, 1000);
 
 // Email form submission
-emailForm.addEventListener('submit', function(e) {
+emailForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const email = emailInput.value.trim();
@@ -72,16 +72,49 @@ emailForm.addEventListener('submit', function(e) {
         return;
     }
     
-    // Here you would typically send the email to a server
-    // For now, we'll just show a success message and store in localStorage
-    const subscribers = JSON.parse(localStorage.getItem('td1_subscribers') || '[]');
-    if (!subscribers.includes(email)) {
-        subscribers.push(email);
-        localStorage.setItem('td1_subscribers', JSON.stringify(subscribers));
-    }
+    // Disable submit button
+    const submitBtn = emailForm.querySelector('.notify-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
     
-    showMessage('Thank you! We\'ll notify you when we launch.', 'success');
-    emailInput.value = '';
+    try {
+        // Submit to Netlify Forms
+        const formData = new FormData(emailForm);
+        
+        const response = await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(formData).toString()
+        });
+        
+        if (response.ok) {
+            // Also store in localStorage as backup
+            const subscribers = JSON.parse(localStorage.getItem('td1_subscribers') || '[]');
+            if (!subscribers.includes(email)) {
+                subscribers.push(email);
+                localStorage.setItem('td1_subscribers', JSON.stringify(subscribers));
+            }
+            
+            showMessage('Thank you! We\'ll notify you when we launch.', 'success');
+            emailInput.value = '';
+        } else {
+            throw new Error('Submission failed');
+        }
+    } catch (error) {
+        console.error('Error submitting form:', error);
+        // Fallback: store in localStorage
+        const subscribers = JSON.parse(localStorage.getItem('td1_subscribers') || '[]');
+        if (!subscribers.includes(email)) {
+            subscribers.push(email);
+            localStorage.setItem('td1_subscribers', JSON.stringify(subscribers));
+        }
+        showMessage('Thank you! We\'ll notify you when we launch.', 'success');
+        emailInput.value = '';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
 });
 
 function showMessage(message, type) {

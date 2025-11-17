@@ -66,8 +66,10 @@
 
             <div class="notification-section">
                 <p class="notification-text">Be the first to know when we launch</p>
-                <form class="email-form" id="emailForm">
-                    <input type="email" id="emailInput" placeholder="Enter your email address" required>
+                <form class="email-form" id="emailForm" name="launch-notifications" netlify netlify-honeypot="bot-field" data-netlify="true">
+                    <input type="hidden" name="form-name" value="launch-notifications">
+                    <input type="hidden" name="bot-field">
+                    <input type="email" id="emailInput" name="email" placeholder="Enter your email address" required>
                     <button type="submit" class="notify-btn">Notify Me</button>
                 </form>
                 <div class="form-message" id="formMessage"></div>
