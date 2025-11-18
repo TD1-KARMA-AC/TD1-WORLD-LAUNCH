@@ -169,10 +169,26 @@ body {
 .subtitle {
     font-size: clamp(1rem, 2.5vw, 1.4rem);
     color: var(--text-secondary);
-    line-height: 1.7;
+    line-height: 1.8;
+    max-width: 700px;
+    margin: 0 auto 1.5rem;
+    opacity: 0.95;
+}
+
+.subtitle-accent {
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    color: var(--text-secondary);
+    line-height: 1.8;
     max-width: 700px;
     margin: 0 auto;
-    opacity: 0.95;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.subtitle-accent strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    opacity: 1;
 }
 
 .countdown-container {
@@ -269,7 +285,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 2rem;
-    margin: 2rem 0;
+    margin: 2rem 0 1rem;
     flex-wrap: wrap;
 }
 
@@ -279,6 +295,16 @@ body {
     gap: 0.5rem;
     color: var(--text-secondary);
     font-size: 1rem;
+}
+
+.system-online-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    opacity: 0.75;
+    margin: 0 auto 2.5rem;
+    font-style: italic;
+    letter-spacing: 0.05em;
 }
 
 .icon {
@@ -311,10 +337,20 @@ body {
         0 0 60px rgba(99, 102, 241, 0.15);
 }
 
+.notification-title {
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
 .notification-text {
-    font-size: 1.1rem;
-    margin-bottom: 1.5rem;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    margin-bottom: 1.75rem;
     color: var(--text-secondary);
+    line-height: 1.7;
+    opacity: 0.9;
 }
 
 .email-form {
@@ -386,12 +422,24 @@ body {
 }
 
 .footer {
-    margin-top: 4rem;
+    margin-top: 5rem;
     padding: 2rem clamp(1rem, 3vw, 2rem);
     text-align: center;
+}
+
+.footer-tagline {
     color: var(--text-secondary);
-    font-size: clamp(0.8rem, 1.5vw, 0.9rem);
-    opacity: 0.7;
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    opacity: 0.6;
+    font-style: italic;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.footer-copyright {
+    color: var(--text-secondary);
+    font-size: clamp(0.75rem, 1.5vw, 0.85rem);
+    opacity: 0.5;
 }
 
 /* Premium Enhancements */
@@ -472,12 +520,30 @@ body {
         margin: 2rem 0.5rem;
     }
 
+    .notification-title {
+        font-size: 1rem;
+    }
+
+    .notification-text {
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+    }
+
     .main-message {
         margin-bottom: 3rem;
     }
 
     .logo-container {
         margin-bottom: 3rem;
+    }
+
+    .system-online-text {
+        margin-bottom: 2rem;
+        font-size: 0.8rem;
+    }
+
+    .footer {
+        margin-top: 3.5rem;
     }
 }
 
