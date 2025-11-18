@@ -84,13 +84,11 @@ emailForm.addEventListener('submit', async function(e) {
     submitBtn.textContent = 'Sending...';
     
     try {
-        // Submit to Netlify Forms
-        const formData = new FormData(emailForm);
-        
-        const response = await fetch('/', {
+        // Send email directly to td1@td1.world
+        const response = await fetch('/.netlify/functions/send-email-notification', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(formData).toString()
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
         });
         
         if (response.ok) {
