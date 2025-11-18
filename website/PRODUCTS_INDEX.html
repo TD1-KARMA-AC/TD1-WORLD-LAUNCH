@@ -231,16 +231,98 @@
             border-radius: 16px;
             padding: 32px;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
         .product-block-card:hover {
             border-color: rgba(155, 92, 246, 0.4);
             transform: translateY(-4px);
             box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
         }
-        .product-block-card:hover .demo-button {
+        .product-block-card:hover .explore-button {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(155, 92, 246, 0.4);
+        }
+        
+        /* Expandable Demo Section */
+        .product-demo-container {
+            margin-top: 24px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .product-demo-container.expanded {
+            max-height: 2000px;
+        }
+        .inline-demo {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 16px;
+            border: 1px solid rgba(193, 162, 255, 0.2);
+        }
+        .demo-interface {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .demo-panel {
+            background: rgba(15, 15, 20, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .demo-panel textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+        .demo-panel textarea:focus {
+            outline: none;
+            border-color: var(--td1-lilac);
+            box-shadow: 0 0 0 3px rgba(193, 162, 255, 0.1);
+        }
+        .btn-demo {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-demo:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(193, 162, 255, 0.4);
+        }
+        .output-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .demo-interface {
+                grid-template-columns: 1fr;
+            }
         }
         
         /* Container */
@@ -466,7 +548,7 @@
         <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
-            <div class="product-block-card" onclick="window.location='demos/TD1_MEM_demo.html'" style="background: rgba(15, 25, 40, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 32px; transition: all 0.3s ease; cursor: pointer;">
+            <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
                 <div class="product-name" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">TD1.MEM</div>
                 <div class="product-desc" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">Persistent long-term memory for AI applications. Never forget, always learn, infinite scale.</div>
@@ -486,11 +568,34 @@
                 </div>
                 <div class="product-pricing" style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 8px;">From $799</div>
                 <div class="product-value" style="font-size: 12px; color: #22c55e; font-weight: 600; margin-bottom: 16px;">Save 90%+ vs cloud memory APIs</div>
-                <a class="demo-button" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; transition: all 0.3s ease;">Try Interactive Demo →</a>
+                <button class="explore-button" onclick="toggleDemo('td1-mem-demo')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
+                
+                <!-- Inline Demo -->
+                <div id="td1-mem-demo" class="product-demo-container">
+                    <div class="inline-demo">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 20px; text-align: center;">🧠 TD1.MEM Live Demo</div>
+                        <div class="demo-interface">
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Store Memory</div>
+                                <textarea id="mem-content" placeholder="Enter information to remember...&#10;&#10;Example:&#10;User prefers dark mode&#10;Birthday is March 15th&#10;Favorite color is blue"></textarea>
+                                <button class="btn-demo" onclick="storeMemoryTD1MEM()">Save to Memory</button>
+                            </div>
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Recall Memory</div>
+                                <textarea id="recall-query" placeholder="Ask about stored information...&#10;&#10;Example:&#10;What does the user prefer?&#10;When is their birthday?"></textarea>
+                                <button class="btn-demo" onclick="recallMemoryTD1MEM()">Recall from Memory</button>
+                            </div>
+                        </div>
+                        <div class="demo-panel">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Memory Output</div>
+                            <div class="output-box" id="td1-mem-output">Memory responses will appear here...&#10;&#10;Try storing some information first, then recall it!&#10;&#10;TD1.MEM uses semantic search with embeddings to find relevant memories.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TD1.GRAPH -->
-            <div class="product-block-card" onclick="window.location='demos/TD1_GRAPH_demo.html'" style="background: rgba(15, 25, 40, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 32px; transition: all 0.3s ease; cursor: pointer;">
+            <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
                 <div class="product-name" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">TD1.GRAPH</div>
                 <div class="product-desc" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">Knowledge graphs made easy. Build, query, and reason over complex relationship networks.</div>
@@ -510,11 +615,34 @@
                 </div>
                 <div class="product-pricing" style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 8px;">From $999</div>
                 <div class="product-value" style="font-size: 12px; color: #22c55e; font-weight: 600; margin-bottom: 16px;">Replace Neo4j & graph APIs</div>
-                <a class="demo-button" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; transition: all 0.3s ease;">Try Interactive Demo →</a>
+                <button class="explore-button" onclick="toggleDemo('td1-graph-demo')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
+                
+                <!-- Inline Demo -->
+                <div id="td1-graph-demo" class="product-demo-container">
+                    <div class="inline-demo">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 20px; text-align: center;">🕸️ TD1.GRAPH Live Demo</div>
+                        <div class="demo-interface">
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Create Node</div>
+                                <textarea id="graph-node" placeholder="Enter node data...&#10;&#10;Example:&#10;Name: Alice&#10;Type: Person&#10;Properties: {age: 30, role: 'Developer'}"></textarea>
+                                <button class="btn-demo" onclick="createGraphNode()">Create Node</button>
+                            </div>
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Query Graph</div>
+                                <textarea id="graph-query" placeholder="Enter Cypher query...&#10;&#10;Example:&#10;MATCH (n) RETURN n LIMIT 10"></textarea>
+                                <button class="btn-demo" onclick="queryGraph()">Execute Query</button>
+                            </div>
+                        </div>
+                        <div class="demo-panel">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Graph Output</div>
+                            <div class="output-box" id="td1-graph-output">Graph operations will appear here...&#10;&#10;Try creating a node or querying the graph!&#10;&#10;TD1.GRAPH uses Neo4j-compatible Cypher queries.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TD1.INTENT -->
-            <div class="product-block-card" onclick="window.location='demos/TD1_INTENT_demo.html'" style="background: rgba(15, 25, 40, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 32px; transition: all 0.3s ease; cursor: pointer;">
+            <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
                 <div class="product-name" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">TD1.INTENT</div>
                 <div class="product-desc" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">Understand what people really mean. Deep intent extraction with context awareness.</div>
@@ -534,11 +662,33 @@
                 </div>
                 <div class="product-pricing" style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 8px;">From $1,299</div>
                 <div class="product-value" style="font-size: 12px; color: #22c55e; font-weight: 600; margin-bottom: 16px;">Power customer support AI</div>
-                <a class="demo-button" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; transition: all 0.3s ease;">Try Interactive Demo →</a>
+                <button class="explore-button" onclick="toggleDemo('td1-intent-demo')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
+                
+                <!-- Inline Demo -->
+                <div id="td1-intent-demo" class="product-demo-container">
+                    <div class="inline-demo">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 20px; text-align: center;">🎯 TD1.INTENT Live Demo</div>
+                        <div class="demo-interface">
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Analyze Intent</div>
+                                <textarea id="intent-text" placeholder="Enter text to analyze...&#10;&#10;Example:&#10;I'm frustrated with my order&#10;Can you help me cancel?&#10;I need a refund ASAP"></textarea>
+                                <button class="btn-demo" onclick="analyzeIntent()">Analyze Intent</button>
+                            </div>
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Context (Optional)</div>
+                                <textarea id="intent-context" placeholder="Previous conversation context...&#10;&#10;Example:&#10;User ordered product X&#10;Order status: delayed"></textarea>
+                            </div>
+                        </div>
+                        <div class="demo-panel">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Intent Analysis</div>
+                            <div class="output-box" id="td1-intent-output">Intent analysis will appear here...&#10;&#10;Enter text to see multi-layered intent extraction!&#10;&#10;TD1.INTENT extracts primary intent, emotions, urgency, and action items.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TD1.MIRROR -->
-            <div class="product-block-card" onclick="window.location='demos/TD1_MIRROR_demo.html'" style="background: rgba(15, 25, 40, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 32px; transition: all 0.3s ease; cursor: pointer;">
+            <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
                 <div class="product-name" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">TD1.MIRROR</div>
                 <div class="product-desc" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">See every side of an issue. Multi-perspective analysis with cognitive reframing.</div>
@@ -558,11 +708,34 @@
                 </div>
                 <div class="product-pricing" style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 8px;">From $699</div>
                 <div class="product-value" style="font-size: 12px; color: #22c55e; font-weight: 600; margin-bottom: 16px;">Better decision-making AI</div>
-                <a class="demo-button" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; transition: all 0.3s ease;">Try Interactive Demo →</a>
+                <button class="explore-button" onclick="toggleDemo('td1-mirror-demo')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
+                
+                <!-- Inline Demo -->
+                <div id="td1-mirror-demo" class="product-demo-container">
+                    <div class="inline-demo">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 20px; text-align: center;">🪞 TD1.MIRROR Live Demo</div>
+                        <div class="demo-interface">
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Analyze Perspectives</div>
+                                <textarea id="mirror-issue" placeholder="Enter issue or decision to analyze...&#10;&#10;Example:&#10;Should we launch the product now or wait?&#10;What are the pros and cons?"></textarea>
+                                <button class="btn-demo" onclick="analyzePerspectives()">Analyze Perspectives</button>
+                            </div>
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Perspective Count</div>
+                                <input type="number" id="perspective-count" value="3" min="2" max="6" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-primary); font-size: 14px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: var(--text-secondary);">Number of perspectives to generate (2-6)</div>
+                            </div>
+                        </div>
+                        <div class="demo-panel">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Multi-Perspective Analysis</div>
+                            <div class="output-box" id="td1-mirror-output">Perspective analysis will appear here...&#10;&#10;Enter an issue to see multiple perspectives and cognitive reframing!&#10;&#10;TD1.MIRROR generates weighted perspectives to help with decision-making.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TD1.ROUTER -->
-            <div class="product-block-card" onclick="window.location='demos/TD1_ROUTER_demo.html'" style="background: rgba(15, 25, 40, 0.72); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 32px; transition: all 0.3s ease; cursor: pointer;">
+            <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
                 <div class="product-name" style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">TD1.ROUTER</div>
                 <div class="product-desc" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">Save 70-90% on API costs. Intelligent routing across multiple AI models with cost optimization.</div>
@@ -582,7 +755,34 @@
                 </div>
                 <div class="product-pricing" style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 8px;">From $1,499</div>
                 <div class="product-value" style="font-size: 12px; color: #22c55e; font-weight: 600; margin-bottom: 16px;">ROI in 1-2 months vs OpenAI</div>
-                <a class="demo-button" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; transition: all 0.3s ease;">Try Interactive Demo →</a>
+                <button class="explore-button" onclick="toggleDemo('td1-router-demo')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
+                
+                <!-- Inline Demo -->
+                <div id="td1-router-demo" class="product-demo-container">
+                    <div class="inline-demo">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--td1-lilac); margin-bottom: 20px; text-align: center;">🔀 TD1.ROUTER Live Demo</div>
+                        <div class="demo-interface">
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Route Request</div>
+                                <textarea id="router-prompt" placeholder="Enter your prompt...&#10;&#10;Example:&#10;Write a short email&#10;Explain quantum computing&#10;Summarize this article"></textarea>
+                                <button class="btn-demo" onclick="routeRequest()">Route & Execute</button>
+                            </div>
+                            <div class="demo-panel">
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Routing Strategy</div>
+                                <select id="routing-strategy" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-primary); font-size: 14px; margin-bottom: 12px;">
+                                    <option value="cost">Cost Optimized</option>
+                                    <option value="quality">Quality Optimized</option>
+                                    <option value="balanced">Balanced</option>
+                                </select>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Choose routing strategy</div>
+                            </div>
+                        </div>
+                        <div class="demo-panel">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Routing Result & Cost Analysis</div>
+                            <div class="output-box" id="td1-router-output">Routing results will appear here...&#10;&#10;Enter a prompt to see intelligent model routing and cost savings!&#10;&#10;TD1.ROUTER automatically selects the best model based on your strategy.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1100,6 +1300,309 @@
                 card.style.setProperty('--mouse-y', `${y}px`);
             });
         });
+        
+        // Toggle Demo Expand/Collapse
+        function toggleDemo(demoId) {
+            const demo = document.getElementById(demoId);
+            const isExpanded = demo.classList.contains('expanded');
+            
+            // Close all other demos
+            document.querySelectorAll('.product-demo-container').forEach(d => {
+                d.classList.remove('expanded');
+            });
+            
+            // Toggle this demo
+            if (!isExpanded) {
+                demo.classList.add('expanded');
+                demo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        
+        // API Configuration
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:3000' 
+            : 'https://api-demo.td1.world';
+        const DEMO_USER_ID = 'demo_user_' + Math.random().toString(36).substr(2, 9);
+        const DEMO_API_KEY = 'demo_key_' + Math.random().toString(36).substr(2, 9);
+        
+        // TD1.MEM Functions
+        async function storeMemoryTD1MEM() {
+            const textarea = document.getElementById('mem-content');
+            const content = textarea ? textarea.value : '';
+            const output = document.getElementById('td1-mem-output');
+            
+            if (!content.trim()) {
+                output.textContent = '❌ Please enter some information to remember.';
+                return;
+            }
+            
+            output.textContent = '🔄 Storing memory...\n\nGenerating embedding...\nConnecting to TD1.MEM API...';
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/remember`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': DEMO_API_KEY
+                    },
+                    body: JSON.stringify({
+                        user_id: DEMO_USER_ID,
+                        content: content,
+                        importance: 0.7,
+                        emotional_weight: 0.8
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    output.textContent = `✅ Memory stored successfully!\n\nMemory ID: ${data.memory_id}\nContent: ${data.content.substring(0, 100)}${data.content.length > 100 ? '...' : ''}\nEmbedding: Generated (${data.embedding?.length || 1536} dimensions)\n💡 Try recalling this memory now!`;
+                    if (textarea) textarea.value = '';
+                } else {
+                    throw new Error(data.message || 'Failed to store memory');
+                }
+            } catch (error) {
+                const memoryId = 'mem_' + Math.random().toString(36).substr(2, 9);
+                output.style.opacity = '1';
+                output.textContent = `✅ Memory stored successfully! (Demo Mode)\n\nMemory ID: ${memoryId}\nContent: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}\nEmbedding: Generated (1536 dimensions)\nStatus: Simulated (API unavailable)\n💡 In production, this connects to TD1.MEM backend.`;
+                if (textarea) textarea.value = '';
+                const memories = JSON.parse(localStorage.getItem('td1_mem_demo') || '[]');
+                memories.push({ id: memoryId, content: content, timestamp: new Date().toISOString() });
+                localStorage.setItem('td1_mem_demo', JSON.stringify(memories));
+            }
+        }
+        
+        async function recallMemoryTD1MEM() {
+            const textarea = document.getElementById('recall-query');
+            const query = textarea ? textarea.value : '';
+            const output = document.getElementById('td1-mem-output');
+            
+            if (!query.trim()) {
+                output.textContent = '❌ Please enter a query to search memories.';
+                return;
+            }
+            
+            output.textContent = '🔍 Searching memories...\n\nGenerating query embedding...\nPerforming semantic search...';
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/recall`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': DEMO_API_KEY
+                    },
+                    body: JSON.stringify({
+                        user_id: DEMO_USER_ID,
+                        query: query,
+                        limit: 5
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok && data.memories && data.memories.length > 0) {
+                    output.style.opacity = '1';
+                    let resultText = `✅ Found ${data.memories.length} relevant memory(ies):\n\n`;
+                    data.memories.forEach((mem, idx) => {
+                        resultText += `${idx + 1}. ${mem.content.substring(0, 80)}${mem.content.length > 80 ? '...' : ''}\n   Relevance: ${(mem.relevance * 100).toFixed(1)}%\n\n`;
+                    });
+                    output.textContent = resultText;
+                } else {
+                    output.style.opacity = '1';
+                    output.textContent = `🔍 No memories found matching "${query}".\n\nTry storing some memories first!`;
+                }
+            } catch (error) {
+                const memories = JSON.parse(localStorage.getItem('td1_mem_demo') || '[]');
+                const matching = memories.filter(m => m.content.toLowerCase().includes(query.toLowerCase()));
+                output.style.opacity = '1';
+                if (matching.length > 0) {
+                    let resultText = `✅ Found ${matching.length} relevant memory(ies): (Demo Mode)\n\n`;
+                    matching.slice(0, 5).forEach((mem, idx) => {
+                        resultText += `${idx + 1}. ${mem.content.substring(0, 80)}${mem.content.length > 80 ? '...' : ''}\n   Relevance: ${(Math.random() * 0.3 + 0.7).toFixed(1)}%\n\n`;
+                    });
+                    output.textContent = resultText;
+                } else {
+                    output.textContent = `🔍 No memories found matching "${query}". (Demo Mode)\n\n💡 Try storing some memories first!`;
+                }
+            }
+        }
+        
+        // TD1.GRAPH Functions
+        async function createGraphNode() {
+            const textarea = document.getElementById('graph-node');
+            const nodeData = textarea ? textarea.value : '';
+            const output = document.getElementById('td1-graph-output');
+            
+            if (!nodeData.trim()) {
+                output.textContent = '❌ Please enter node data.';
+                return;
+            }
+            
+            output.textContent = '🔄 Creating node...\n\nConnecting to TD1.GRAPH API...';
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/graph/node`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': DEMO_API_KEY },
+                    body: JSON.stringify({ data: nodeData })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    output.textContent = `✅ Node created successfully!\n\nNode ID: ${data.node_id}\nData: ${nodeData.substring(0, 100)}\n💡 Try querying the graph now!`;
+                    if (textarea) textarea.value = '';
+                } else throw new Error(data.message);
+            } catch (error) {
+                const nodeId = 'node_' + Math.random().toString(36).substr(2, 9);
+                output.style.opacity = '1';
+                output.textContent = `✅ Node created successfully! (Demo Mode)\n\nNode ID: ${nodeId}\nData: ${nodeData.substring(0, 100)}\nStatus: Simulated\n💡 In production, this connects to TD1.GRAPH backend.`;
+                if (textarea) textarea.value = '';
+            }
+        }
+        
+        async function queryGraph() {
+            const textarea = document.getElementById('graph-query');
+            const query = textarea ? textarea.value : '';
+            const output = document.getElementById('td1-graph-output');
+            
+            if (!query.trim()) {
+                output.textContent = '❌ Please enter a Cypher query.';
+                return;
+            }
+            
+            output.textContent = '🔍 Executing query...\n\nConnecting to TD1.GRAPH API...';
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/graph/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': DEMO_API_KEY },
+                    body: JSON.stringify({ query: query })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    output.textContent = `✅ Query executed successfully!\n\nResults: ${JSON.stringify(data.results, null, 2).substring(0, 500)}`;
+                } else throw new Error(data.message);
+            } catch (error) {
+                output.style.opacity = '1';
+                output.textContent = `✅ Query executed! (Demo Mode)\n\nQuery: ${query}\nResults: [Simulated results]\nStatus: Simulated\n💡 In production, this executes real Cypher queries on TD1.GRAPH.`;
+            }
+        }
+        
+        // TD1.INTENT Functions
+        async function analyzeIntent() {
+            const textarea = document.getElementById('intent-text');
+            const contextTextarea = document.getElementById('intent-context');
+            const text = textarea ? textarea.value : '';
+            const context = contextTextarea ? contextTextarea.value : '';
+            const output = document.getElementById('td1-intent-output');
+            
+            if (!text.trim()) {
+                output.textContent = '❌ Please enter text to analyze.';
+                return;
+            }
+            
+            output.textContent = '🔍 Analyzing intent...\n\nExtracting multi-layered intent...\nAnalyzing emotions and urgency...';
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/intent/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': DEMO_API_KEY },
+                    body: JSON.stringify({ text: text, context: context })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    output.textContent = `✅ Intent Analysis Complete!\n\nPrimary Intent: ${data.primary_intent}\nEmotion: ${data.emotion}\nUrgency: ${data.urgency}\nAction Items: ${data.action_items?.join(', ') || 'None'}\nConfidence: ${(data.confidence * 100).toFixed(1)}%`;
+                } else throw new Error(data.message);
+            } catch (error) {
+                output.style.opacity = '1';
+                output.textContent = `✅ Intent Analysis Complete! (Demo Mode)\n\nPrimary Intent: Request/Inquiry\nEmotion: Neutral\nUrgency: Medium\nAction Items: [Simulated]\nConfidence: 85%\n\n💡 In production, TD1.INTENT provides deep multi-layered intent extraction.`;
+            }
+        }
+        
+        // TD1.MIRROR Functions
+        async function analyzePerspectives() {
+            const textarea = document.getElementById('mirror-issue');
+            const countInput = document.getElementById('perspective-count');
+            const issue = textarea ? textarea.value : '';
+            const count = countInput ? parseInt(countInput.value) : 3;
+            const output = document.getElementById('td1-mirror-output');
+            
+            if (!issue.trim()) {
+                output.textContent = '❌ Please enter an issue to analyze.';
+                return;
+            }
+            
+            output.textContent = `🔄 Analyzing ${count} perspectives...\n\nGenerating multi-perspective analysis...\nApplying cognitive reframing...`;
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/mirror/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': DEMO_API_KEY },
+                    body: JSON.stringify({ issue: issue, perspective_count: count })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    let resultText = `✅ Multi-Perspective Analysis Complete!\n\n`;
+                    data.perspectives?.forEach((p, idx) => {
+                        resultText += `\nPerspective ${idx + 1} (Weight: ${(p.weight * 100).toFixed(0)}%):\n${p.analysis.substring(0, 150)}...\n`;
+                    });
+                    output.textContent = resultText;
+                } else throw new Error(data.message);
+            } catch (error) {
+                output.style.opacity = '1';
+                let resultText = `✅ Multi-Perspective Analysis Complete! (Demo Mode)\n\n`;
+                for (let i = 1; i <= count; i++) {
+                    resultText += `\nPerspective ${i} (Weight: ${(100/count).toFixed(0)}%):\n[Simulated perspective analysis for: "${issue.substring(0, 50)}..."]\n`;
+                }
+                resultText += `\n💡 In production, TD1.MIRROR generates weighted perspectives with cognitive reframing.`;
+                output.textContent = resultText;
+            }
+        }
+        
+        // TD1.ROUTER Functions
+        async function routeRequest() {
+            const textarea = document.getElementById('router-prompt');
+            const strategySelect = document.getElementById('routing-strategy');
+            const prompt = textarea ? textarea.value : '';
+            const strategy = strategySelect ? strategySelect.value : 'balanced';
+            const output = document.getElementById('td1-router-output');
+            
+            if (!prompt.trim()) {
+                output.textContent = '❌ Please enter a prompt.';
+                return;
+            }
+            
+            output.textContent = `🔄 Routing request...\n\nAnalyzing prompt complexity...\nSelecting optimal model (${strategy})...\nExecuting request...`;
+            output.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/router/route`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': DEMO_API_KEY },
+                    body: JSON.stringify({ prompt: prompt, strategy: strategy })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    output.style.opacity = '1';
+                    output.textContent = `✅ Request Routed Successfully!\n\nSelected Model: ${data.model}\nStrategy: ${strategy}\nCost: $${data.cost?.toFixed(4) || '0.0000'}\nSavings vs GPT-4: ${data.savings || '0'}%\n\nResponse: ${data.response?.substring(0, 300) || 'N/A'}...`;
+                } else throw new Error(data.message);
+            } catch (error) {
+                const models = { cost: 'gpt-3.5-turbo', quality: 'gpt-4', balanced: 'claude-3-haiku' };
+                const costs = { cost: 0.0001, quality: 0.03, balanced: 0.00025 };
+                const selectedModel = models[strategy] || 'gpt-3.5-turbo';
+                const cost = costs[strategy] || 0.0001;
+                output.style.opacity = '1';
+                output.textContent = `✅ Request Routed Successfully! (Demo Mode)\n\nSelected Model: ${selectedModel}\nStrategy: ${strategy}\nCost: $${cost.toFixed(4)}\nSavings vs GPT-4: ${((0.03 - cost) / 0.03 * 100).toFixed(1)}%\n\nResponse: [Simulated response for: "${prompt.substring(0, 50)}..."]\n\n💡 In production, TD1.ROUTER intelligently routes to optimize cost/quality.`;
+            }
+        }
     </script>
 </body>
 </html>
