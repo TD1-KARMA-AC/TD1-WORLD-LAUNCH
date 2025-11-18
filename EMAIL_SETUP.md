@@ -1,38 +1,22 @@
 # Email Setup Guide - Launch Notifications
 
+## Current Status
+
+The email form on the launch page collects email addresses. Submissions are stored in:
+- ✅ **Netlify Dashboard** → Forms (view all submissions)
+- ✅ **Browser localStorage** (as backup)
+
+**Note:** Email notifications are disabled (would cost $20/month on Netlify). We'll add newsletter functionality later when ready.
+
 ## How It Works
 
-When someone enters their email in the "Be the first to know when we launch" section, it will be sent to **td1@td1.world**.
+When someone enters their email in the "Be the first to know when we launch" section:
+1. Form submission is saved to Netlify Forms
+2. Also stored in browser localStorage as backup
+3. User sees success message
+4. You can view all submissions in Netlify Dashboard → Forms
 
-## Setup Options
-
-### Option 1: Netlify Forms (Easiest - Already Configured! ✅)
-
-**What I've Done:**
-- Added Netlify Forms attributes to your form
-- Form submissions will automatically be captured by Netlify
-- You'll receive emails at the address you configure
-
-**How to Set Up Email Notifications:**
-
-1. **Go to Netlify Dashboard:**
-   - Your site → Site settings → Forms
-
-2. **Configure Email Notifications:**
-   - Click "Add notification"
-   - Choose "Email notifications"
-   - Enter: `td1@td1.world`
-   - Save
-
-3. **That's it!** 
-   - All form submissions will be emailed to `td1@td1.world`
-   - You'll also see them in Netlify Dashboard → Forms
-
-**Benefits:**
-- ✅ Free (up to 100 submissions/month on free tier)
-- ✅ No code changes needed
-- ✅ Automatic spam protection
-- ✅ All submissions stored in Netlify dashboard
+**No email notifications are sent** - we'll add that later with a newsletter service.
 
 ---
 
