@@ -223,6 +223,26 @@
             color: #fca5a5;
         }
         
+        /* Product Block Cards (DEMO_LAUNCHER Style) */
+        .product-block-card {
+            background: rgba(15, 25, 40, 0.72);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .product-block-card:hover {
+            border-color: rgba(155, 92, 246, 0.4);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+        }
+        .product-block-card:hover .demo-button {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(155, 92, 246, 0.4);
+        }
+        
         /* Container */
         .container {
             max-width: 1400px;
