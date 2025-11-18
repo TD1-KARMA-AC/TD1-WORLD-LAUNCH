@@ -191,6 +191,54 @@ body {
     opacity: 1;
 }
 
+.key-points {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin: 2rem auto;
+    flex-wrap: wrap;
+    padding: 1.5rem 0;
+}
+
+.point {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    opacity: 0.95;
+    position: relative;
+    padding: 0 0.5rem;
+}
+
+.point::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    opacity: 0.5;
+}
+
+.launch-date-text {
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    color: var(--text-secondary);
+    line-height: 1.8;
+    max-width: 700px;
+    margin: 1.5rem auto 0;
+    opacity: 0.9;
+    font-weight: 400;
+    text-align: center;
+}
+
+.launch-date-text strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    opacity: 1;
+}
+
 .countdown-container {
     margin: 3rem auto;
     padding: 2.5rem 2rem;
@@ -285,7 +333,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 2rem;
-    margin: 2rem 0 1rem;
+    margin: 2.5rem 0 1rem;
     flex-wrap: wrap;
 }
 
@@ -295,16 +343,6 @@ body {
     gap: 0.5rem;
     color: var(--text-secondary);
     font-size: 1rem;
-}
-
-.system-online-text {
-    text-align: center;
-    color: var(--text-secondary);
-    font-size: clamp(0.85rem, 1.8vw, 1rem);
-    opacity: 0.75;
-    margin: 0 auto 2.5rem;
-    font-style: italic;
-    letter-spacing: 0.05em;
 }
 
 .icon {
@@ -351,6 +389,12 @@ body {
     color: var(--text-secondary);
     line-height: 1.7;
     opacity: 0.9;
+}
+
+.notification-text strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    opacity: 1;
 }
 
 .email-form {
@@ -537,9 +581,18 @@ body {
         margin-bottom: 3rem;
     }
 
-    .system-online-text {
-        margin-bottom: 2rem;
-        font-size: 0.8rem;
+    .key-points {
+        gap: 1rem;
+        padding: 1rem 0;
+    }
+
+    .point {
+        font-size: 0.85rem;
+    }
+
+    .launch-date-text {
+        margin-top: 1rem;
+        font-size: 0.9rem;
     }
 
     .footer {
