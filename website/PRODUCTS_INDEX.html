@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TD1.WORLD — 50 Premium AI Products</title>
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -484,6 +486,39 @@
             left: 0;
             color: var(--td1-lilac);
             font-weight: 700;
+        }
+        .buy-button {
+            width: 100%;
+            padding: 14px 24px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .buy-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
+        }
+        .buy-button:active {
+            transform: translateY(0);
+        }
+        .buy-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .buy-button.contact-sales {
+            background: linear-gradient(135deg, var(--td1-lilac) 0%, var(--td1-purple) 100%);
+        }
+        .buy-button.contact-sales:hover {
+            box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4);
         }
         .demo-embed {
             background: rgba(0, 0, 0, 0.5);
@@ -2097,7 +2132,7 @@
                 tagline: 'Persistent long-term memory for AI applications',
                 demoUrl: 'demos/TD1_MEM_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$799', features: ['Fundamental memory implementation', 'Basic embedding search', 'Core API functionality', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$799', priceId: 'price_1SVtGmGyR5AWuIFNqg8D3Xpf', features: ['Fundamental memory implementation', 'Basic embedding search', 'Core API functionality', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,499', features: ['Full memory system implementation', 'Advanced embedding search', 'Complete API suite', 'All optimization features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2122,7 +2157,7 @@
                 tagline: 'Knowledge graph solution for relationship networks',
                 demoUrl: 'demos/TD1_GRAPH_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$999', features: ['Fundamental graph implementation', 'Basic Cypher queries', 'Core database functionality', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$999', priceId: 'price_1SVtJVGyR5AWuIFNjKTesNF8', features: ['Fundamental graph implementation', 'Basic Cypher queries', 'Core database functionality', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,899', features: ['Full graph system implementation', 'Advanced Cypher queries', 'Complete visualization suite', 'All reasoning features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2145,7 +2180,7 @@
                 tagline: 'Deep intent understanding with multi-layered analysis',
                 demoUrl: 'demos/TD1_INTENT_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$1,299', features: ['Fundamental intent parsing implementation', 'Basic classification models', 'Core API functionality', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$1,299', priceId: 'price_1SVtNpGyR5AWuIFNcSDp83Pd', features: ['Fundamental intent parsing implementation', 'Basic classification models', 'Core API functionality', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$2,499', features: ['Full intent system implementation', 'Advanced multi-layered analysis', 'Complete emotion detection', 'All optimization features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom models and features', 'One-time purchase, fully yours'] }
                 ],
@@ -2168,7 +2203,7 @@
                 tagline: 'Multi-perspective analysis for better decisions',
                 demoUrl: 'demos/TD1_MIRROR_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$699', features: ['Fundamental perspective implementation', 'Basic cognitive reframing', 'Core analysis API', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$699', priceId: 'price_1SVtQkGyR5AWuIFNicQqn2is', features: ['Fundamental perspective implementation', 'Basic cognitive reframing', 'Core analysis API', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,399', features: ['Full perspective system implementation', 'Advanced cognitive reframing', 'Complete weighting algorithms', 'All decision support features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2191,7 +2226,7 @@
                 tagline: 'Intelligent AI model routing saves 70-90% on costs',
                 demoUrl: 'demos/TD1_ROUTER_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$1,499', features: ['Fundamental routing implementation', 'Basic cost optimization', 'Core provider integrations', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$1,499', priceId: 'price_1SVtUkGyR5AWuIFNya4qbjYZ', features: ['Fundamental routing implementation', 'Basic cost optimization', 'Core provider integrations', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$2,999', features: ['Full routing system implementation', 'Advanced cost optimization', 'Complete analytics dashboard', 'All load balancing features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom providers and features', 'One-time purchase, fully yours'] }
                 ],
@@ -2214,7 +2249,7 @@
                 tagline: 'Complete AI platform with beautiful chat interfaces',
                 demoUrl: 'demos/TD1.AI_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$799', features: ['Fundamental chat interface', 'Basic glassmorphic design', 'Core API integration', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$799', priceId: 'price_1SVtWGGyR5AWuIFN6nHBjFbp', features: ['Fundamental chat interface', 'Basic glassmorphic design', 'Core API integration', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,299', features: ['Full platform implementation', 'ChatGPT-like UI with sidebar', 'Complete customization suite', 'All premium features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'White-label solution', 'Full customization', 'One-time purchase, fully yours'] }
                 ],
@@ -2240,7 +2275,7 @@
                 tagline: 'AI Consciousness Core',
                 demoUrl: 'demos/TD1_CORE_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$2,999', features: ['Fundamental consciousness implementation', 'Basic emotional cognition', 'Core state evolution', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$2,999', priceId: 'price_1SVtYMGyR5AWuIFN5DCPjhLp', features: ['Fundamental consciousness implementation', 'Basic emotional cognition', 'Core state evolution', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$4,999', features: ['Full consciousness system implementation', 'Advanced emotional cognition', 'Complete identity formation', 'All cognitive features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2263,7 +2298,7 @@
                 tagline: 'Multi-Persona AI Brain Merger',
                 demoUrl: 'demos/TD1_FUSION_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$1,999', features: ['Fundamental fusion implementation', 'Basic persona blending', 'Core weighting system', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$1,999', priceId: 'price_1SVtZbGyR5AWuIFNyjox8ZPE', features: ['Fundamental fusion implementation', 'Basic persona blending', 'Core weighting system', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$3,499', features: ['Full fusion system implementation', 'Advanced persona blending', 'Complete consciousness merging', 'All cognitive features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2285,7 +2320,7 @@
                 tagline: 'AI-Controlled Desktop Supervisor',
                 demoUrl: 'demos/TD1_OS_REMOTE_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$999', features: ['Fundamental OS control implementation', 'Basic sandboxing', 'Core supervision API', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$999', priceId: 'price_1SVtbHGyR5AWuIFNxnQ1vmXE', features: ['Fundamental OS control implementation', 'Basic sandboxing', 'Core supervision API', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,899', features: ['Full OS control implementation', 'Advanced sandboxing', 'Complete desktop supervision', 'All security features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2307,7 +2342,7 @@
                 tagline: 'Autonomous Device Farm Controller',
                 demoUrl: 'demos/TD1_FARM_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$1,499', features: ['Fundamental farm control implementation', 'Basic device management', 'Core automation API', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$1,499', priceId: 'price_1SVtejGyR5AWuIFN71QcLDFE', features: ['Fundamental farm control implementation', 'Basic device management', 'Core automation API', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$2,499', features: ['Full farm control implementation', 'Advanced device management', 'Complete autonomy features', 'All randomization features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2329,7 +2364,7 @@
                 tagline: 'Thought Stream Visualizer',
                 demoUrl: 'demos/TD1_ECHO_demo.html',
                 pricing: [
-                    { name: 'Standard', price: '$799', features: ['Fundamental visualization implementation', 'Basic graph rendering', 'Core real-time display', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: '$799', priceId: 'price_1SVtgCGyR5AWuIFNyjSrL7h2', features: ['Fundamental visualization implementation', 'Basic graph rendering', 'Core real-time display', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: '$1,399', features: ['Full visualization system implementation', 'Advanced graph rendering', 'Complete emotional color grading', 'All real-time features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2348,14 +2383,14 @@
         };
         
         // Helper function to create product data entries
-        function createProductData(productId, icon, name, tagline, demoUrl, standardPrice, masterPrice) {
+        function createProductData(productId, icon, name, tagline, demoUrl, standardPrice, masterPrice, priceId) {
             return {
                 icon: icon,
                 name: name,
                 tagline: tagline,
                 demoUrl: demoUrl,
                 pricing: [
-                    { name: 'Standard', price: standardPrice, features: ['Fundamental implementation', 'Core functionality', 'Basic features', 'One-time purchase, you own it forever'] },
+                    { name: 'Standard', price: standardPrice, priceId: priceId || '', features: ['Fundamental implementation', 'Core functionality', 'Basic features', 'One-time purchase, you own it forever'] },
                     { name: 'Master', price: masterPrice, features: ['Full system implementation', 'Advanced features', 'Complete functionality', 'All optimization features', 'One-time purchase, you own it forever'] },
                     { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
                 ],
@@ -2374,45 +2409,64 @@
         
         // Add remaining products using helper
         Object.assign(productData, {
-            'td1-mindset': createProductData('td1-mindset', '🎛️', 'TD1.MINDSET', 'AI Cognitive Bias Controller', 'demos/TD1_MINDSET_demo.html', '$1,299', '$2,199'),
-            'td1-sim': createProductData('td1-sim', '🌍', 'TD1.SIM', 'AI Internal World Simulator', 'demos/TD1_SIM_demo.html', '$1,999', '$3,499'),
-            'td1-body': createProductData('td1-body', '🤖', 'TD1.BODY', 'Robot Embodiment Adapter', 'demos/TD1_BODY_demo.html', '$2,499', '$4,499'),
-            'td1-secret': createProductData('td1-secret', '🔐', 'TD1.SECRET', 'Private Key Vault + Model Routing', 'demos/TD1_SECRET_demo.html', '$499', '$999'),
-            'td1-chaos': createProductData('td1-chaos', '🎲', 'TD1.CHAOS', 'Creative Explosion Engine', 'demos/TD1_CHAOS_demo.html', '$499', '$899'),
-            'td1-reflect': createProductData('td1-reflect', '🔍', 'TD1.REFLECT', 'Self-Audit System', 'demos/TD1_REFLECT_demo.html', '$1,499', '$2,499'),
-            'td1-time': createProductData('td1-time', '⏰', 'TD1.TIME', 'Memory Timeline Engine', 'demos/TD1_TIME_demo.html', '$999', '$1,799'),
-            'td1-rewrite': createProductData('td1-rewrite', '🔄', 'TD1.REWRITE', 'Psychological Reframing Engine', 'demos/TD1_REWRITE_demo.html', '$1,799', '$2,999'),
-            'td1-exec': createProductData('td1-exec', '⚡', 'TD1.EXEC', 'Autonomous Task Executor', 'demos/TD1_EXEC_demo.html', '$2,999', '$4,999'),
-            'td1-link': createProductData('td1-link', '🔗', 'TD1.LINK', 'Cross-Product Orchestration', 'demos/TD1_LINK_demo.html', '$499', '$999'),
-            'td1-ghost': createProductData('td1-ghost', '👻', 'TD1.GHOST', 'Undetectable Agent Cloaking', 'demos/TD1_GHOST_demo.html', '$1,999', '$3,499'),
-            'td1-daemon': createProductData('td1-daemon', '👹', 'TD1.DAEMON', 'Background AI OS Process', 'demos/TD1_DAEMON_demo.html', '$2,999', '$4,999'),
-            'td1-synapse': createProductData('td1-synapse', '🧬', 'TD1.SYNAPSE', 'Multi-Model Brain Fusion', 'demos/TD1_SYNAPSE_demo.html', '$1,999', '$3,499'),
-            'td1-reality': createProductData('td1-reality', '🌐', 'TD1.REALITY', 'Sensor Fusion Perception', 'demos/TD1_REALITY_demo.html', '$4,999', '$8,999'),
-            'td1-mirage': createProductData('td1-mirage', '🌅', 'TD1.MIRAGE', 'Synthetic Identity Generator', 'demos/TD1_MIRAGE_demo.html', '$799', '$1,499'),
-            'td1-chaoslab': createProductData('td1-chaoslab', '🧪', 'TD1.CHAOSLAB', 'Evolutionary Creativity Engine', 'demos/TD1_CHAOSLAB_demo.html', '$499', '$899'),
-            'td1-sovereign': createProductData('td1-sovereign', '👑', 'TD1.SOVEREIGN', 'Nation-State Simulator', 'demos/TD1_SOVEREIGN_demo.html', '$9,999', '$19,999'),
-            'td1-realtime': createProductData('td1-realtime', '⚡', 'TD1.REALTIME', 'Live Thought Stream Visualizer', 'demos/TD1_REALTIME_demo.html', '$799', '$1,399'),
-            'td1-genome': createProductData('td1-genome', '🧬', 'TD1.GENOME', 'AI Personality DNA', 'demos/TD1_GENOME_demo.html', '$1,499', '$2,499'),
-            'td1-forever': createProductData('td1-forever', '♾️', 'TD1.FOREVER', 'AI Lifetime Simulator', 'demos/TD1_FOREVER_demo.html', '$1,999', '$3,499'),
-            'td1-overseer': createProductData('td1-overseer', '👁️', 'TD1.OVERSEER', 'Multi-Agent Orchestration', 'demos/TD1_OVERSEER_demo.html', '$2,999', '$4,999'),
-            'td1-state': createProductData('td1-state', '🎭', 'TD1.STATE', 'Emotional State Engine', 'demos/TD1_STATE_demo.html', '$899', '$1,599'),
-            'td1-sandbox': createProductData('td1-sandbox', '🎮', 'TD1.SANDBOX', 'Offline Multi-Model Playground', 'demos/TD1.SANDBOX_demo.html', '$499', '$899'),
-            'td1-agent-debugger': createProductData('td1-agent-debugger', '🔍', 'TD1.AGENT_DEBUGGER', 'Visual Agent Inspector', 'demos/TD1.AGENT_DEBUGGER_demo.html', '$599', '$1,099'),
-            'td1-model-lab': createProductData('td1-model-lab', '📊', 'TD1.MODEL_LAB', 'LLM Benchmark Studio', 'demos/TD1.MODEL_LAB_demo.html', '$699', '$1,299'),
-            'td1-dataset-cleaner': createProductData('td1-dataset-cleaner', '🧹', 'TD1.DATASET_CLEANER', 'Data Purification', 'demos/TD1.DATASET_CLEANER_demo.html', '$499', '$899'),
-            'td1-prompt-optimizer': createProductData('td1-prompt-optimizer', '🧬', 'TD1.PROMPT_OPTIMIZER', 'Evolutionary Engine', 'demos/TD1.PROMPT_OPTIMIZER_demo.html', '$499', '$899'),
-            'td1-stress-tester': createProductData('td1-stress-tester', '🔥', 'TD1.STRESS_TESTER', 'Jailbreak Finder', 'demos/TD1.STRESS_TESTER_demo.html', '$699', '$1,299'),
-            'td1-load-tester': createProductData('td1-load-tester', '⚡', 'TD1.LOAD_TESTER', 'Performance Benchmark', 'demos/TD1.LOAD_TESTER_demo.html', '$699', '$1,299'),
-            'td1-robot-adapter': createProductData('td1-robot-adapter', '🤖', 'TD1.ROBOT_ADAPTER', 'Universal API', 'demos/TD1.ROBOT_ADAPTER_demo.html', '$799', '$1,499'),
-            'td1-robot-data-gen': createProductData('td1-robot-data-gen', '🎬', 'TD1.ROBOT_DATA_GEN', 'Synthetic Data', 'demos/TD1.ROBOT_DATA_GEN_demo.html', '$699', '$1,299'),
-            'td1-private-ai-cto': createProductData('td1-private-ai-cto', '🏢', 'TD1.PRIVATE_AI_CTO', 'Company Brain', 'demos/TD1.PRIVATE_AI_CTO_demo.html', '$1,499', '$2,999'),
-            'td1-decision-engine': createProductData('td1-decision-engine', '💼', 'TD1.DECISION_ENGINE', 'Strategic Copilot', 'demos/TD1.DECISION_ENGINE_demo.html', '$1,299', '$2,499'),
-            'td1-legal-ai': createProductData('td1-legal-ai', '⚖️', 'TD1.LEGAL_AI', 'Compliance', 'demos/TD1.LEGAL_AI_demo.html', '$1,199', '$2,199'),
-            'td1-security-scanner': createProductData('td1-security-scanner', '🛡️', 'TD1.SECURITY_SCANNER', 'Vulnerability Detector', 'demos/TD1.SECURITY_SCANNER_demo.html', '$1,199', '$2,199'),
-            'td1-compliance-auditor': createProductData('td1-compliance-auditor', '📋', 'TD1.COMPLIANCE_AUDITOR', 'Regulation Checker', 'demos/TD1.COMPLIANCE_AUDITOR_demo.html', '$1,199', '$2,199'),
-            'td1-memory-palace': createProductData('td1-memory-palace', '🏛️', 'TD1.MEMORY_PALACE', 'Personal Knowledge Brain', 'demos/TD1.MEMORY_PALACE_demo.html', '$399', '$699'),
-            'td1-mirror-engine-pro': createProductData('td1-mirror-engine-pro', '🪞', 'TD1.MIRROR_ENGINE_PRO', 'Cognitive Reflection', 'demos/TD1.MIRROR_ENGINE_PRO_demo.html', '$349', '$649'),
-            'td1-os': createProductData('td1-os', '🌐', 'TD1.OS', 'AI Operating System', 'demos/TD1_OS_demo.html', '$1,499', '$2,999')
+            'td1-mindset': createProductData('td1-mindset', '🎛️', 'TD1.MINDSET', 'AI Cognitive Bias Controller', 'demos/TD1_MINDSET_demo.html', '$1,299', '$2,199', 'price_1SVtiEGyR5AWuIFNOq4NCO29'),
+            'td1-sim': createProductData('td1-sim', '🌍', 'TD1.SIM', 'AI Internal World Simulator', 'demos/TD1_SIM_demo.html', '$1,999', '$3,499', 'price_1SVtklGyR5AWuIFN0DNGu6V4'),
+            'td1-body': createProductData('td1-body', '🤖', 'TD1.BODY', 'Robot Embodiment Adapter', 'demos/TD1_BODY_demo.html', '$2,499', '$4,499', 'price_1SVtmJGyR5AWuIFNxDDFueUE'),
+            'td1-secret': createProductData('td1-secret', '🔐', 'TD1.SECRET', 'Private Key Vault + Model Routing', 'demos/TD1_SECRET_demo.html', '$499', '$999', 'price_1SVtnmGyR5AWuIFNyYC6WdSF'),
+            'td1-chaos': createProductData('td1-chaos', '🎲', 'TD1.CHAOS', 'Creative Explosion Engine', 'demos/TD1_CHAOS_demo.html', '$499', '$899', 'price_1SVtpZGyR5AWuIFN1WN8kpth'),
+            'td1-reflect': createProductData('td1-reflect', '🔍', 'TD1.REFLECT', 'Self-Audit System', 'demos/TD1_REFLECT_demo.html', '$1,499', '$2,499', 'price_1SVtr6GyR5AWuIFNwO5lcj5J'),
+            'td1-time': createProductData('td1-time', '⏰', 'TD1.TIME', 'Memory Timeline Engine', 'demos/TD1_TIME_demo.html', '$999', '$1,799', 'price_1SVtwvGyR5AWuIFNZ0ugMMlM'),
+            'td1-rewrite': createProductData('td1-rewrite', '🔄', 'TD1.REWRITE', 'Psychological Reframing Engine', 'demos/TD1_REWRITE_demo.html', '$1,799', '$2,999', 'price_1SVtykGyR5AWuIFNFwCA2blp'),
+            'td1-exec': createProductData('td1-exec', '⚡', 'TD1.EXEC', 'Autonomous Task Executor', 'demos/TD1_EXEC_demo.html', '$2,999', '$4,999', 'price_1SVu0BGyR5AWuIFNYhBmtbaE'),
+            'td1-link': createProductData('td1-link', '🔗', 'TD1.LINK', 'Cross-Product Orchestration', 'demos/TD1_LINK_demo.html', '$499', '$999', 'price_1SVu2HGyR5AWuIFNPx5aqATa'),
+            'td1-ghost': createProductData('td1-ghost', '👻', 'TD1.GHOST', 'Undetectable Agent Cloaking', 'demos/TD1_GHOST_demo.html', '$1,999', '$3,499', 'price_1SVu4SGyR5AWuIFNqPEZDiRg'),
+            'td1-daemon': createProductData('td1-daemon', '👹', 'TD1.DAEMON', 'Background AI OS Process', 'demos/TD1_DAEMON_demo.html', '$2,999', '$4,999', 'price_1SVu5pGyR5AWuIFNwu7KOOfk'),
+            'td1-synapse': createProductData('td1-synapse', '🧬', 'TD1.SYNAPSE', 'Multi-Model Brain Fusion', 'demos/TD1_SYNAPSE_demo.html', '$1,999', '$3,499', 'price_1SVu7CGyR5AWuIFNMnqByMEw'),
+            'td1-reality': createProductData('td1-reality', '🌐', 'TD1.REALITY', 'Sensor Fusion Perception', 'demos/TD1_REALITY_demo.html', '$4,999', '$8,999', 'price_1SVu91GyR5AWuIFNev07nNJE'),
+            'td1-mirage': createProductData('td1-mirage', '🌅', 'TD1.MIRAGE', 'Synthetic Identity Generator', 'demos/TD1_MIRAGE_demo.html', '$799', '$1,499', 'price_1SVuAgGyR5AWuIFNJ2Wa1H8E'),
+            'td1-chaoslab': createProductData('td1-chaoslab', '🧪', 'TD1.CHAOSLAB', 'Evolutionary Creativity Engine', 'demos/TD1_CHAOSLAB_demo.html', '$499', '$899', 'price_1SVuCIGyR5AWuIFNXH6xNL5t'),
+            'td1-sovereign': createProductData('td1-sovereign', '👑', 'TD1.SOVEREIGN', 'Nation-State Simulator', 'demos/TD1_SOVEREIGN_demo.html', '$9,999', '$19,999', 'price_1SVuEKGyR5AWuIFNlb1iIs33'),
+            'td1-realtime': createProductData('td1-realtime', '⚡', 'TD1.REALTIME', 'Live Thought Stream Visualizer', 'demos/TD1_REALTIME_demo.html', '$799', '$1,399', 'price_1SVuFXGyR5AWuIFN904Dbvrp'),
+            'td1-genome': createProductData('td1-genome', '🧬', 'TD1.GENOME', 'AI Personality DNA', 'demos/TD1_GENOME_demo.html', '$1,499', '$2,499', 'price_1SVuHOGyR5AWuIFN4Ur4dJ8L'),
+            'td1-forever': createProductData('td1-forever', '♾️', 'TD1.FOREVER', 'AI Lifetime Simulator', 'demos/TD1_FOREVER_demo.html', '$1,999', '$3,499', 'price_1SVuP8GyR5AWuIFN14vsF7EP'),
+            'td1-overseer': createProductData('td1-overseer', '👁️', 'TD1.OVERSEER', 'Multi-Agent Orchestration', 'demos/TD1_OVERSEER_demo.html', '$2,999', '$4,999', 'price_1SVuQUGyR5AWuIFNlL0kYOHm'),
+            'td1-state': createProductData('td1-state', '🎭', 'TD1.STATE', 'Emotional State Engine', 'demos/TD1_STATE_demo.html', '$899', '$1,599', 'price_1SVuSGGyR5AWuIFNEcIUqA9B'),
+            'td1-sandbox': createProductData('td1-sandbox', '🎮', 'TD1.SANDBOX', 'Offline Multi-Model Playground', 'demos/TD1.SANDBOX_demo.html', '$499', '$899', 'price_1SVuV7GyR5AWuIFNaEQaPUwB'),
+            'td1-agent-debugger': createProductData('td1-agent-debugger', '🔍', 'TD1.AGENT_DEBUGGER', 'Visual Agent Inspector', 'demos/TD1.AGENT_DEBUGGER_demo.html', '$599', '$1,099', 'price_1SVuWtGyR5AWuIFNONA2OGjr'),
+            'td1-model-lab': createProductData('td1-model-lab', '📊', 'TD1.MODEL_LAB', 'LLM Benchmark Studio', 'demos/TD1.MODEL_LAB_demo.html', '$699', '$1,299', 'price_1SVuYwGyR5AWuIFNTsMcbk1G'),
+            'td1-dataset-cleaner': createProductData('td1-dataset-cleaner', '🧹', 'TD1.DATASET_CLEANER', 'Data Purification', 'demos/TD1.DATASET_CLEANER_demo.html', '$499', '$899', 'price_1SVuaGGyR5AWuIFNpVg6YJSj'),
+            'td1-prompt-optimizer': createProductData('td1-prompt-optimizer', '🧬', 'TD1.PROMPT_OPTIMIZER', 'Evolutionary Engine', 'demos/TD1.PROMPT_OPTIMIZER_demo.html', '$499', '$899', 'price_1SVucIGyR5AWuIFNoTy40Z9E'),
+            'td1-stress-tester': createProductData('td1-stress-tester', '🔥', 'TD1.STRESS_TESTER', 'Jailbreak Finder', 'demos/TD1.STRESS_TESTER_demo.html', '$699', '$1,299', 'price_1SVudbGyR5AWuIFNQp4kuT1X'),
+            'td1-load-tester': createProductData('td1-load-tester', '⚡', 'TD1.LOAD_TESTER', 'Performance Benchmark', 'demos/TD1.LOAD_TESTER_demo.html', '$699', '$1,299', 'price_1SVugUGyR5AWuIFNsc7RLsBJ'),
+            'td1-robot-adapter': createProductData('td1-robot-adapter', '🤖', 'TD1.ROBOT_ADAPTER', 'Universal API', 'demos/TD1.ROBOT_ADAPTER_demo.html', '$799', '$1,499', 'price_1SVuihGyR5AWuIFN6VOh0qwK'),
+            'td1-robot-data-gen': createProductData('td1-robot-data-gen', '🎬', 'TD1.ROBOT_DATA_GEN', 'Synthetic Data', 'demos/TD1.ROBOT_DATA_GEN_demo.html', '$699', '$1,299', 'price_1SVutTGyR5AWuIFNMHthIIr5'),
+            'td1-private-ai-cto': createProductData('td1-private-ai-cto', '🏢', 'TD1.PRIVATE_AI_CTO', 'Company Brain', 'demos/TD1.PRIVATE_AI_CTO_demo.html', '$1,499', '$2,999', 'price_1SVuxBGyR5AWuIFNMDtBaNh5'),
+            'td1-decision-engine': createProductData('td1-decision-engine', '💼', 'TD1.DECISION_ENGINE', 'Strategic Copilot', 'demos/TD1.DECISION_ENGINE_demo.html', '$1,299', '$2,499', 'price_1SVv82GyR5AWuIFNwBtKtOGV'),
+            'td1-legal-ai': createProductData('td1-legal-ai', '⚖️', 'TD1.LEGAL_AI', 'Compliance', 'demos/TD1.LEGAL_AI_demo.html', '$1,199', '$2,199', 'price_1SVvCeGyR5AWuIFNUDcOtBlW'),
+            'td1-security-scanner': createProductData('td1-security-scanner', '🛡️', 'TD1.SECURITY_SCANNER', 'Vulnerability Detector', 'demos/TD1.SECURITY_SCANNER_demo.html', '$1,199', '$2,199', 'price_1SVvU1GyR5AWuIFNcaXehemd'),
+            'td1-compliance-auditor': createProductData('td1-compliance-auditor', '📋', 'TD1.COMPLIANCE_AUDITOR', 'Regulation Checker', 'demos/TD1.COMPLIANCE_AUDITOR_demo.html', '$1,199', '$2,199', 'price_1SVvWGGyR5AWuIFN3D45AZOa'),
+            'td1-memory-palace': createProductData('td1-memory-palace', '🏛️', 'TD1.MEMORY_PALACE', 'Personal Knowledge Brain', 'demos/TD1.MEMORY_PALACE_demo.html', '$399', '$699', 'price_1SVvZcGyR5AWuIFNt9Ma57yu'),
+            'td1-mirror-engine-pro': createProductData('td1-mirror-engine-pro', '🪞', 'TD1.MIRROR_ENGINE_PRO', 'Cognitive Reflection', 'demos/TD1.MIRROR_ENGINE_PRO_demo.html', '$349', '$649', 'price_1SVvbZGyR5AWuIFNIbWhf9OT'),
+            'td1-os': {
+                icon: '🌐',
+                name: 'TD1.OS',
+                tagline: 'AI Operating System',
+                demoUrl: 'demos/TD1_OS_demo.html',
+                pricing: [
+                    { name: 'Standard', price: 'Contact Sales', features: ['Complete AI operating system infrastructure', 'Full source code and documentation', 'Enterprise deployment support', 'One-time purchase, fully yours'] },
+                    { name: 'Master', price: 'Contact Sales', features: ['Complete AI operating system infrastructure', 'Full source code and documentation', 'Enterprise deployment support', 'One-time purchase, fully yours'] },
+                    { name: 'Enterprise', price: 'Contact Sales', features: ['Custom build to your specifications', 'Dedicated integration support', 'Custom features and modifications', 'One-time purchase, fully yours'] }
+                ],
+                whatItsFor: 'TD1.OS is the complete AI operating system infrastructure. Build on solid foundation with full control and ownership.',
+                howItWorks: 'Complete AI operating system with full source code, documentation, and enterprise deployment support.',
+                whoItsFor: 'Enterprise Teams, AI Infrastructure Builders, Organizations requiring full control.',
+                whatYouGet: [
+                    'Complete AI operating system source code',
+                    'Full API and documentation',
+                    'Enterprise deployment guides',
+                    'One-time purchase, no subscriptions, no licenses, fully yours'
+                ]
+            }
         });
         
         // Open Product Modal
@@ -2435,15 +2489,39 @@
             
             // Set pricing
             const pricingGrid = document.getElementById('modalPricingGrid');
-            pricingGrid.innerHTML = product.pricing.map(tier => `
-                <div class="pricing-tier-modal">
-                    <div class="pricing-tier-name-modal">${tier.name}</div>
-                    <div class="pricing-tier-price-modal">${tier.price}</div>
-                    <div class="pricing-tier-features-modal">
-                        ${tier.features.map(f => `<div>${f}</div>`).join('')}
+            pricingGrid.innerHTML = product.pricing.map((tier, index) => {
+                const isStandard = tier.name === 'Standard';
+                const isMaster = tier.name === 'Master';
+                const isEnterprise = tier.name === 'Enterprise' || tier.price === 'Contact Sales';
+                
+                // Standard → Stripe checkout, Master & Enterprise → Contact Sales
+                let buttonText, buttonClass, onClick;
+                
+                if (isStandard) {
+                    // Standard tier: Stripe checkout
+                    buttonText = `Buy ${tier.name} - ${tier.price}`;
+                    buttonClass = 'buy-button';
+                    onClick = `handleBuy('${productId}', '${tier.name}', '${tier.priceId || ''}', '${product.name} - ${tier.name}', this)`;
+                } else {
+                    // Master & Enterprise: Contact Sales
+                    buttonText = 'Contact Sales';
+                    buttonClass = 'buy-button contact-sales';
+                    onClick = `window.location.href='mailto:sales@td1.world?subject=Inquiry: ${product.name} - ${tier.name} (${tier.price})'`;
+                }
+                
+                return `
+                    <div class="pricing-tier-modal">
+                        <div class="pricing-tier-name-modal">${tier.name}</div>
+                        <div class="pricing-tier-price-modal">${tier.price}</div>
+                        <div class="pricing-tier-features-modal">
+                            ${tier.features.map(f => `<div>${f}</div>`).join('')}
+                        </div>
+                        <button class="${buttonClass}" onclick="${onClick}">
+                            ${buttonText}
+                        </button>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             // Set content sections
             document.getElementById('modalWhatItsFor').innerHTML = `<p>${product.whatItsFor}</p>`;
@@ -2493,6 +2571,58 @@
                 closeProductModal();
             }
         });
+        
+        // Stripe Checkout Handler
+        const stripe = Stripe('pk_test_51SUTNZGyR5AWuIFNAtvb2WrGzalAglOeu7yQLV3lRoJ1i6V00NurTFpMRTUR62yfYcLdIBpUTOL1SKJuVNF6mPF900OWlAYh49');
+        
+        async function handleBuy(productId, tier, priceId, productName, buttonElement) {
+            if (!priceId || priceId === '') {
+                alert('Price ID not configured. Please contact sales@td1.world');
+                return;
+            }
+            
+            const button = buttonElement || event?.target || document.activeElement;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            try {
+                // Call Netlify function to create checkout session
+                const response = await fetch('/.netlify/functions/create-checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        priceId: priceId,
+                        productName: productName || productId,
+                        productId: productId,
+                        tier: tier
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create checkout session');
+                }
+                
+                // Redirect to Stripe Checkout
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: data.sessionId
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Error starting checkout: ' + error.message);
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
         
     </script>
     

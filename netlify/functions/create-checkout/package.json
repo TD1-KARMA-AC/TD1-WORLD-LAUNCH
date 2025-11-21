@@ -1,0 +1,9 @@
+{
+  "name": "create-checkout",
+  "version": "1.0.0",
+  "description": "Stripe checkout session creator for TD1.WORLD",
+  "main": "create-checkout.js",
+  "dependencies": {
+    "stripe": "^14.25.0"
+  }
+}
