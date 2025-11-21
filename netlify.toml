@@ -6,6 +6,9 @@
 [build.environment]
   NODE_VERSION = "18"
 
+[functions]
+  directory = "netlify/functions"
+
 # Force HTTPS and www redirects
 # All traffic should go to https://www.td1.world
 

@@ -2587,6 +2587,8 @@
             button.textContent = 'Processing...';
             
             try {
+                console.log('Starting checkout for:', { productId, tier, priceId, productName });
+                
                 // Call Netlify function to create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout', {
                     method: 'POST',
@@ -2599,6 +2601,10 @@
                         productId: productId,
                         tier: tier
                     })
+                }).catch((fetchError) => {
+                    // This catches network errors (like "Failed to fetch")
+                    console.error('Fetch network error:', fetchError);
+                    throw new Error(`Network error: ${fetchError.message}. The Netlify function may not be deployed. Check your Netlify deployment logs.`);
                 });
                 
                 // Check if response is ok before parsing JSON
@@ -2611,7 +2617,7 @@
                         errorData = { error: errorText || 'Unknown error', status: response.status };
                     }
                     console.error('Function error response:', errorData);
-                    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to create checkout session`);
+                    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${errorText || 'Failed to create checkout session'}`);
                 }
                 
                 const data = await response.json();
@@ -2631,9 +2637,15 @@
                 console.error('Error details:', error);
                 
                 // Show more detailed error message
-                let errorMsg = 'Error starting checkout: ' + error.message;
-                if (error.message.includes('Failed to fetch')) {
-                    errorMsg += '\n\nPossible causes:\n- Netlify function not deployed yet\n- Check Netlify deployment status\n- Verify STRIPE_SECRET_KEY is set in Netlify';
+                let errorMsg = 'Error starting checkout:\n\n' + error.message;
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+                    errorMsg += '\n\n🔍 Troubleshooting Steps:\n';
+                    errorMsg += '1. Check Netlify deployment status\n';
+                    errorMsg += '2. Verify function is deployed in Netlify Functions tab\n';
+                    errorMsg += '3. Check function logs in Netlify for errors\n';
+                    errorMsg += '4. Verify STRIPE_SECRET_KEY is set in Netlify environment variables\n';
+                    errorMsg += '5. Try redeploying the site in Netlify';
                 }
                 
                 alert(errorMsg);
