@@ -28,11 +28,25 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Check if Stripe secret key is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY is not set in environment variables');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Server configuration error',
+          message: 'STRIPE_SECRET_KEY is not configured. Please add it in Netlify environment variables.'
+        })
+      };
+    }
+
     const { priceId, productName, productId, tier } = JSON.parse(event.body);
 
     if (!priceId) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: 'Price ID is required' })
       };
     }
@@ -67,12 +81,14 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Stripe error:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Failed to create checkout session',
-        message: error.message 
+        message: error.message,
+        details: error.stack || error.toString()
       })
     };
   }

@@ -2601,11 +2601,21 @@
                     })
                 });
                 
-                const data = await response.json();
-                
+                // Check if response is ok before parsing JSON
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to create checkout session');
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: errorText || 'Unknown error', status: response.status };
+                    }
+                    console.error('Function error response:', errorData);
+                    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to create checkout session`);
                 }
+                
+                const data = await response.json();
+                console.log('Checkout session created:', data);
                 
                 // Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({
@@ -2618,7 +2628,15 @@
                 
             } catch (error) {
                 console.error('Checkout error:', error);
-                alert('Error starting checkout: ' + error.message);
+                console.error('Error details:', error);
+                
+                // Show more detailed error message
+                let errorMsg = 'Error starting checkout: ' + error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg += '\n\nPossible causes:\n- Netlify function not deployed yet\n- Check Netlify deployment status\n- Verify STRIPE_SECRET_KEY is set in Netlify';
+                }
+                
+                alert(errorMsg);
                 button.disabled = false;
                 button.textContent = originalText;
             }
