@@ -204,10 +204,66 @@
             font-style: italic;
         }
         
-        /* Section Headers */
+        /* Collapsible Sections */
+        .collapsible-section {
+            margin-bottom: 40px;
+        }
         .section-header {
             text-align: center;
-            padding: 80px 20px 40px;
+            padding: 60px 20px 30px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: all 0.3s ease;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        .section-header:hover {
+            background: rgba(193, 162, 255, 0.05);
+        }
+        .section-header.collapsed {
+            padding-bottom: 20px;
+        }
+        .section-toggle {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            transition: all 0.3s ease;
+            color: var(--td1-lilac);
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .section-header:hover .section-toggle {
+            background: rgba(193, 162, 255, 0.25);
+            border-color: rgba(193, 162, 255, 0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .section-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .section-header.collapsed .section-toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .section-content {
+            max-height: 10000px;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            opacity: 1;
+        }
+        .section-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+            padding: 0;
         }
         .section-title {
             font-size: clamp(2rem, 5vw, 3rem);
@@ -890,10 +946,18 @@
                 padding: 0 1rem;
             }
             .section-header {
-                padding: 0 1rem;
+                padding: 40px 1rem 20px !important;
+                position: relative;
+            }
+            .section-toggle {
+                right: 10px !important;
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 14px !important;
             }
             .section-title {
                 font-size: clamp(1.5rem, 6vw, 2.5rem) !important;
+                padding-right: 40px;
             }
             .products-block {
                 grid-template-columns: 1fr !important;
@@ -989,15 +1053,19 @@
     </section>
     
     <!-- BLOCK 1: Core Infrastructure (First 5) -->
-    <section class="container" style="margin-top: 60px;">
-        <div class="section-header">
-            <div class="category-badge" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">🏗️ BLOCK 1: CORE INFRASTRUCTURE</div>
+    <section class="container collapsible-section" style="margin-top: 60px;">
+        <div class="section-header" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">🏗️ BLOCK 1: CORE INFRASTRUCTURE<span class="section-product-count">5 products</span></div>
             <h2 class="section-title">Start Here: Essential AI Building Blocks</h2>
             <p style="font-size: 16px; color: var(--text-secondary); margin-top: 16px; max-width: 700px; margin-left: auto; margin-right: auto;">
                 Click any product below to test the live interactive demo. Each connects to a working API backend.
             </p>
         </div>
-        <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
+        <div class="section-content">
+            <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
             <div class="product-block-card">
@@ -1119,16 +1187,21 @@
                 <button class="explore-button" onclick="openProductModal('td1-router')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
     
     
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS<span class="section-product-count">26 products</span></div>
             <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">FORBIDDEN AGI</div>
@@ -1707,15 +1780,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-overseer')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES<span class="section-product-count">12 products</span></div>
             <h2 class="section-title">Core AI Infrastructure</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
@@ -1854,15 +1932,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-intent')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🔬 DEVELOPMENT TOOLS<span class="section-product-count">8 products</span></div>
             <h2 class="section-title">Essential AI Development</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">DEVELOPMENT</div>
@@ -2018,15 +2101,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-load-tester')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🤖 ROBOTICS</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🤖 ROBOTICS<span class="section-product-count">2 products</span></div>
             <h2 class="section-title">Universal Robot AI</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(6, 182, 212, 0.2); color: #06b6d4;">ROBOTICS</div>
@@ -2072,15 +2160,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-robot-data-gen')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🏢 ENTERPRISE SUITE<span class="section-product-count">6 products</span></div>
             <h2 class="section-title">Enterprise AI Tools</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">ENTERPRISE</div>
@@ -2192,15 +2285,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-compliance-auditor')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🧠 PERSONAL AI</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🧠 PERSONAL AI<span class="section-product-count">3 products</span></div>
             <h2 class="section-title">Personal Knowledge Tools</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(34, 197, 94, 0.2); color: #22c55e;">PERSONAL</div>
@@ -2246,15 +2344,20 @@
                 <button class="explore-button" onclick="openProductModal('td1-mirror-engine-pro')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🌐 AI PLATFORM</div>
+    <section class="container collapsible-section">
+        <div class="section-header collapsed" onclick="toggleSection(this)">
+            <div class="section-toggle">
+                <span class="section-toggle-icon">▼</span>
+            </div>
+            <div class="category-badge ">🌐 AI PLATFORM<span class="section-product-count">2 products</span></div>
             <h2 class="section-title">Universal Infrastructure</h2>
         </div>
-        <div class="products-grid">
+        <div class="section-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(155, 92, 246, 0.2); color: #9b5cf6;">PLATFORM</div>
@@ -2302,6 +2405,7 @@
                 <button class="explore-button" onclick="openProductModal('td1-ai')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
@@ -2320,6 +2424,21 @@
     </footer>
     
     <script>
+        // Collapsible Sections Toggle
+        function toggleSection(header) {
+            const section = header.closest('.collapsible-section');
+            const content = section.querySelector('.section-content');
+            const isCollapsed = header.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                header.classList.remove('collapsed');
+                content.classList.remove('collapsed');
+            } else {
+                header.classList.add('collapsed');
+                content.classList.add('collapsed');
+            }
+        }
+        
         // Neural Particles
         const p = document.getElementById('particles');
         for (let i = 0; i < 50; i++) {
