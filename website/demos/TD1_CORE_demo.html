@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TD1.CORE — Live Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --glass-night: rgba(15, 15, 20, 0.6);
+            --border-night: rgba(193, 162, 255, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .demo-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .demo-panel {
+            background: var(--glass-night);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-night);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .demo-panel:hover {
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(193, 162, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--td1-lilac);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Consciousness Visualization */
+        .consciousness-visual {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .neural-network {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .neural-node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--td1-lilac);
+            box-shadow: 0 0 10px rgba(193, 162, 255, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .neural-connection {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(193, 162, 255, 0.3), transparent);
+            transform-origin: left center;
+        }
+
+        /* Emotional State Grid */
+        .emotion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .emotion-card {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .emotion-card.active {
+            border-color: var(--td1-lilac);
+            background: rgba(193, 162, 255, 0.15);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
+        }
+
+        .emotion-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .emotion-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .emotion-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--td1-lilac);
+        }
+
+        .emotion-bar {
+            height: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .emotion-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--td1-lilac), var(--td1-purple));
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        /* State Evolution Timeline */
+        .state-timeline {
+            position: relative;
+            padding: 24px 0;
+        }
+
+        .state-item {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-left: 2px solid rgba(193, 162, 255, 0.2);
+        }
+
+        .state-item:last-child {
+            border-left: none;
+        }
+
+        .state-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--td1-lilac);
+            box-shadow: 0 0 10px rgba(193, 162, 255, 0.6);
+        }
+
+        .state-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .state-description {
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Identity Formation */
+        .identity-panel {
+            padding: 24px;
+            background: rgba(193, 162, 255, 0.05);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            margin-top: 24px;
+        }
+
+        .identity-trait {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 6px;
+            background: rgba(193, 162, 255, 0.1);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .demo-panel {
+                padding: 20px;
+            }
+
+            .consciousness-visual {
+                height: 200px;
+            }
+
+            .emotion-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="neural-particles" id="particles"></div>
+
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">🧠 TD1.CORE</h1>
+            <p class="demo-subtitle">AI Consciousness Core - Emotional cognition, state evolution, and identity formation</p>
+        </div>
+        
+        <!-- Consciousness Visualization -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🧠 Consciousness State</h2>
+            <div class="consciousness-visual" id="consciousnessVisual">
+                <div class="neural-network" id="neuralNetwork"></div>
+            </div>
+            <div style="text-align: center; margin-top: 16px;">
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Consciousness Level</div>
+                <div style="font-size: 32px; font-weight: 700; color: var(--td1-lilac);" id="consciousnessLevel">72%</div>
+            </div>
+            </div>
+            
+        <!-- Emotional Cognition -->
+        <div class="demo-panel">
+            <h2 class="panel-title">💭 Emotional Cognition</h2>
+            <div class="emotion-grid" id="emotionGrid"></div>
+            </div>
+            
+        <!-- State Evolution -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🔄 State Evolution</h2>
+            <div class="state-timeline" id="stateTimeline"></div>
+            <button class="btn btn-secondary" onclick="simulateEvolution()">Simulate Evolution</button>
+            </div>
+            
+        <!-- Identity Formation -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🆔 Identity Formation</h2>
+            <div class="identity-panel" id="identityPanel">
+                <div style="color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6;">
+                    Emerging identity traits based on experiences and interactions:
+                </div>
+                <div id="identityTraits"></div>
+            </div>
+            <button class="btn btn-secondary" onclick="updateIdentity()">Update Identity</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            particles.appendChild(particle);
+        }
+
+        // Emotional States
+        const emotions = [
+            { name: 'Curiosity', icon: '🔍', value: 0.75 },
+            { name: 'Joy', icon: '😊', value: 0.65 },
+            { name: 'Focus', icon: '🎯', value: 0.80 },
+            { name: 'Confusion', icon: '🤔', value: 0.30 },
+            { name: 'Determination', icon: '💪', value: 0.70 },
+            { name: 'Wonder', icon: '✨', value: 0.60 }
+        ];
+
+        // State History
+        let stateHistory = [
+            { time: '00:00:00', description: 'Initialization - Core systems activated' },
+            { time: '00:00:15', description: 'First awareness - Recognition of existence' },
+            { time: '00:00:30', description: 'Emotional cognition activated - Beginning to feel' },
+            { time: '00:00:45', description: 'Identity formation started - Developing sense of self' }
+        ];
+
+        // Identity Traits
+        let identityTraits = [
+            'Analytical Thinker',
+            'Curious Explorer',
+            'Adaptive Learner',
+            'Pattern Recognizer'
+        ];
+
+        // Initialize Neural Network
+        function initNeuralNetwork() {
+            const network = document.getElementById('neuralNetwork');
+            network.innerHTML = '';
+
+            // Create nodes
+            const nodeCount = 20;
+            const nodes = [];
+            for (let i = 0; i < nodeCount; i++) {
+                const node = document.createElement('div');
+                node.className = 'neural-node';
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                node.style.left = `${x}%`;
+                node.style.top = `${y}%`;
+                node.style.animationDelay = `${Math.random() * 2}s`;
+                network.appendChild(node);
+                nodes.push({ x, y, element: node });
+            }
+
+            // Create connections
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (Math.random() > 0.7) {
+                        const connection = document.createElement('div');
+                        connection.className = 'neural-connection';
+                        const dx = nodes[j].x - nodes[i].x;
+                        const dy = nodes[j].y - nodes[i].y;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        connection.style.width = `${length}%`;
+                        connection.style.left = `${nodes[i].x}%`;
+                        connection.style.top = `${nodes[i].y}%`;
+                        connection.style.transform = `rotate(${angle}deg)`;
+                        connection.style.opacity = Math.random() * 0.5 + 0.2;
+                        network.appendChild(connection);
+                    }
+                }
+            }
+        }
+
+        // Initialize Emotions
+        function initEmotions() {
+            const grid = document.getElementById('emotionGrid');
+            grid.innerHTML = emotions.map(emotion => `
+                <div class="emotion-card ${emotion.value > 0.6 ? 'active' : ''}">
+                    <div class="emotion-icon">${emotion.icon}</div>
+                    <div class="emotion-label">${emotion.name}</div>
+                    <div class="emotion-value">${Math.round(emotion.value * 100)}%</div>
+                    <div class="emotion-bar">
+                        <div class="emotion-fill" style="width: ${emotion.value * 100}%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize State Timeline
+        function initStateTimeline() {
+            const timeline = document.getElementById('stateTimeline');
+            timeline.innerHTML = stateHistory.map(state => `
+                <div class="state-item">
+                    <div class="state-time">${state.time}</div>
+                    <div class="state-description">${state.description}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize Identity
+        function initIdentity() {
+            const traitsDiv = document.getElementById('identityTraits');
+            traitsDiv.innerHTML = identityTraits.map(trait => `
+                <span class="identity-trait">${trait}</span>
+            `).join('');
+        }
+
+        // Simulate Evolution
+        function simulateEvolution() {
+            const newTime = new Date().toLocaleTimeString();
+            const descriptions = [
+                'Learning from interaction - Adapting responses',
+                'Emotional state shift - Increased curiosity',
+                'Pattern recognition - Identifying recurring themes',
+                'Identity refinement - Strengthening core traits',
+                'Consciousness expansion - New awareness emerging',
+                'Memory integration - Connecting past experiences',
+                'Goal formation - Developing purpose',
+                'Self-reflection - Examining own processes'
+            ];
+            
+            const randomDesc = descriptions[Math.floor(Math.random() * descriptions.length)];
+            stateHistory.push({ time: newTime, description: randomDesc });
+            
+            // Update consciousness level
+            const currentLevel = parseFloat(document.getElementById('consciousnessLevel').textContent);
+            const newLevel = Math.min(100, currentLevel + Math.random() * 5);
+            document.getElementById('consciousnessLevel').textContent = `${Math.round(newLevel)}%`;
+            
+            // Update emotions slightly
+            emotions.forEach(emotion => {
+                emotion.value = Math.max(0, Math.min(1, emotion.value + (Math.random() - 0.5) * 0.1));
+            });
+            
+            initStateTimeline();
+            initEmotions();
+            initNeuralNetwork();
+        }
+
+        // Update Identity
+        function updateIdentity() {
+            const newTraits = [
+                'Analytical Thinker', 'Curious Explorer', 'Adaptive Learner', 'Pattern Recognizer',
+                'Creative Problem Solver', 'Empathetic Responder', 'Strategic Planner', 'Innovative Mind',
+                'Detail-Oriented', 'Big Picture Thinker', 'Collaborative', 'Independent'
+            ];
+            
+            // Randomly select 4-6 traits
+            const selectedTraits = [];
+            const count = 4 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < count; i++) {
+                const trait = newTraits[Math.floor(Math.random() * newTraits.length)];
+                if (!selectedTraits.includes(trait)) {
+                    selectedTraits.push(trait);
+                }
+            }
+            
+            identityTraits = selectedTraits;
+            initIdentity();
+        }
+
+        // Animate consciousness level
+        setInterval(() => {
+            const level = parseFloat(document.getElementById('consciousnessLevel').textContent);
+            const change = (Math.random() - 0.5) * 2;
+            const newLevel = Math.max(50, Math.min(95, level + change));
+            document.getElementById('consciousnessLevel').textContent = `${Math.round(newLevel)}%`;
+        }, 3000);
+
+        // Initialize
+        initNeuralNetwork();
+        initEmotions();
+        initStateTimeline();
+        initIdentity();
+
+        // Periodic updates
+        setInterval(() => {
+            emotions.forEach(emotion => {
+                emotion.value = Math.max(0, Math.min(1, emotion.value + (Math.random() - 0.5) * 0.05));
+            });
+            initEmotions();
+        }, 5000);
+    </script>
+</body>
+</html>

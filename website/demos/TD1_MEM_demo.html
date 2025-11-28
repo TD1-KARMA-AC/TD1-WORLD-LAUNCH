@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TD1.MEM — Live Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --glass-night: rgba(15, 15, 20, 0.6);
+            --border-night: rgba(193, 162, 255, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* Neural Particles */
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+
+        /* Demo Container */
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .demo-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Demo Panels */
+        .demo-panel {
+            background: var(--glass-night);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-night);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .demo-panel:hover {
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(193, 162, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--td1-lilac);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Input Section */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--td1-lilac);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
+        }
+
+        .input-field::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(193, 162, 255, 0.25);
+        }
+
+        /* Memory List */
+        .memory-list {
+            display: grid;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .memory-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .memory-item:hover {
+            border-color: rgba(193, 162, 255, 0.4);
+            transform: translateX(4px);
+        }
+
+        .memory-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .memory-content {
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .memory-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .memory-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: rgba(193, 162, 255, 0.15);
+            color: var(--td1-lilac);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .similarity-score {
+            color: var(--td1-lilac);
+            font-weight: 600;
+        }
+
+        /* Search Results */
+        .search-results {
+            margin-top: 24px;
+        }
+
+        .result-item {
+            background: rgba(193, 162, 255, 0.05);
+            border-left: 3px solid var(--td1-lilac);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .result-content {
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .result-score {
+            font-size: 12px;
+            color: var(--td1-lilac);
+            font-weight: 600;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .stat-card {
+            background: rgba(193, 162, 255, 0.1);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--td1-lilac);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .demo-panel {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="neural-particles" id="particles"></div>
+
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">🧠 TD1.MEM</h1>
+            <p class="demo-subtitle">Persistent long-term memory for AI applications</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="demo-panel">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMemories">0</div>
+                    <div class="stat-label">Memories Stored</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalEmbeddings">0</div>
+                    <div class="stat-label">Vector Embeddings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgSimilarity">0%</div>
+                    <div class="stat-label">Avg Similarity</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Memory -->
+        <div class="demo-panel">
+            <h2 class="panel-title">💾 Store Memory</h2>
+            <div class="input-group">
+                <label class="input-label">Memory Content</label>
+                <textarea 
+                    id="memoryInput" 
+                    class="input-field" 
+                    placeholder="Enter what you want to remember... e.g., 'User prefers dark mode and loves Python programming'"
+                ></textarea>
+            </div>
+            <div class="input-group">
+                <label class="input-label">Emotional Weight (0-100)</label>
+                <input 
+                    type="range" 
+                    id="emotionalWeight" 
+                    min="0" 
+                    max="100" 
+                    value="50"
+                    class="input-field"
+                    style="padding: 0;"
+                >
+                <div style="text-align: center; margin-top: 8px; color: var(--text-secondary); font-size: 14px;">
+                    <span id="weightValue">50</span>
+                </div>
+            </div>
+            <button class="btn" onclick="storeMemory()">Store Memory</button>
+        </div>
+
+        <!-- Search Memories -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🔍 Semantic Search</h2>
+            <div class="input-group">
+                <label class="input-label">Search Query</label>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="input-field" 
+                    placeholder="Search memories by meaning, not keywords... e.g., 'programming preferences'"
+                >
+            </div>
+            <button class="btn" onclick="searchMemories()">Search</button>
+            <button class="btn btn-secondary" onclick="clearSearch()" style="margin-left: 12px;">Clear</button>
+            
+            <div id="searchResults" class="search-results" style="display: none;"></div>
+        </div>
+
+        <!-- All Memories -->
+        <div class="demo-panel">
+            <h2 class="panel-title">📚 All Memories</h2>
+            <div id="memoriesList" class="memory-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🧠</div>
+                    <p>No memories stored yet. Store your first memory above!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            particles.appendChild(particle);
+        }
+
+        // Memory Storage (simulated)
+        let memories = [];
+        let memoryIdCounter = 1;
+
+        // Emotional weight slider
+        const weightSlider = document.getElementById('emotionalWeight');
+        const weightValue = document.getElementById('weightValue');
+        weightSlider.addEventListener('input', (e) => {
+            weightValue.textContent = e.target.value;
+        });
+
+        // Simple text similarity (simulated semantic search)
+        function calculateSimilarity(text1, text2) {
+            const words1 = text1.toLowerCase().split(/\s+/);
+            const words2 = text2.toLowerCase().split(/\s+/);
+            const intersection = words1.filter(word => words2.includes(word));
+            const union = [...new Set([...words1, ...words2])];
+            return Math.round((intersection.length / union.length) * 100);
+        }
+
+        // Store Memory
+        function storeMemory() {
+            const content = document.getElementById('memoryInput').value.trim();
+            const emotionalWeight = parseInt(document.getElementById('emotionalWeight').value);
+
+            if (!content) {
+                alert('Please enter memory content');
+                return;
+            }
+
+            const memory = {
+                id: memoryIdCounter++,
+                content: content,
+                emotionalWeight: emotionalWeight,
+                timestamp: new Date().toISOString(),
+                embedding: `embedding_${memoryIdCounter}` // Simulated embedding
+            };
+
+            memories.push(memory);
+            document.getElementById('memoryInput').value = '';
+            document.getElementById('emotionalWeight').value = 50;
+            weightValue.textContent = '50';
+
+            updateUI();
+        }
+
+        // Search Memories
+        function searchMemories() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            if (memories.length === 0) {
+                resultsDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No memories to search. Store some memories first!</p>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+
+            // Calculate similarity scores
+            const results = memories.map(memory => ({
+                ...memory,
+                similarity: calculateSimilarity(query, memory.content)
+            })).sort((a, b) => b.similarity - a.similarity).slice(0, 5);
+
+            resultsDiv.innerHTML = results.map(result => `
+                <div class="result-item">
+                    <div class="result-content">${result.content}</div>
+                    <div class="result-score">Similarity: ${result.similarity}% | Weight: ${result.emotionalWeight}</div>
+                </div>
+            `).join('');
+
+            resultsDiv.style.display = 'block';
+        }
+
+        // Clear Search
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').style.display = 'none';
+        }
+
+        // Update UI
+        function updateUI() {
+            // Update stats
+            document.getElementById('totalMemories').textContent = memories.length;
+            document.getElementById('totalEmbeddings').textContent = memories.length;
+            
+            const avgSim = memories.length > 0 
+                ? Math.round(memories.reduce((sum, m) => sum + m.emotionalWeight, 0) / memories.length)
+                : 0;
+            document.getElementById('avgSimilarity').textContent = `${avgSim}%`;
+
+            // Update memories list
+            const memoriesList = document.getElementById('memoriesList');
+            
+            if (memories.length === 0) {
+                memoriesList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🧠</div>
+                        <p>No memories stored yet. Store your first memory above!</p>
+                    </div>
+                `;
+            } else {
+                memoriesList.innerHTML = memories.slice().reverse().map(memory => `
+                    <div class="memory-item">
+                        <div class="memory-header">
+                            <span class="memory-tag">Memory #${memory.id}</span>
+                            <span class="similarity-score">Weight: ${memory.emotionalWeight}</span>
+                        </div>
+                        <div class="memory-content">${memory.content}</div>
+                        <div class="memory-meta">
+                            <span>📅 ${new Date(memory.timestamp).toLocaleString()}</span>
+                            <span>🔢 Embedding: ${memory.embedding}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('memoryInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                storeMemory();
+            }
+        });
+
+        document.getElementById('searchInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                searchMemories();
+            }
+        });
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>
