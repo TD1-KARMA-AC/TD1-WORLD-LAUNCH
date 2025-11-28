@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     <title>TD1.WORLD — The Architecture of Autonomous Intelligence</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +16,13 @@
             --text-primary: #EAEAEA;
             --text-secondary: #A0A0A0;
         }
-        html { scroll-behavior: smooth; }
+        html { 
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            touch-action: manipulation;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
             background: var(--bg-dark);
@@ -21,6 +30,8 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         
         /* Neural Particles */
@@ -555,6 +566,7 @@
             100% { opacity: 0; transform: translate(var(--tx, 0), var(--ty, 0)) scale(0); }
         }
         
+        /* Mobile Responsive Fixes */
         @media (max-width: 968px) {
             .karma-preview,
             .tech-grid {
@@ -567,6 +579,89 @@
             .step-duration {
                 grid-column: 2;
                 margin-top: 10px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            html {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+                text-size-adjust: 100%;
+            }
+            body {
+                overflow-x: hidden;
+                width: 100%;
+                position: relative;
+            }
+            .section {
+                padding: 80px 1rem;
+                min-height: auto;
+            }
+            .nav {
+                top: 10px;
+                padding: 8px 16px;
+                font-size: 12px;
+                gap: 12px;
+            }
+            .nav-link {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .hero-title {
+                font-size: clamp(3rem, 12vw, 5rem) !important;
+            }
+            .hero-tagline {
+                font-size: clamp(1rem, 4vw, 1.5rem) !important;
+            }
+            .hero-description {
+                font-size: clamp(0.875rem, 3vw, 1rem) !important;
+                padding: 0 1rem;
+            }
+            .hero-stats {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+                padding: 0 1rem !important;
+            }
+            .stat-card {
+                padding: 1.5rem !important;
+            }
+            .hero-cta {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0 1rem;
+            }
+            .magnetic-btn {
+                width: 100%;
+                padding: 14px 24px;
+                font-size: 14px;
+            }
+            .section-title {
+                font-size: clamp(2rem, 8vw, 3rem) !important;
+            }
+            .section-subtitle {
+                font-size: clamp(0.875rem, 3vw, 1.125rem) !important;
+                padding: 0 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .section {
+                padding: 60px 0.75rem;
+            }
+            .nav {
+                padding: 6px 12px;
+                font-size: 11px;
+                gap: 8px;
+            }
+            .nav-link {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            .hero-title {
+                font-size: clamp(2.5rem, 15vw, 4rem) !important;
+            }
+            .stat-card {
+                padding: 1.25rem !important;
             }
         }
     </style>
