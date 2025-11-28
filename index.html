@@ -100,14 +100,14 @@
             box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
         }
         .hero-title {
-            font-size: clamp(4rem, 12vw, 9rem);
+            font-size: clamp(3.5rem, 10vw, 7.5rem);
             font-weight: 800;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             background: linear-gradient(135deg, white, var(--td1-lilac), var(--td1-purple));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            letter-spacing: -4px;
+            letter-spacing: -3px;
             line-height: 1;
             animation: titleGlow 3s ease-in-out infinite;
             cursor: default;
@@ -118,35 +118,35 @@
             50% { filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.6)); }
         }
         .hero-tagline {
-            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
             color: var(--text-primary);
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 20px 40px;
-            border-radius: 20px;
-            background: rgba(18, 24, 40, 0.6);
-            backdrop-filter: blur(32px);
-            border: 1px solid rgba(193, 162, 255, 0.3);
-            box-shadow: 0 0 40px rgba(193, 162, 255, 0.2);
+            max-width: 800px;
+            margin: 1.5rem auto;
+            padding: 14px 28px;
+            border-radius: 16px;
+            background: rgba(18, 24, 40, 0.5);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(193, 162, 255, 0.25);
+            box-shadow: 0 0 30px rgba(193, 162, 255, 0.15);
             transition: all 0.3s ease;
         }
         .hero-tagline:hover {
-            border-color: rgba(193, 162, 255, 0.5);
-            box-shadow: 0 0 60px rgba(193, 162, 255, 0.3);
+            border-color: rgba(193, 162, 255, 0.4);
+            box-shadow: 0 0 40px rgba(193, 162, 255, 0.25);
         }
         .hero-description {
             font-size: clamp(1rem, 2vw, 1.25rem);
             color: var(--text-secondary);
             max-width: 800px;
-            margin: 2rem auto 3rem;
-            line-height: 1.6;
+            margin: 1.5rem auto 2rem;
+            line-height: 1.7;
         }
         .hero-cta {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 3rem;
+            margin-top: 2rem;
         }
         
         /* Magnetic Buttons */
@@ -192,14 +192,14 @@
         /* Scroll Indicator - Enhanced */
         .scroll-indicator {
             position: absolute;
-            bottom: 40px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
-            opacity: 0.5;
+            gap: 10px;
+            opacity: 0.4;
             animation: bounce 2s infinite;
             pointer-events: none;
         }
@@ -272,22 +272,23 @@
             border-radius: 2px;
         }
         
-        /* Section Base */
+        /* Section Base - Cleaner, Less Bulky */
         .section {
-            min-height: 100vh;
-            padding: 120px 2rem;
+            min-height: auto;
+            padding: 80px 2rem;
             position: relative;
             z-index: 10;
         }
         .section:first-of-type {
-            padding-top: 140px;
+            padding-top: 120px;
+            min-height: 100vh;
         }
         .section + .section {
-            padding-top: 100px;
+            padding-top: 60px;
         }
         .section-header {
             text-align: center;
-            margin-bottom: 80px;
+            margin-bottom: 50px;
             opacity: 0;
             transform: translateY(30px);
             transition: opacity 0.8s ease, transform 0.8s ease;
@@ -298,30 +299,31 @@
         }
         .section-badge {
             display: inline-block;
-            padding: 8px 20px;
-            border-radius: 48px;
-            background: rgba(193, 162, 255, 0.2);
-            border: 1px solid rgba(193, 162, 255, 0.4);
-            font-size: 12px;
+            padding: 6px 16px;
+            border-radius: 32px;
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 2rem;
+            letter-spacing: 1.5px;
+            margin-bottom: 1.25rem;
             color: var(--td1-lilac);
         }
         .section-title {
-            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             background: linear-gradient(135deg, white, var(--td1-lilac));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            line-height: 1.2;
         }
         .section-subtitle {
-            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+            font-size: clamp(1rem, 2vw, 1.25rem);
             color: var(--text-secondary);
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
             line-height: 1.6;
         }
@@ -333,15 +335,15 @@
         }
         .process-step {
             display: grid;
-            grid-template-columns: 80px 1fr auto;
-            gap: 40px;
+            grid-template-columns: 70px 1fr auto;
+            gap: 28px;
             align-items: center;
-            padding: 40px;
-            margin-bottom: 30px;
-            border-radius: 24px;
-            background: rgba(18, 24, 40, 0.6);
-            backdrop-filter: blur(32px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 28px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            background: rgba(18, 24, 40, 0.5);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             opacity: 0;
             transform: translateY(50px);
             transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -641,8 +643,17 @@
                 position: relative;
             }
             .section {
-                padding: 80px 1rem;
+                padding: 60px 1rem;
                 min-height: auto;
+            }
+            .section:first-of-type {
+                padding-top: 100px;
+            }
+            .section + .section {
+                padding-top: 40px;
+            }
+            .section-header {
+                margin-bottom: 40px;
             }
             .nav {
                 top: 10px;
@@ -667,13 +678,17 @@
             }
             .hero-stats {
                 grid-template-columns: 1fr !important;
-                gap: 1.5rem !important;
+                gap: 1.25rem !important;
                 padding: 0 1rem !important;
-                margin: 2rem auto !important;
+                margin: 1.5rem auto !important;
             }
             .stat-card {
                 padding: 1.5rem !important;
                 margin: 0 !important;
+            }
+            .hero-cta {
+                margin-top: 1.5rem !important;
+                gap: 12px !important;
             }
             .stat-card > div:first-child {
                 font-size: clamp(2rem, 8vw, 3rem) !important;
@@ -755,32 +770,32 @@
             <strong style="color: var(--td1-lilac); font-size: 1.1em;">$2.3M in development infrastructure included.</strong><br/>
             Full local execution. Zero cloud reliance. Permanent, unrestricted ownership.
         </p>
-        <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1200px; margin: 3rem auto; padding: 0 2rem;">
-            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.15), inset 0 0 20px rgba(193, 162, 255, 0.05); transition: all 0.4s; text-align: center;">
+        <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1100px; margin: 2rem auto; padding: 0 2rem;">
+            <div class="stat-card" style="padding: 1.75rem; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(24px); border: 1px solid rgba(193, 162, 255, 0.25); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(193, 162, 255, 0.1), inset 0 0 15px rgba(193, 162, 255, 0.03); transition: all 0.4s; text-align: center;">
                 <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.2; margin-bottom: 0.5rem; text-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">$2.3M</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Development Cost</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Full investment</div>
             </div>
-            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.15), inset 0 0 20px rgba(193, 162, 255, 0.05); transition: all 0.4s; text-align: center;">
+            <div class="stat-card" style="padding: 1.75rem; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(24px); border: 1px solid rgba(193, 162, 255, 0.25); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(193, 162, 255, 0.1), inset 0 0 15px rgba(193, 162, 255, 0.03); transition: all 0.4s; text-align: center;">
                 <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.2; margin-bottom: 0.5rem; text-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">676</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Developer-Weeks</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">13 developer-years</div>
             </div>
-            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.15), inset 0 0 20px rgba(193, 162, 255, 0.05); transition: all 0.4s; text-align: center;">
+            <div class="stat-card" style="padding: 1.75rem; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(24px); border: 1px solid rgba(193, 162, 255, 0.25); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(193, 162, 255, 0.1), inset 0 0 15px rgba(193, 162, 255, 0.03); transition: all 0.4s; text-align: center;">
                 <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.2; margin-bottom: 0.5rem; text-shadow: 0 0 30px rgba(193, 162, 255, 0.3);">$15M</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">IP Valuation</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Intellectual property</div>
             </div>
         </div>
-        <div style="max-width: 900px; margin: 2rem auto; padding: 0 2rem;">
-            <p style="font-size: clamp(0.875rem, 2vw, 1rem); color: var(--text-secondary); line-height: 1.8; text-align: center;">
+        <div style="max-width: 800px; margin: 1.5rem auto; padding: 0 2rem;">
+            <p style="font-size: clamp(0.875rem, 2vw, 0.95rem); color: var(--text-secondary); line-height: 1.7; text-align: center;">
                 <strong style="color: var(--td1-lilac);">Team Time:</strong> 16-18 months with 8-person team<br class="mobile-break"/>
                 <strong style="color: var(--td1-lilac);">Code Volume:</strong> 80,800+ lines of production-ready code
             </p>
         </div>
-        <div style="max-width: 900px; margin: 2rem auto; padding: 20px 40px; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.4); box-shadow: 0 0 40px rgba(193, 162, 255, 0.25), inset 0 0 20px rgba(193, 162, 255, 0.05);">
-            <p style="font-size: clamp(1rem, 2vw, 1.125rem); color: var(--text-primary); line-height: 1.8; text-align: center; margin: 0;">
-                The same building blocks powering <strong style="color: var(--td1-lilac); text-shadow: 0 0 20px rgba(193, 162, 255, 0.5);">Karma AC's autonomous intelligence core</strong>. Production-grade AGI infrastructure. Full local execution. Zero cloud reliance.
+        <div style="max-width: 800px; margin: 1.5rem auto; padding: 18px 32px; border-radius: 16px; background: rgba(18, 24, 40, 0.5); backdrop-filter: blur(24px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 0 30px rgba(193, 162, 255, 0.2), inset 0 0 15px rgba(193, 162, 255, 0.03);">
+            <p style="font-size: clamp(0.95rem, 2vw, 1.05rem); color: var(--text-primary); line-height: 1.7; text-align: center; margin: 0;">
+                The same building blocks powering <strong style="color: var(--td1-lilac); text-shadow: 0 0 15px rgba(193, 162, 255, 0.4);">Karma AC's autonomous intelligence core</strong>. Production-grade AGI infrastructure. Full local execution. Zero cloud reliance.
             </p>
         </div>
         <div class="hero-cta">
@@ -1115,7 +1130,14 @@
         const portalParticles = document.getElementById('portalParticles');
         
         exploreBtn.addEventListener('click', () => {
+            // Prevent multiple clicks
+            exploreBtn.disabled = true;
+            exploreBtn.style.opacity = '0.7';
+            
             portal.classList.add('active');
+            
+            // Clear any existing particles
+            portalParticles.innerHTML = '';
             
             // Create portal particles
             for (let i = 0; i < 150; i++) {
@@ -1131,9 +1153,11 @@
                 portalParticles.appendChild(particle);
             }
             
+            // Navigate after animation
             setTimeout(() => {
+                portal.classList.remove('active');
                 window.location.href = 'PRODUCTS_INDEX.html';
-            }, 1500);
+            }, 1200);
         });
         
         // Contact Button Scroll
