@@ -33,8 +33,8 @@
   status = 301
   force = true
 
-# Handle SPA routing (if needed later)
-# Note: Netlify Functions at /.netlify/functions/* are handled automatically before redirects
+# Note: Netlify Functions at /.netlify/functions/* are handled automatically BEFORE redirects
+# Handle SPA routing - redirect all non-function requests to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

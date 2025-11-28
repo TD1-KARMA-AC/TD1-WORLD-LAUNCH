@@ -29,7 +29,7 @@ function updateCountdown() {
     minutesEl.textContent = String(minutes).padStart(2, '0');
     secondsEl.textContent = String(seconds).padStart(2, '0');
 
-    // If countdown is finished
+    // If countdown is finished - just show zeros, no redirect
     if (distance < 0) {
         clearInterval(countdownInterval);
         daysEl.textContent = '00';
@@ -37,19 +37,14 @@ function updateCountdown() {
         minutesEl.textContent = '00';
         secondsEl.textContent = '00';
         
-        // Show launch message and redirect to main website
+        // Show launch message but don't redirect
         const mainMessage = document.querySelector('.main-message');
         if (mainMessage) {
             mainMessage.innerHTML = `
                 <h2 class="title">We're Live! 🎉</h2>
-                <p class="subtitle">Welcome to TD1 World. Redirecting you now...</p>
+                <p class="subtitle">Welcome to TD1 World</p>
             `;
         }
-        
-        // Redirect to main website after 2 seconds
-        setTimeout(() => {
-            window.location.href = '/website/index.html';
-        }, 2000);
     }
 }
 

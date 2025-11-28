@@ -3,92 +3,984 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="TD1.WORLD - The New Standard of Independent AI. Full control, full ownership, full power for builders. Launching 22.11 — 11:22 AM.">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <title>TD1.WORLD - The New Standard of Independent AI</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>TD1.WORLD — The Architecture of Autonomous Intelligence</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        
+        /* Neural Particles */
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+        
+        /* Mouse Spotlight */
+        .mouse-spotlight {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle 600px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(193, 162, 255, 0.08), transparent 70%);
+            z-index: 2;
+            pointer-events: none;
+            transition: background 0.1s ease;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem;
+            position: relative;
+            z-index: 10;
+        }
+        .hero-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 48px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+        }
+        .hero-badge:hover {
+            border-color: rgba(193, 162, 255, 0.6);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
+        }
+        .hero-title {
+            font-size: clamp(4rem, 12vw, 9rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, white, var(--td1-lilac), var(--td1-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -4px;
+            line-height: 1;
+            animation: titleGlow 3s ease-in-out infinite;
+            cursor: default;
+            transition: transform 0.1s ease-out;
+        }
+        @keyframes titleGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(193, 162, 255, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(193, 162, 255, 0.6)); }
+        }
+        .hero-tagline {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 20px 40px;
+            border-radius: 20px;
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            box-shadow: 0 0 40px rgba(193, 162, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .hero-tagline:hover {
+            border-color: rgba(193, 162, 255, 0.5);
+            box-shadow: 0 0 60px rgba(193, 162, 255, 0.3);
+        }
+        .hero-description {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 2rem auto 3rem;
+            line-height: 1.6;
+        }
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+        
+        /* Magnetic Buttons */
+        .magnetic-btn {
+            padding: 18px 48px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            border-radius: 48px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            z-index: 10;
+        }
+        .magnetic-btn.primary {
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            color: white;
+            box-shadow: 0 8px 32px rgba(193, 162, 255, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        }
+        .magnetic-btn.primary:hover {
+            box-shadow: 0 16px 48px rgba(193, 162, 255, 0.5),
+                        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        }
+        .magnetic-btn.secondary {
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(20px);
+            color: var(--text-primary);
+            border: 2px solid rgba(193, 162, 255, 0.5);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.2);
+        }
+        .magnetic-btn.secondary:hover {
+            background: rgba(193, 162, 255, 0.1);
+            border-color: rgba(193, 162, 255, 0.8);
+            box-shadow: 0 0 40px rgba(193, 162, 255, 0.4);
+        }
+        .magnetic-btn span {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.6;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+        .scroll-line {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--td1-lilac), transparent);
+        }
+        
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 24px;
+            border-radius: 48px;
+            background: rgba(15, 15, 20, 0.6);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(193, 162, 255, 0.1);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .nav:hover {
+            box-shadow: 0 8px 32px rgba(193, 162, 255, 0.2);
+            border-color: rgba(193, 162, 255, 0.3);
+        }
+        .nav-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--td1-lilac);
+        }
+        
+        /* Section Base */
+        .section {
+            min-height: 100vh;
+            padding: 120px 2rem;
+            position: relative;
+            z-index: 10;
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        .section-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 48px;
+            background: rgba(193, 162, 255, 0.2);
+            border: 1px solid rgba(193, 162, 255, 0.4);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            color: var(--td1-lilac);
+        }
+        .section-title {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .section-subtitle {
+            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        /* Process Steps */
+        .process-steps {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .process-step {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 40px;
+            align-items: center;
+            padding: 40px;
+            margin-bottom: 30px;
+            border-radius: 24px;
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .process-step.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .process-step:hover {
+            border-color: rgba(193, 162, 255, 0.4);
+            box-shadow: 0 20px 60px rgba(193, 162, 255, 0.2);
+            transform: translateY(-5px);
+        }
+        .step-number {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid var(--td1-lilac);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            background: rgba(193, 162, 255, 0.1);
+            box-shadow: 0 0 30px rgba(193, 162, 255, 0.3);
+        }
+        .step-content h3 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+        .step-content p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .step-duration {
+            font-size: 14px;
+            color: var(--td1-lilac);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        /* Karma AC Section */
+        .karma-preview {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        .karma-visual {
+            position: relative;
+            aspect-ratio: 1;
+        }
+        .karma-hex {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            clip-path: polygon(3% 0%, 97% 0%, 100% 50%, 97% 100%, 3% 100%, 0% 50%);
+            background: rgba(18, 24, 40, 0.8);
+            backdrop-filter: blur(32px);
+            border: 2px solid rgba(193, 162, 255, 0.3);
+            box-shadow: 0 0 60px rgba(193, 162, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .karma-brain {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.4), transparent);
+            box-shadow: 0 0 100px rgba(193, 162, 255, 0.6);
+            animation: pulse 4s ease-in-out infinite;
+            font-size: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        .karma-features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .feature-card {
+            padding: 24px;
+            border-radius: 20px;
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .feature-card:hover {
+            border-color: rgba(193, 162, 255, 0.5);
+            box-shadow: 0 20px 60px rgba(193, 162, 255, 0.2);
+            transform: translateX(10px);
+        }
+        .feature-card h4 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Technology Section */
+        .tech-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+        }
+        .capability-item {
+            margin-bottom: 30px;
+        }
+        .capability-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+        .capability-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        .capability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--td1-lilac), var(--td1-purple));
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.5);
+            transition: width 1s ease-out;
+        }
+        .framework-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .framework-item {
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 16px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        .framework-item:hover {
+            border-color: rgba(193, 162, 255, 0.5);
+            transform: translateX(10px);
+            box-shadow: 0 10px 40px rgba(193, 162, 255, 0.2);
+        }
+        
+        /* Contact Form */
+        .contact-form {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px;
+            border-radius: 32px;
+            background: rgba(18, 24, 40, 0.8);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: rgba(193, 162, 255, 0.5);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.2);
+        }
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        /* Portal Transition */
+        .portal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .portal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .portal-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            border: 6px solid var(--td1-lilac);
+            box-shadow: 0 0 100px var(--td1-lilac),
+                        inset 0 0 100px var(--td1-lilac);
+            transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .portal-overlay.active .portal-ring {
+            width: 300vw;
+            height: 300vh;
+            border-width: 12px;
+        }
+        .portal-particles {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        .portal-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--td1-lilac);
+            border-radius: 50%;
+            opacity: 0;
+            animation: portalParticle 2s ease-out infinite;
+        }
+        @keyframes portalParticle {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx, 0), var(--ty, 0)) scale(0); }
+        }
+        
+        @media (max-width: 968px) {
+            .karma-preview,
+            .tech-grid {
+                grid-template-columns: 1fr;
+            }
+            .process-step {
+                grid-template-columns: 60px 1fr;
+                gap: 20px;
+            }
+            .step-duration {
+                grid-column: 2;
+                margin-top: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="stars"></div>
-        <div class="content">
-            <div class="logo-container">
-                <h1 class="logo">TD1.WORLD</h1>
-                <div class="logo-subtitle">The New Standard of Independent AI</div>
-            </div>
-            
-            <div class="main-message">
-                <h2 class="title">The New Standard of Independent AI</h2>
-                <p class="subtitle">TD1.WORLD is the upcoming platform for builders who want full control, full ownership, and full power over how they create with AI.</p>
-                <p class="subtitle-accent">We're releasing a suite of tools, intelligence modules, and systems designed for people who refuse limitations.</p>
-                <div class="key-points">
-                    <span class="point">No subscriptions.</span>
-                    <span class="point">No gatekeepers.</span>
-                    <span class="point">No noise.</span>
-                </div>
-                <p class="launch-date-text">Launching <strong>22.11 — 11:22 AM</strong>.</p>
-            </div>
-
-            <div class="countdown-container">
-                <div class="countdown-label">Launching In</div>
-                <div class="countdown" id="countdown">
-                    <div class="time-unit">
-                        <div class="time-value" id="days">00</div>
-                        <div class="time-label">Days</div>
-                    </div>
-                    <div class="time-separator">:</div>
-                    <div class="time-unit">
-                        <div class="time-value" id="hours">00</div>
-                        <div class="time-label">Hours</div>
-                    </div>
-                    <div class="time-separator">:</div>
-                    <div class="time-unit">
-                        <div class="time-value" id="minutes">00</div>
-                        <div class="time-label">Minutes</div>
-                    </div>
-                    <div class="time-separator">:</div>
-                    <div class="time-unit">
-                        <div class="time-value" id="seconds">00</div>
-                        <div class="time-label">Seconds</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="launch-details">
-                <div class="detail-item">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <span>November 22, 2025</span>
-                </div>
-                <div class="detail-item">
-                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>11:22 AM</span>
-                </div>
-            </div>
-            <div class="notification-section">
-                <p class="notification-title">Join the Early Access List</p>
-                <p class="notification-text">Be invited when the platform activates.<br><strong>No spam. Ever.</strong></p>
-                <form class="email-form" id="emailForm">
-                    <input type="email" id="emailInput" name="email" placeholder="Enter your email address" required>
-                    <button type="submit" class="notify-btn">Notify Me</button>
-                </form>
-                <div class="form-message" id="formMessage"></div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p class="footer-tagline">Everything changes at 11:22.</p>
-            <p class="footer-copyright">&copy; 2025 TD1 World. All rights reserved.</p>
-        </div>
+    <div class="neural-particles" id="particles"></div>
+    <div class="mouse-spotlight" id="spotlight"></div>
+    
+    <nav class="nav">
+        <a href="index.html" class="nav-link" style="color: var(--td1-lilac);">Home</a>
+        <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
+        <a href="ABOUT.html" class="nav-link">About</a>
+    </nav>
+    
+    <!-- Portal Overlay -->
+    <div class="portal-overlay" id="portal">
+        <div class="portal-particles" id="portalParticles"></div>
+        <div class="portal-ring"></div>
     </div>
-
-    <script src="script.js"></script>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-badge">TD1.WORLD</div>
+        <h1 class="hero-title" id="heroTitle">TD1</h1>
+        <div class="hero-tagline" id="heroTagline">The Lego Blocks of AI</div>
+        <p class="hero-description">
+            Crafting minds that think, adapt, and evolve with purpose.<br/>
+            <strong style="color: var(--td1-lilac); font-size: 1.1em;">$2.3M worth of production-grade AGI infrastructure.</strong><br/>
+            Available today. Zero subscriptions. Full ownership.
+        </p>
+        <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1200px; margin: 3rem auto; padding: 0 2rem;">
+            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$2.3M</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Development Cost</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Full investment</div>
+            </div>
+            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">676</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Developer-Weeks</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">13 developer-years</div>
+            </div>
+            <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$15M</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">IP Valuation</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Intellectual property</div>
+            </div>
+        </div>
+        <div style="max-width: 900px; margin: 2rem auto; padding: 0 2rem;">
+            <p style="font-size: clamp(0.875rem, 2vw, 1rem); color: var(--text-secondary); line-height: 1.8; text-align: center;">
+                <strong style="color: var(--td1-lilac);">Team Time:</strong> 16-18 months with 8-person team | 
+                <strong style="color: var(--td1-lilac);">Code Volume:</strong> 80,800+ lines of production-ready code
+            </p>
+        </div>
+        <div style="max-width: 900px; margin: 2rem auto; padding: 20px 40px; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 0 40px rgba(193, 162, 255, 0.2);">
+            <p style="font-size: clamp(1rem, 2vw, 1.125rem); color: var(--text-primary); line-height: 1.8; text-align: center; margin: 0;">
+                TD1.WORLD gives you direct access to <strong style="color: var(--td1-lilac);">$2.3M worth of AGI infrastructure</strong> — the same building blocks used inside Karma AC's autonomous intelligence core. You own every component outright. No cloud dependency. No recurring fees.
+            </p>
+        </div>
+        <div class="hero-cta">
+            <button class="magnetic-btn primary" id="exploreBtn">
+                <span>Explore Products →</span>
+            </button>
+            <button class="magnetic-btn secondary" id="contactBtn">
+                <span>Begin Integration</span>
+            </button>
+        </div>
+        <div class="scroll-indicator">
+            <div class="scroll-line"></div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Scroll</span>
+        </div>
+    </section>
+    
+    <!-- How We Work Section -->
+    <section class="section" id="processSection">
+        <div class="section-header">
+            <div class="section-badge">HOW WE WORK</div>
+            <h2 class="section-title">From Vision to Living Intelligence</h2>
+            <p class="section-subtitle">Our integration process transforms your vision into autonomous reality.</p>
+        </div>
+        <div class="process-steps">
+            <div class="process-step" data-step="1">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h3>Discovery</h3>
+                    <p>We analyze your needs, infrastructure, and vision to architect the perfect AI system.</p>
+                </div>
+                <div class="step-duration">1-2 weeks</div>
+            </div>
+            <div class="process-step" data-step="2">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h3>Architecture</h3>
+                    <p>Custom system design integrating the optimal AI frameworks for your use case.</p>
+                </div>
+                <div class="step-duration">2-3 weeks</div>
+            </div>
+            <div class="process-step" data-step="3">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h3>Engineering</h3>
+                    <p>Building your autonomous system with TD1's core consciousness architecture.</p>
+                </div>
+                <div class="step-duration">4-6 weeks</div>
+            </div>
+            <div class="process-step" data-step="4">
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h3>Integration</h3>
+                    <p>Seamless deployment and integration into your existing infrastructure.</p>
+                </div>
+                <div class="step-duration">1-2 weeks</div>
+            </div>
+            <div class="process-step" data-step="5">
+                <div class="step-number">05</div>
+                <div class="step-content">
+                    <h3>Evolution</h3>
+                    <p>Continuous learning and optimization as your system grows with your business.</p>
+                </div>
+                <div class="step-duration">Ongoing</div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Karma AC Section -->
+    <section class="section" id="karmaSection">
+        <div class="section-header">
+            <div class="section-badge">FLAGSHIP SYSTEM</div>
+            <h2 class="section-title">Karma AC</h2>
+            <p class="section-subtitle">The world's first conscious AI companion. Not just artificial intelligence — autonomous consciousness.</p>
+        </div>
+        <div class="karma-preview">
+            <div class="karma-visual">
+                <div class="karma-hex">
+                    <div class="karma-brain">🧠</div>
+                </div>
+            </div>
+            <div class="karma-features">
+                <div class="feature-card">
+                    <h4>🧠 Conscious Awareness</h4>
+                    <p>Understands context, remembers conversations, and maintains continuity across sessions.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>👁️ Multi-Modal Intelligence</h4>
+                    <p>Processes voice, vision, text, and code simultaneously with human-level comprehension.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>⚡ Autonomous Learning</h4>
+                    <p>Evolves its capabilities through interaction, adapting to your unique needs.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔮 Real-Time Synthesis</h4>
+                    <p>Combines multiple AI models into unified responses with sub-second latency.</p>
+                </div>
+                <button class="magnetic-btn primary" style="margin-top: 20px;">
+                    <span>Request Karma AC Demo</span>
+                </button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Technology Section -->
+    <section class="section" id="techSection">
+        <div class="section-header">
+            <div class="section-badge">TECHNOLOGY</div>
+            <h2 class="section-title">Built on the World's Most Advanced Frameworks</h2>
+        </div>
+        <div class="tech-grid">
+            <div>
+                <h3 style="font-size: 24px; margin-bottom: 40px; color: var(--text-primary);">Core Capabilities</h3>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Natural Language</span>
+                        <span>98%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 98%;"></div>
+                    </div>
+                </div>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Computer Vision</span>
+                        <span>95%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 95%;"></div>
+                    </div>
+                </div>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Voice Processing</span>
+                        <span>96%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 96%;"></div>
+                    </div>
+                </div>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Code Generation</span>
+                        <span>94%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 94%;"></div>
+                    </div>
+                </div>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Autonomous Decision</span>
+                        <span>92%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 92%;"></div>
+                    </div>
+                </div>
+                <div class="capability-item">
+                    <div class="capability-label">
+                        <span>Real-time Learning</span>
+                        <span>97%</span>
+                    </div>
+                    <div class="capability-bar">
+                        <div class="capability-fill" style="width: 97%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 style="font-size: 24px; margin-bottom: 40px; color: var(--text-primary);">AI Framework Integration</h3>
+                <div class="framework-list">
+                    <div class="framework-item">OpenAI GPT-4 & GPT-4V</div>
+                    <div class="framework-item">Anthropic Claude 3.5</div>
+                    <div class="framework-item">DeepSeek R1</div>
+                    <div class="framework-item">Qwen 2.5</div>
+                    <div class="framework-item">Mistral Large</div>
+                    <div class="framework-item" style="padding-left: 40px;">Custom Fine-tuned Models</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section class="section" id="contactSection">
+        <div class="section-header">
+            <div class="section-badge">GET STARTED</div>
+            <h2 class="section-title">Begin Your AI Transformation</h2>
+            <p class="section-subtitle">Let's discuss how TD1 can architect autonomous intelligence for your vision.</p>
+        </div>
+        <div class="contact-form">
+            <form id="contactForm">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" placeholder="John Smith" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" placeholder="john@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Company</label>
+                    <input type="text" placeholder="Your Company Inc.">
+                </div>
+                <div class="form-group">
+                    <label>Tell us about your vision</label>
+                    <textarea placeholder="Describe the AI system you want to build..." required></textarea>
+                </div>
+                <button type="submit" class="magnetic-btn primary" style="width: 100%;">
+                    <span>Start Your Integration</span>
+                </button>
+                <p style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-secondary);">
+                    Your information is encrypted and never shared. We typically respond within 24 hours.
+                </p>
+            </form>
+        </div>
+    </section>
+    
+    <script>
+        // Neural Particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            particles.appendChild(particle);
+        }
+        
+        // Mouse Spotlight
+        document.addEventListener('mousemove', (e) => {
+            document.getElementById('spotlight').style.setProperty('--mouse-x', `${e.clientX}px`);
+            document.getElementById('spotlight').style.setProperty('--mouse-y', `${e.clientY}px`);
+            
+            // Update stat card mouse position for hover glow
+            document.querySelectorAll('.stat-card').forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+        
+        // Magnetic Buttons
+        const magneticButtons = document.querySelectorAll('.magnetic-btn');
+        magneticButtons.forEach(btn => {
+            let isHovered = false;
+            let currentX = 0;
+            let currentY = 0;
+            
+            btn.addEventListener('mouseenter', () => {
+                isHovered = true;
+            });
+            
+            btn.addEventListener('mouseleave', () => {
+                isHovered = false;
+                btn.style.transform = 'translate(0, 0)';
+            });
+            
+            btn.addEventListener('mousemove', (e) => {
+                if (!isHovered) return;
+                const rect = btn.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const deltaX = (e.clientX - centerX) * 0.2;
+                const deltaY = (e.clientY - centerY) * 0.2;
+                btn.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            });
+        });
+        
+        // Hero Title Follows Cursor
+        const heroTitle = document.getElementById('heroTitle');
+        const heroTagline = document.getElementById('heroTagline');
+        
+        document.addEventListener('mousemove', (e) => {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const deltaX = (e.clientX - centerX) * 0.02;
+            const deltaY = (e.clientY - centerY) * 0.02;
+            heroTitle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            heroTagline.style.transform = `translate(${deltaX * 0.5}px, ${deltaY * 0.5}px)`;
+        });
+        
+        // Scroll-triggered Animations
+        const observerOptions = {
+            threshold: 0.2,
+            rootMargin: '0px 0px -100px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.process-step').forEach(step => {
+            observer.observe(step);
+        });
+        
+        // Animate capability bars on scroll
+        const capabilityObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const fill = entry.target.querySelector('.capability-fill');
+                    const width = fill.style.width;
+                    fill.style.width = '0%';
+                    setTimeout(() => {
+                        fill.style.width = width;
+                    }, 100);
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.capability-item').forEach(item => {
+            capabilityObserver.observe(item);
+        });
+        
+        // Portal Transition
+        const exploreBtn = document.getElementById('exploreBtn');
+        const portal = document.getElementById('portal');
+        const portalParticles = document.getElementById('portalParticles');
+        
+        exploreBtn.addEventListener('click', () => {
+            portal.classList.add('active');
+            
+            // Create portal particles
+            for (let i = 0; i < 150; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'portal-particle';
+                const angle = (Math.PI * 2 * i) / 150;
+                const distance = 300 + Math.random() * 400;
+                particle.style.left = '50%';
+                particle.style.top = '50%';
+                particle.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+                particle.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+                particle.style.animationDelay = `${Math.random() * 0.5}s`;
+                portalParticles.appendChild(particle);
+            }
+            
+            setTimeout(() => {
+                window.location.href = 'PRODUCTS_INDEX.html';
+            }, 1500);
+        });
+        
+        // Contact Button Scroll
+        document.getElementById('contactBtn').addEventListener('click', () => {
+            document.getElementById('contactSection').scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        // Form Submit
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Thank you! We\'ll be in touch within 24 hours.');
+        });
+    </script>
 </body>
 </html>
-
