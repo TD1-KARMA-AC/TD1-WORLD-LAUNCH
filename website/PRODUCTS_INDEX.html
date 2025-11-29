@@ -2728,7 +2728,7 @@
                     return;
                 }
                 
-                // Resolve demo URL - always use absolute path for deployed sites
+                // Resolve demo URL - handle both local and deployed scenarios
                 const currentUrl = window.location.href;
                 let demoUrl;
                 
@@ -2736,10 +2736,13 @@
                     // Local development: use relative path
                     demoUrl = product.demoUrl;
                 } else {
-                    // Deployed: always use absolute path starting with /website/
+                    // Deployed: Always use /website/ prefix (matches netlify.toml structure)
+                    // Demos are always at /website/demos/ when deployed
                     if (product.demoUrl.startsWith('/')) {
-                        demoUrl = window.location.origin + product.demoUrl;
+                        // If already absolute, use as-is but ensure /website/ prefix
+                        demoUrl = window.location.origin + (product.demoUrl.startsWith('/website/') ? product.demoUrl : '/website' + product.demoUrl);
                     } else {
+                        // Relative path: add /website/ prefix
                         demoUrl = window.location.origin + '/website/' + product.demoUrl;
                     }
                 }
@@ -2784,15 +2787,23 @@
                 const productId = modal?.dataset?.productId;
                 const modalDemo = document.getElementById('modalDemo');
                 
+                if (!modalDemo) {
+                    console.error('modalDemo element not found');
+                    return;
+                }
+                
                 console.log('Modal:', modal);
                 console.log('Product ID:', productId);
                 console.log('Modal Demo element:', modalDemo);
+                
+                // Always clear and reload when switching to demo tab
+                modalDemo.innerHTML = '';
                 
                 if (productId && productData[productId] && productData[productId].demoUrl) {
                     console.log('Product found, embedding demo iframe');
                     const product = productData[productId];
                     
-                    // Resolve demo URL - use same logic as openDemoInNewTab
+                    // Resolve demo URL - handle both local and deployed scenarios
                     const currentUrl = window.location.href;
                     let demoUrl;
                     
@@ -2800,68 +2811,103 @@
                         // Local development: use relative path
                         demoUrl = product.demoUrl;
                     } else {
-                        // Deployed: always use absolute path starting with /website/
+                        // Deployed: Always use /website/ prefix (matches netlify.toml structure)
+                        // Demos are always at /website/demos/ when deployed
                         if (product.demoUrl.startsWith('/')) {
-                            demoUrl = window.location.origin + product.demoUrl;
+                            // If already absolute, use as-is but ensure /website/ prefix
+                            demoUrl = window.location.origin + (product.demoUrl.startsWith('/website/') ? product.demoUrl : '/website' + product.demoUrl);
                         } else {
+                            // Relative path: add /website/ prefix
                             demoUrl = window.location.origin + '/website/' + product.demoUrl;
                         }
                     }
                     
-                    console.log('Embedding demo URL:', demoUrl);
+                    console.log('=== DEMO LOADING DEBUG ===');
+                    console.log('Product:', product.name);
+                    console.log('Product ID:', productId);
+                    console.log('Original demoUrl:', product.demoUrl);
+                    console.log('Resolved demoUrl:', demoUrl);
+                    console.log('Current URL:', currentUrl);
+                    console.log('Window origin:', window.location.origin);
                     
-                    // Clear and create iframe
-                    modalDemo.innerHTML = '';
+                    // Create wrapper for loading state and iframe
+                    const wrapper = document.createElement('div');
+                    wrapper.id = 'demoWrapper';
+                    wrapper.style.cssText = 'position: relative; width: 100%; min-height: 400px; display: block; visibility: visible;';
+                    console.log('Wrapper created');
                     
-                    // Create loading indicator
+                    // Create loading indicator (will be removed when iframe loads)
                     const loadingDiv = document.createElement('div');
-                    loadingDiv.style.cssText = 'padding: 40px; text-align: center; color: var(--text-primary);';
+                    loadingDiv.id = 'demoLoadingIndicator';
+                    loadingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; color: var(--text-primary); z-index: 1; background: rgba(0, 0, 0, 0.3); border-radius: 12px;';
                     loadingDiv.innerHTML = `
                         <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
-                        <p style="color: var(--text-secondary);">Loading ${product.name} Interactive Demo...</p>
+                        <p style="color: var(--text-secondary); margin-top: 16px;">Loading ${product.name} Interactive Demo...</p>
                     `;
-                    modalDemo.appendChild(loadingDiv);
+                    wrapper.appendChild(loadingDiv);
                     
                     // Create iframe
                     const iframe = document.createElement('iframe');
                     iframe.className = 'demo-iframe';
+                    iframe.id = 'productDemoIframe';
                     iframe.src = demoUrl;
                     iframe.setAttribute('allowfullscreen', 'true');
-                    iframe.setAttribute('loading', 'lazy');
-                    iframe.style.cssText = 'width: 100%; height: clamp(350px, 60vh, 800px); max-height: 90vh; border: none; border-radius: 12px; background: rgba(0, 0, 0, 0.3);';
+                    iframe.setAttribute('frameborder', '0');
+                    iframe.setAttribute('scrolling', 'auto');
+                    iframe.style.cssText = 'width: 100%; height: clamp(400px, 70vh, 900px); min-height: 400px; border: 2px solid rgba(155, 92, 246, 0.3); border-radius: 12px; background: rgba(0, 0, 0, 0.5); display: block; opacity: 1; visibility: visible;';
+                    
+                    console.log('Iframe created:', iframe);
+                    console.log('Iframe src:', iframe.src);
                     
                     // Handle iframe load
                     iframe.onload = function() {
-                        console.log('Demo iframe loaded successfully');
-                        loadingDiv.remove();
+                        console.log('✅ Demo iframe loaded successfully');
+                        const loader = document.getElementById('demoLoadingIndicator');
+                        if (loader) {
+                            loader.style.display = 'none';
+                            console.log('Loading indicator hidden');
+                        }
+                        console.log('Iframe content loaded, dimensions:', iframe.offsetWidth, 'x', iframe.offsetHeight);
                     };
                     
-                    // Handle iframe errors
+                    // Handle iframe load errors (note: onerror doesn't work for iframes, but we can check after timeout)
                     iframe.onerror = function() {
-                        console.error('Failed to load demo iframe');
-                        loadingDiv.innerHTML = `
-                            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                            <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Loading Error</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 24px;">
-                                Unable to load the demo. You can try opening it in a new tab instead.
-                            </p>
-                            <button onclick="openDemoInNewTab('${productId}')" style="
-                                padding: 12px 24px; 
-                                background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                                border: none; 
-                                border-radius: 8px; 
-                                color: white; 
-                                font-size: 14px; 
-                                font-weight: 600; 
-                                cursor: pointer;
-                            ">
-                                Open Demo in New Tab →
-                            </button>
-                        `;
+                        console.error('❌ Iframe error event fired');
                     };
                     
-                    // Add iframe to container
-                    modalDemo.appendChild(iframe);
+                    // Add timeout fallback (if iframe doesn't load within 10 seconds, show error)
+                    setTimeout(function() {
+                        const loader = document.getElementById('demoLoadingIndicator');
+                        if (loader && loader.style.display !== 'none') {
+                            console.warn('Demo iframe loading timeout');
+                            loader.innerHTML = `
+                                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                                <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Taking Longer Than Expected</h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                                    The demo may still be loading, or there may be an issue. You can try opening it in a new tab.
+                                </p>
+                                <button onclick="openDemoInNewTab('${productId}')" style="
+                                    padding: 12px 24px; 
+                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                    border: none; 
+                                    border-radius: 8px; 
+                                    color: white; 
+                                    font-size: 14px; 
+                                    font-weight: 600; 
+                                    cursor: pointer;
+                                    margin-top: 16px;
+                                ">
+                                    Open Demo in New Tab →
+                                </button>
+                            `;
+                        }
+                    }, 10000);
+                    
+                    // Add iframe to wrapper
+                    wrapper.appendChild(iframe);
+                    
+                    // Add wrapper to container
+                    modalDemo.appendChild(wrapper);
                     
                 } else {
                     console.warn('Demo not available - Product ID:', productId, 'Product data:', productId ? productData[productId] : 'not found');
