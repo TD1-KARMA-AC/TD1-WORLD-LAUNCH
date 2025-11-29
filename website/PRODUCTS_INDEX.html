@@ -2728,33 +2728,25 @@
                     return;
                 }
                 
-                // Resolve demo URL - handle both local and deployed scenarios
+                // Resolve demo URL - use relative paths when possible
+                // Since PRODUCTS_INDEX.html and demos are in the same website folder structure,
+                // we can use relative paths which work both locally and deployed
                 const currentUrl = window.location.href;
+                const currentPath = window.location.pathname;
                 let demoUrl;
                 
                 if (currentUrl.startsWith('file://')) {
-                    // Local development: use relative path
+                    // Local file:// - use relative path
                     demoUrl = product.demoUrl;
+                } else if (currentPath.includes('/website/')) {
+                    // We're in /website/ folder - use relative path (works on deployed site)
+                    // product.demoUrl is "demos/TD1_INTENT_demo.html"
+                    // Relative to /website/PRODUCTS_INDEX.html, demos are at ./demos/
+                    demoUrl = product.demoUrl; // Relative path works!
                 } else {
-                    // Deployed: Always use /website/ prefix (matches netlify.toml structure)
-                    // Demos are always at /website/demos/ when deployed
-                    // product.demoUrl is like "demos/TD1_INTENT_demo.html"
-                    // We need: "/website/demos/TD1_INTENT_demo.html"
-                    
-                    // Remove any leading slashes from product.demoUrl to avoid double slashes
+                    // We're at root - need absolute path with /website/ prefix
                     const cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
-                    
-                    // Ensure it starts with /website/
-                    if (cleanDemoUrl.startsWith('website/')) {
-                        // Already has website/ prefix
-                        demoUrl = window.location.origin + '/' + cleanDemoUrl;
-                    } else if (cleanDemoUrl.startsWith('demos/')) {
-                        // Has demos/ prefix, add website/
-                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
-                    } else {
-                        // Fallback: add website/demos/
-                        demoUrl = window.location.origin + '/website/demos/' + cleanDemoUrl;
-                    }
+                    demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                 }
                 
                 console.log('=== Opening Demo in New Tab ===');
@@ -2813,33 +2805,25 @@
                     console.log('Product found, embedding demo iframe');
                     const product = productData[productId];
                     
-                    // Resolve demo URL - handle both local and deployed scenarios
+                    // Resolve demo URL - use relative paths when possible
+                    // Since PRODUCTS_INDEX.html and demos are in the same website folder structure,
+                    // we can use relative paths which work both locally and deployed
                     const currentUrl = window.location.href;
+                    const currentPath = window.location.pathname;
                     let demoUrl;
                     
                     if (currentUrl.startsWith('file://')) {
-                        // Local development: use relative path
+                        // Local file:// - use relative path
                         demoUrl = product.demoUrl;
+                    } else if (currentPath.includes('/website/')) {
+                        // We're in /website/ folder - use relative path (works on deployed site)
+                        // product.demoUrl is "demos/TD1_INTENT_demo.html"
+                        // Relative to /website/PRODUCTS_INDEX.html, demos are at ./demos/
+                        demoUrl = product.demoUrl; // Relative path works!
                     } else {
-                        // Deployed: Always use /website/ prefix (matches netlify.toml structure)
-                        // Demos are always at /website/demos/ when deployed
-                        // product.demoUrl is like "demos/TD1_INTENT_demo.html"
-                        // We need: "/website/demos/TD1_INTENT_demo.html"
-                        
-                        // Remove any leading slashes from product.demoUrl to avoid double slashes
+                        // We're at root - need absolute path with /website/ prefix
                         const cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
-                        
-                        // Ensure it starts with /website/
-                        if (cleanDemoUrl.startsWith('website/')) {
-                            // Already has website/ prefix
-                            demoUrl = window.location.origin + '/' + cleanDemoUrl;
-                        } else if (cleanDemoUrl.startsWith('demos/')) {
-                            // Has demos/ prefix, add website/
-                            demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
-                        } else {
-                            // Fallback: add website/demos/
-                            demoUrl = window.location.origin + '/website/demos/' + cleanDemoUrl;
-                        }
+                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                     }
                     
                     console.log('=== DEMO LOADING DEBUG ===');
