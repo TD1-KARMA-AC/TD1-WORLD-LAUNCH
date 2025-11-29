@@ -2922,7 +2922,7 @@
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
-            // If switching to demo tab, ensure iframe is loaded and visible
+            // If switching to demo tab, ALWAYS create a completely fresh iframe
             if (tabName === 'demo') {
                 const modal = document.getElementById('productModal');
                 const productId = modal.dataset.productId;
@@ -2930,7 +2930,6 @@
                 
                 if (productId && productData[productId] && productData[productId].demoUrl) {
                     const product = productData[productId];
-                    let iframe = modalDemo.querySelector('iframe');
                     
                     // Resolve path for deployed site
                     const currentUrl = window.location.href;
@@ -2952,64 +2951,36 @@
                         ? demoPath 
                         : window.location.origin + demoPath;
                     
-                    // If iframe doesn't exist or src is different, create/recreate iframe
-                    // Note: iframe.src returns full URL, so we compare with demoUrl (also full URL)
-                    const currentSrc = iframe ? iframe.src : '';
-                    if (!iframe || currentSrc !== demoUrl) {
-                        console.log('=== Loading Demo in Tab ===');
-                        console.log('Demo path:', demoPath);
-                        console.log('Full demo URL:', demoUrl);
-                        
-                        // Create iframe
-                        iframe = document.createElement('iframe');
-                        iframe.src = demoUrl;
-                        iframe.className = 'demo-iframe';
-                        iframe.setAttribute('loading', 'lazy');
-                        iframe.setAttribute('allow', 'fullscreen');
-                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
-                        iframe.style.cssText = 'width: 100%; height: 100%; min-height: 500px; border: none; border-radius: 12px; background: var(--bg-dark);';
-                        
-                        iframe.onload = function() {
-                            console.log('✅ Demo iframe loaded');
-                            console.log('Iframe src:', iframe.src);
-                            console.log('Iframe contentWindow location:', iframe.contentWindow?.location?.href || 'Cannot access (cross-origin)');
-                        };
-                        
-                        iframe.onerror = function() {
-                            console.error('❌ Demo iframe failed to load');
-                            console.error('Failed URL:', demoUrl);
-                        };
-                        
-                        // Add timeout to detect if wrong content loaded
-                        setTimeout(() => {
-                            try {
-                                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                                if (iframeDoc) {
-                                    const title = iframeDoc.title || iframeDoc.querySelector('title')?.textContent || '';
-                                    console.log('Iframe loaded document title:', title);
-                                    if (title.includes('TD1.WORLD') && !title.includes('Demo')) {
-                                        console.warn('⚠️ Iframe appears to have loaded homepage instead of demo!');
-                                        console.warn('Expected demo file but got:', title);
-                                    }
-                                }
-                            } catch (e) {
-                                console.log('Cannot access iframe content (cross-origin):', e.message);
-                            }
-                        }, 2000);
-                        
-                        // Clear and add iframe
-                        modalDemo.innerHTML = '';
-                        modalDemo.appendChild(iframe);
-                        
-                        // Force iframe to load by setting src again after append
-                        // This ensures the iframe actually requests the URL
-                        setTimeout(() => {
-                            if (iframe.src !== demoUrl) {
-                                console.log('Re-setting iframe src in tab switch to ensure it loads');
-                                iframe.src = demoUrl;
-                            }
-                        }, 100);
-                    }
+                    console.log('=== Creating Fresh Demo Iframe ===');
+                    console.log('Product:', product.name);
+                    console.log('Full demo URL:', demoUrl);
+                    
+                    // ALWAYS clear and create completely fresh iframe - no reuse, no caching
+                    modalDemo.innerHTML = '';
+                    
+                    // Create brand new iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.src = demoUrl;
+                    iframe.className = 'demo-iframe';
+                    iframe.setAttribute('loading', 'eager');
+                    iframe.setAttribute('allow', 'fullscreen');
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+                    iframe.style.cssText = 'width: 100%; height: 100%; min-height: 500px; border: none; border-radius: 12px; background: var(--bg-dark);';
+                    
+                    iframe.onload = function() {
+                        console.log('✅ Fresh demo iframe loaded successfully');
+                    };
+                    
+                    iframe.onerror = function() {
+                        console.error('❌ Demo iframe failed to load:', demoUrl);
+                        modalDemo.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                            <p>Failed to load demo. Please try again.</p>
+                            <p style="font-size: 12px; margin-top: 10px;">URL: ${demoUrl}</p>
+                        </div>`;
+                    };
+                    
+                    // Add fresh iframe to container
+                    modalDemo.appendChild(iframe);
                 }
             }
         }
