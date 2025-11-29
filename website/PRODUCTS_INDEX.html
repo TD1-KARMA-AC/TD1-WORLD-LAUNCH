@@ -2997,21 +2997,9 @@
                             }
                         }, 2000);
                         
-            // Clear and add iframe
-            modalDemo.innerHTML = '';
-            modalDemo.appendChild(iframe);
-            
-            // Verify iframe src after adding (for debugging)
-            setTimeout(() => {
-                const addedIframe = modalDemo.querySelector('iframe');
-                if (addedIframe) {
-                    console.log('Iframe src after adding:', addedIframe.src);
-                    console.log('Expected URL:', demoUrl);
-                    if (addedIframe.src !== demoUrl && !addedIframe.src.endsWith(demoUrl.split('/').pop())) {
-                        console.warn('Iframe src mismatch! Expected:', demoUrl, 'Got:', addedIframe.src);
-                    }
-                }
-            }, 100);
+                        // Clear and add iframe
+                        modalDemo.innerHTML = '';
+                        modalDemo.appendChild(iframe);
                         
                         // Force iframe to load by setting src again after append
                         // This ensures the iframe actually requests the URL
