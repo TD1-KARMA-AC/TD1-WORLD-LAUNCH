@@ -2709,13 +2709,12 @@
             document.body.style.overflow = '';
         }
         
-        // Load Demo Content Directly - No iframe, fetch and inject HTML
-        async function loadDemoContent(productId) {
+        // Open Demo in New Tab - Simple and reliable
+        function openDemoInNewTab(productId) {
             const product = productData[productId];
-            const modalDemo = document.getElementById('modalDemo');
             
             if (!product || !product.demoUrl) {
-                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
+                alert('Demo coming soon for this product!');
                 return;
             }
             
@@ -2735,73 +2734,12 @@
                 }
             }
             
-            console.log('=== Loading Demo Content ===');
+            console.log('=== Opening Demo in New Tab ===');
             console.log('Product:', product.name);
             console.log('Demo URL:', demoUrl);
             
-            // Show loading state
-            modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Loading demo...</div>';
-            
-            try {
-                // Fetch the demo HTML
-                const response = await fetch(demoUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const html = await response.text();
-                
-                // Create a temporary DOM element to parse the HTML
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = html;
-                
-                // Extract the body content (skip html, head, body tags)
-                const bodyContent = tempDiv.querySelector('body');
-                
-                if (bodyContent) {
-                    // Extract styles from head if they exist
-                    const headContent = tempDiv.querySelector('head');
-                    let styles = '';
-                    if (headContent) {
-                        const styleTags = headContent.querySelectorAll('style');
-                        styleTags.forEach(style => {
-                            styles += style.outerHTML;
-                        });
-                    }
-                    
-                    // Inject styles and body content
-                    modalDemo.innerHTML = styles + bodyContent.innerHTML;
-                    
-                    // Re-execute any scripts that were in the demo
-                    const scripts = bodyContent.querySelectorAll('script');
-                    scripts.forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        if (oldScript.src) {
-                            newScript.src = oldScript.src;
-                        } else {
-                            newScript.textContent = oldScript.textContent;
-                        }
-                        modalDemo.appendChild(newScript);
-                    });
-                    
-                    console.log('✅ Demo content loaded successfully');
-                } else {
-                    // If no body tag, just use the entire content
-                    modalDemo.innerHTML = html;
-                }
-                
-            } catch (error) {
-                console.error('❌ Failed to load demo:', error);
-                modalDemo.innerHTML = `
-                    <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                        <p>Failed to load demo.</p>
-                        <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">${error.message}</p>
-                        <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">URL: ${demoUrl}</p>
-                        <button onclick="loadDemoContent('${productId}')" style="margin-top: 20px; padding: 10px 20px; background: var(--td1-lilac); border: none; border-radius: 8px; color: white; cursor: pointer;">Retry</button>
-                    </div>
-                `;
-            }
+            // Open in new tab
+            window.open(demoUrl, '_blank', 'noopener,noreferrer');
         }
         
         // Switch Tab - Rebuilt from scratch
@@ -2817,18 +2755,47 @@
             if (tabButton) tabButton.classList.add('active');
             if (tabContent) tabContent.classList.add('active');
             
-            // If switching to demo tab, load the demo content directly
+            // If switching to demo tab, show a button to open demo in new tab
             if (tabName === 'demo') {
                 const modal = document.getElementById('productModal');
                 const productId = modal?.dataset?.productId;
+                const modalDemo = document.getElementById('modalDemo');
                 
-                if (productId) {
-                    loadDemoContent(productId);
+                if (productId && productData[productId] && productData[productId].demoUrl) {
+                    const product = productData[productId];
+                    modalDemo.innerHTML = `
+                        <div style="padding: 60px 40px; text-align: center; color: var(--text-primary);">
+                            <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
+                            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">${product.name} Interactive Demo</h2>
+                            <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 16px;">
+                                Experience the full interactive demo in a new window
+                            </p>
+                            <button 
+                                onclick="openDemoInNewTab('${productId}')" 
+                                style="
+                                    padding: 16px 32px; 
+                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                    border: none; 
+                                    border-radius: 12px; 
+                                    color: white; 
+                                    font-size: 16px; 
+                                    font-weight: 600; 
+                                    cursor: pointer;
+                                    transition: transform 0.2s, box-shadow 0.2s;
+                                    box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
+                                "
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 25px rgba(155, 92, 246, 0.4)';"
+                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 20px rgba(155, 92, 246, 0.3)';"
+                            >
+                                Open Live Demo →
+                            </button>
+                            <p style="color: var(--text-secondary); margin-top: 24px; font-size: 14px; opacity: 0.7;">
+                                The demo will open in a new tab
+                            </p>
+                        </div>
+                    `;
                 } else {
-                    const modalDemo = document.getElementById('modalDemo');
-                    if (modalDemo) {
-                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">No product selected</div>';
-                    }
+                    modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
                 }
             }
         }
