@@ -2857,17 +2857,21 @@
                     demoPath = product.demoUrl;
                 } else {
                     // Deployed site (http:// or https://)
-                    // Check if we're in /website/ folder or at root
-                    if (currentPath.includes('/website/')) {
-                        // We're in /website/ folder, demo path should be relative
+                    // Always use absolute path from root for deployed site
+                    // Demos are at /website/demos/TD1_INTENT_demo.html
+                    // So we need absolute path: /website/demos/TD1_INTENT_demo.html
+                    // Make sure it starts with / and includes /website/
+                    if (product.demoUrl.startsWith('/')) {
                         demoPath = product.demoUrl;
                     } else {
-                        // We're at root, need to add /website/ prefix
-                        // If demoUrl is 'demos/TD1_INTENT_demo.html'
-                        // We need '/website/demos/TD1_INTENT_demo.html'
                         demoPath = '/website/' + product.demoUrl;
-                    }
+                    }  
                 }
+                
+                // Build full URL for iframe
+                const demoUrl = currentUrl.startsWith('file://') 
+                    ? demoPath 
+                    : window.location.origin + demoPath;
                 
                 console.log('=== Demo Loading Debug ===');
                 console.log('Product:', product.name);
@@ -2875,10 +2879,11 @@
                 console.log('Current URL:', currentUrl);
                 console.log('Current path:', currentPath);
                 console.log('Resolved demo path:', demoPath);
+                console.log('Full demo URL:', demoUrl);
                 
                 // Create iframe
                 const iframe = document.createElement('iframe');
-                iframe.src = demoPath;
+                iframe.src = demoUrl;
                 iframe.className = 'demo-iframe';
                 iframe.setAttribute('loading', 'lazy');
                 iframe.setAttribute('allow', 'fullscreen');
@@ -2982,26 +2987,33 @@
                     
                     // Resolve path for deployed site
                     const currentUrl = window.location.href;
-                    const currentPath = window.location.pathname;
                     let demoPath;
                     
                     if (currentUrl.startsWith('file://')) {
                         demoPath = product.demoUrl;
                     } else {
-                        if (currentPath.includes('/website/')) {
+                        // Always use absolute path for deployed site
+                        if (product.demoUrl.startsWith('/')) {
                             demoPath = product.demoUrl;
                         } else {
                             demoPath = '/website/' + product.demoUrl;
                         }
                     }
                     
+                    // Build full URL for iframe
+                    const demoUrl = currentUrl.startsWith('file://') 
+                        ? demoPath 
+                        : window.location.origin + demoPath;
+                    
                     // If iframe doesn't exist or src is different, create/recreate iframe
-                    if (!iframe || iframe.src !== demoPath) {
-                        console.log('Loading demo in tab:', demoPath);
+                    if (!iframe || iframe.src !== demoUrl) {
+                        console.log('=== Loading Demo in Tab ===');
+                        console.log('Demo path:', demoPath);
+                        console.log('Full demo URL:', demoUrl);
                         
                         // Create iframe
                         iframe = document.createElement('iframe');
-                        iframe.src = demoPath;
+                        iframe.src = demoUrl;
                         iframe.className = 'demo-iframe';
                         iframe.setAttribute('loading', 'lazy');
                         iframe.setAttribute('allow', 'fullscreen');
