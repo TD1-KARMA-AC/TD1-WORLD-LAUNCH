@@ -904,7 +904,7 @@
                 Click any product below to test the live interactive demo. Each connects to a working API backend.
             </p>
         </div>
-        <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
+            <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
             <div class="product-block-card">
@@ -1035,7 +1035,7 @@
             <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
             <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">FORBIDDEN AGI</div>
@@ -1622,7 +1622,7 @@
             <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
             <h2 class="section-title">Core AI Infrastructure</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
@@ -1769,7 +1769,7 @@
             <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
             <h2 class="section-title">Essential AI Development</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">DEVELOPMENT</div>
@@ -1933,7 +1933,7 @@
             <div class="category-badge ">🤖 ROBOTICS</div>
             <h2 class="section-title">Universal Robot AI</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(6, 182, 212, 0.2); color: #06b6d4;">ROBOTICS</div>
@@ -1987,7 +1987,7 @@
             <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
             <h2 class="section-title">Enterprise AI Tools</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">ENTERPRISE</div>
@@ -2107,7 +2107,7 @@
             <div class="category-badge ">🧠 PERSONAL AI</div>
             <h2 class="section-title">Personal Knowledge Tools</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(34, 197, 94, 0.2); color: #22c55e;">PERSONAL</div>
@@ -2161,7 +2161,7 @@
             <div class="category-badge ">🌐 AI PLATFORM</div>
             <h2 class="section-title">Universal Infrastructure</h2>
         </div>
-        <div class="products-grid">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(155, 92, 246, 0.2); color: #9b5cf6;">PLATFORM</div>
@@ -2628,8 +2628,11 @@
             modalTagline.textContent = product.tagline;
             
             // Demo will be loaded when "Live Demo" tab is clicked
-            // Clear the demo container for now
+            // FORCE CLEAR the demo container - remove ANY iframes that might exist
             modalDemo.innerHTML = '';
+            // Double-check: remove any iframes that might have been created
+            const existingIframes = modalDemo.querySelectorAll('iframe');
+            existingIframes.forEach(iframe => iframe.remove());
             
             // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2713,6 +2716,13 @@
                 return;
             }
             
+            // FORCE REMOVE any existing iframes first - prevent any old code from creating iframes
+            const existingIframes = modalDemo.querySelectorAll('iframe');
+            existingIframes.forEach(iframe => {
+                console.log('Removing existing iframe:', iframe.src);
+                iframe.remove();
+            });
+            
             // Resolve demo URL - always use absolute path for deployed sites
             const currentUrl = window.location.href;
             let demoUrl;
@@ -2732,6 +2742,9 @@
             console.log('=== Demo URL ===');
             console.log('Product:', product.name);
             console.log('Demo URL:', demoUrl);
+            
+            // FORCE CLEAR container and create button - NO IFRAMES ALLOWED
+            modalDemo.innerHTML = '';
             
             // Create a nice button to open the demo in a new tab
             modalDemo.innerHTML = `
@@ -2767,8 +2780,8 @@
                     </p>
                 </div>
             `;
-        }
-        
+            }
+            
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
             // Remove active from all tabs and contents
@@ -2786,16 +2799,50 @@
             if (tabName === 'demo') {
                 const modal = document.getElementById('productModal');
                 const productId = modal?.dataset?.productId;
+                const modalDemo = document.getElementById('modalDemo');
+                
+                // FORCE REMOVE any iframes that might exist
+                if (modalDemo) {
+                    const existingIframes = modalDemo.querySelectorAll('iframe');
+                    existingIframes.forEach(iframe => {
+                        console.log('Removing iframe from demo tab:', iframe.src);
+                        iframe.remove();
+                    });
+                }
                 
                 if (productId) {
                     loadDemoButton(productId);
                 } else {
-                    const modalDemo = document.getElementById('modalDemo');
                     if (modalDemo) {
                         modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">No product selected</div>';
                     }
                 }
             }
+        }
+        
+        // PREVENT IFRAME CREATION - Watch for any iframes being added to modalDemo and remove them immediately
+        const modalDemo = document.getElementById('modalDemo');
+        if (modalDemo) {
+            const iframeObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeName === 'IFRAME' || (node.querySelector && node.querySelector('iframe'))) {
+                            console.warn('⚠️ IFRAME DETECTED - Removing immediately!', node);
+                            if (node.nodeName === 'IFRAME') {
+                                node.remove();
+                            } else {
+                                const iframes = node.querySelectorAll('iframe');
+                                iframes.forEach(iframe => iframe.remove());
+                            }
+                        }
+                    });
+                });
+            });
+            
+            iframeObserver.observe(modalDemo, {
+                childList: true,
+                subtree: true
+            });
         }
         
         // Close modal on background click
