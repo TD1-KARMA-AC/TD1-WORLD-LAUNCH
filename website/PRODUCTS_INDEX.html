@@ -2625,11 +2625,6 @@
             const demoButtonSection = document.getElementById('demoButtonSection');
             if (product.demoUrl && demoButtonSection) {
                 demoButtonSection.style.display = 'block';
-                // Store demo URL on the button for later use
-                const openDemoButton = document.getElementById('openDemoButton');
-                if (openDemoButton) {
-                    openDemoButton.dataset.demoUrl = product.demoUrl;
-                }
             } else if (demoButtonSection) {
                 demoButtonSection.style.display = 'none';
             }
@@ -2708,15 +2703,19 @@
         
         // Open Demo in New Tab - Simple function that opens demo URL
         function openDemoInNewTab() {
-            const button = document.getElementById('openDemoButton');
-            if (!button || !button.dataset.demoUrl) {
-                console.error('Demo button or URL not found');
+            const modal = document.getElementById('productModal');
+            const productId = modal?.dataset?.productId;
+            
+            if (!productId) {
+                console.error('Product ID not found');
+                alert('Error: Product not found. Please close and reopen the modal.');
                 return;
             }
             
-            const product = productData[document.getElementById('productModal')?.dataset?.productId];
+            const product = productData[productId];
             if (!product || !product.demoUrl) {
                 console.error('Product or demo URL not found');
+                alert('Demo not available for this product.');
                 return;
             }
             
@@ -2737,6 +2736,7 @@
             }
             
             console.log('Opening demo:', demoUrl);
+            console.log('Product:', product.name);
             window.open(demoUrl, '_blank', 'noopener,noreferrer');
         }
             
