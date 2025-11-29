@@ -2845,34 +2845,25 @@
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
             
-            // Set demo iframe - resolve path correctly
+            // Set demo iframe - use URL constructor for proper path resolution
             if (product.demoUrl) {
-                // Get the current page URL to determine the base path
-                const currentUrl = window.location.href;
-                const currentPath = window.location.pathname;
-                
-                // Determine the correct path based on current location
-                let demoPath = product.demoUrl;
-                
-                // If we're viewing from file:// protocol, use relative path
-                // If we're viewing from http://, construct absolute path
-                if (currentUrl.startsWith('file://')) {
-                    // File protocol - use relative path
+                // Use URL constructor to resolve path relative to current page
+                let demoPath;
+                try {
+                    // Create a URL object relative to current page
+                    const baseUrl = window.location.href;
+                    const demoUrl = new URL(product.demoUrl, baseUrl);
+                    demoPath = demoUrl.href;
+                } catch (e) {
+                    // Fallback: use relative path
                     demoPath = product.demoUrl;
-                } else {
-                    // HTTP/HTTPS - construct path relative to current page
-                    // If PRODUCTS_INDEX.html is at /website/PRODUCTS_INDEX.html
-                    // and demo is at /website/demos/TD1_INTENT_demo.html
-                    // we need to go from current dir to demos/
-                    const pathParts = currentPath.split('/');
-                    pathParts.pop(); // Remove PRODUCTS_INDEX.html
-                    const basePath = pathParts.join('/');
-                    demoPath = basePath + '/' + product.demoUrl;
                 }
                 
-                console.log('Current URL:', currentUrl);
-                console.log('Current path:', currentPath);
-                console.log('Demo path:', demoPath);
+                console.log('=== Demo Loading Debug ===');
+                console.log('Product:', product.name);
+                console.log('Demo URL from data:', product.demoUrl);
+                console.log('Current location:', window.location.href);
+                console.log('Resolved demo path:', demoPath);
                 
                 // Create iframe
                 const iframe = document.createElement('iframe');
@@ -2885,7 +2876,17 @@
                 
                 // Add load event
                 iframe.onload = function() {
-                    console.log('Demo iframe loaded:', demoPath);
+                    console.log('✅ Demo iframe loaded successfully');
+                };
+                
+                iframe.onerror = function() {
+                    console.error('❌ Demo iframe failed to load');
+                    // Try fallback path
+                    const fallbackPath = product.demoUrl.startsWith('/') 
+                        ? product.demoUrl 
+                        : '/' + product.demoUrl;
+                    console.log('Trying fallback path:', fallbackPath);
+                    iframe.src = fallbackPath;
                 };
                 
                 // Clear and add iframe
@@ -2964,15 +2965,53 @@
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
-            // If switching to demo tab, ensure iframe is loaded
+            // If switching to demo tab, ensure iframe is loaded and visible
             if (tabName === 'demo') {
+                const modal = document.getElementById('productModal');
+                const productId = modal.dataset.productId;
                 const modalDemo = document.getElementById('modalDemo');
-                const iframe = modalDemo.querySelector('iframe');
-                if (iframe && !iframe.src) {
-                    // Reload iframe if it wasn't loaded
-                    const productId = document.getElementById('productModal').dataset.productId;
-                    if (productId && productData[productId] && productData[productId].demoUrl) {
-                        iframe.src = productData[productId].demoUrl;
+                
+                if (productId && productData[productId] && productData[productId].demoUrl) {
+                    const product = productData[productId];
+                    let iframe = modalDemo.querySelector('iframe');
+                    
+                    // If iframe doesn't exist or src is empty, create/recreate iframe
+                    if (!iframe || !iframe.src) {
+                        // Use URL constructor to resolve path
+                        let demoPath;
+                        try {
+                            const baseUrl = window.location.href;
+                            const demoUrl = new URL(product.demoUrl, baseUrl);
+                            demoPath = demoUrl.href;
+                        } catch (e) {
+                            demoPath = product.demoUrl;
+                        }
+                        
+                        console.log('Loading demo in tab:', demoPath);
+                        
+                        // Create iframe
+                        iframe = document.createElement('iframe');
+                        iframe.src = demoPath;
+                        iframe.className = 'demo-iframe';
+                        iframe.setAttribute('loading', 'lazy');
+                        iframe.setAttribute('allow', 'fullscreen');
+                        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+                        iframe.style.cssText = 'width: 100%; height: 100%; min-height: 500px; border: none; border-radius: 12px; background: var(--bg-dark);';
+                        
+                        iframe.onload = function() {
+                            console.log('✅ Demo loaded in tab');
+                        };
+                        
+                        // Clear and add iframe
+                        modalDemo.innerHTML = '';
+                        modalDemo.appendChild(iframe);
+                    } else {
+                        // Iframe exists, just reload it to ensure it displays
+                        const currentSrc = iframe.src;
+                        iframe.src = '';
+                        setTimeout(() => {
+                            iframe.src = currentSrc;
+                        }, 100);
                     }
                 }
             }
