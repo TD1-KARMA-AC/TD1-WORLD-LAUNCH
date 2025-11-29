@@ -34,22 +34,24 @@
   force = true
 
 # Note: Netlify Functions at /.netlify/functions/* are handled automatically BEFORE redirects
+# IMPORTANT: Netlify processes redirects in order - specific rules must come BEFORE catch-all
+# Netlify serves static files FIRST, but redirects can override, so we need explicit rules
 
-# Allow demo files to be served directly (must come before catch-all)
+# Explicitly serve demo files directly (must come before catch-all)
 [[redirects]]
   from = "/website/demos/*"
   to = "/website/demos/:splat"
   status = 200
   force = false
 
-# Allow website files to be served directly
+# Explicitly serve website HTML files directly
 [[redirects]]
   from = "/website/*.html"
-  to = "/website/:splat"
+  to = "/website/:splat.html"
   status = 200
   force = false
 
-# Allow assets to be served directly
+# Explicitly serve assets directly
 [[redirects]]
   from = "/website/assets/*"
   to = "/website/assets/:splat"
@@ -57,6 +59,7 @@
   force = false
 
 # Handle SPA routing - redirect all other non-function requests to index.html
+# This catch-all comes LAST and only matches paths not handled above
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -80,4 +83,3 @@
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     Content-Security-Policy = "default-src 'self' 'unsafe-inline' https: data:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; frame-ancestors 'self' https://www.td1.world;"
-
