@@ -2711,36 +2711,58 @@
         
         // Open Demo in New Tab - Simple and reliable
         function openDemoInNewTab(productId) {
-            const product = productData[productId];
+            console.log('openDemoInNewTab called with productId:', productId);
             
-            if (!product || !product.demoUrl) {
-                alert('Demo coming soon for this product!');
-                return;
-            }
-            
-            // Resolve demo URL - always use absolute path for deployed sites
-            const currentUrl = window.location.href;
-            let demoUrl;
-            
-            if (currentUrl.startsWith('file://')) {
-                // Local development: use relative path
-                demoUrl = product.demoUrl;
-            } else {
-                // Deployed: always use absolute path starting with /website/
-                if (product.demoUrl.startsWith('/')) {
-                    demoUrl = window.location.origin + product.demoUrl;
-                } else {
-                    demoUrl = window.location.origin + '/website/' + product.demoUrl;
+            try {
+                const product = productData[productId];
+                
+                if (!product) {
+                    console.error('Product not found:', productId);
+                    alert('Product not found. Please try again.');
+                    return;
                 }
+                
+                if (!product.demoUrl) {
+                    console.warn('No demo URL for product:', productId);
+                    alert('Demo coming soon for this product!');
+                    return;
+                }
+                
+                // Resolve demo URL - always use absolute path for deployed sites
+                const currentUrl = window.location.href;
+                let demoUrl;
+                
+                if (currentUrl.startsWith('file://')) {
+                    // Local development: use relative path
+                    demoUrl = product.demoUrl;
+                } else {
+                    // Deployed: always use absolute path starting with /website/
+                    if (product.demoUrl.startsWith('/')) {
+                        demoUrl = window.location.origin + product.demoUrl;
+                    } else {
+                        demoUrl = window.location.origin + '/website/' + product.demoUrl;
+                    }
+                }
+                
+                console.log('=== Opening Demo in New Tab ===');
+                console.log('Product:', product.name);
+                console.log('Demo URL:', demoUrl);
+                console.log('Full URL:', demoUrl);
+                
+                // Open in new tab
+                const newWindow = window.open(demoUrl, '_blank', 'noopener,noreferrer');
+                
+                if (!newWindow) {
+                    alert('Please allow popups for this site to open the demo.');
+                }
+            } catch (error) {
+                console.error('Error opening demo:', error);
+                alert('Error opening demo: ' + error.message);
             }
-            
-            console.log('=== Opening Demo in New Tab ===');
-            console.log('Product:', product.name);
-            console.log('Demo URL:', demoUrl);
-            
-            // Open in new tab
-            window.open(demoUrl, '_blank', 'noopener,noreferrer');
         }
+        
+        // Make function globally accessible
+        window.openDemoInNewTab = openDemoInNewTab;
         
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
@@ -2757,44 +2779,78 @@
             
             // If switching to demo tab, show a button to open demo in new tab
             if (tabName === 'demo') {
+                console.log('=== Demo Tab Clicked ===');
                 const modal = document.getElementById('productModal');
                 const productId = modal?.dataset?.productId;
                 const modalDemo = document.getElementById('modalDemo');
                 
+                console.log('Modal:', modal);
+                console.log('Product ID:', productId);
+                console.log('Modal Demo element:', modalDemo);
+                
                 if (productId && productData[productId] && productData[productId].demoUrl) {
+                    console.log('Product found, creating demo button');
                     const product = productData[productId];
-                    modalDemo.innerHTML = `
-                        <div style="padding: 60px 40px; text-align: center; color: var(--text-primary);">
-                            <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
-                            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">${product.name} Interactive Demo</h2>
-                            <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 16px;">
-                                Experience the full interactive demo in a new window
-                            </p>
-                            <button 
-                                onclick="openDemoInNewTab('${productId}')" 
-                                style="
-                                    padding: 16px 32px; 
-                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                                    border: none; 
-                                    border-radius: 12px; 
-                                    color: white; 
-                                    font-size: 16px; 
-                                    font-weight: 600; 
-                                    cursor: pointer;
-                                    transition: transform 0.2s, box-shadow 0.2s;
-                                    box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
-                                "
-                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 25px rgba(155, 92, 246, 0.4)';"
-                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 20px rgba(155, 92, 246, 0.3)';"
-                            >
-                                Open Live Demo →
-                            </button>
-                            <p style="color: var(--text-secondary); margin-top: 24px; font-size: 14px; opacity: 0.7;">
-                                The demo will open in a new tab
-                            </p>
-                        </div>
+                    
+                    // Clear and create container
+                    modalDemo.innerHTML = '';
+                    
+                    // Create the demo button container
+                    const container = document.createElement('div');
+                    container.style.cssText = 'padding: 60px 40px; text-align: center; color: var(--text-primary);';
+                    
+                    container.innerHTML = `
+                        <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
+                        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">${product.name} Interactive Demo</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 16px;">
+                            Experience the full interactive demo in a new window
+                        </p>
+                        <button id="demoOpenButton" style="
+                            padding: 16px 32px; 
+                            background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                            border: none; 
+                            border-radius: 12px; 
+                            color: white; 
+                            font-size: 16px; 
+                            font-weight: 600; 
+                            cursor: pointer;
+                            transition: transform 0.2s, box-shadow 0.2s;
+                            box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
+                        ">
+                            Open Live Demo →
+                        </button>
+                        <p style="color: var(--text-secondary); margin-top: 24px; font-size: 14px; opacity: 0.7;">
+                            The demo will open in a new tab
+                        </p>
                     `;
+                    
+                    modalDemo.appendChild(container);
+                    
+                    // Add event listener to button (more reliable than onclick)
+                    const button = document.getElementById('demoOpenButton');
+                    console.log('Demo button element:', button);
+                    if (button) {
+                        console.log('Adding click listener to button');
+                        button.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Demo button clicked for product:', productId);
+                            openDemoInNewTab(productId);
+                        });
+                        
+                        // Add hover effects
+                        button.addEventListener('mouseenter', function() {
+                            this.style.transform = 'scale(1.05)';
+                            this.style.boxShadow = '0 6px 25px rgba(155, 92, 246, 0.4)';
+                        });
+                        
+                        button.addEventListener('mouseleave', function() {
+                            this.style.transform = 'scale(1)';
+                            this.style.boxShadow = '0 4px 20px rgba(155, 92, 246, 0.3)';
+                        });
+                    }
                 } else {
+                    console.warn('Demo not available - Product ID:', productId, 'Product data:', productId ? productData[productId] : 'not found');
                     modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
                 }
             }
