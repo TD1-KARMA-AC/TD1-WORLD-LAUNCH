@@ -2845,24 +2845,35 @@
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
             
-            // Set demo iframe - use URL constructor for proper path resolution
+            // Set demo iframe - handle both local file:// and deployed http:// paths
             if (product.demoUrl) {
-                // Use URL constructor to resolve path relative to current page
+                const currentUrl = window.location.href;
+                const currentPath = window.location.pathname;
                 let demoPath;
-                try {
-                    // Create a URL object relative to current page
-                    const baseUrl = window.location.href;
-                    const demoUrl = new URL(product.demoUrl, baseUrl);
-                    demoPath = demoUrl.href;
-                } catch (e) {
-                    // Fallback: use relative path
+                
+                // Determine if we're on deployed site or local file
+                if (currentUrl.startsWith('file://')) {
+                    // Local file:// - use relative path as-is
                     demoPath = product.demoUrl;
+                } else {
+                    // Deployed site (http:// or https://)
+                    // Check if we're in /website/ folder or at root
+                    if (currentPath.includes('/website/')) {
+                        // We're in /website/ folder, demo path should be relative
+                        demoPath = product.demoUrl;
+                    } else {
+                        // We're at root, need to add /website/ prefix
+                        // If demoUrl is 'demos/TD1_INTENT_demo.html'
+                        // We need '/website/demos/TD1_INTENT_demo.html'
+                        demoPath = '/website/' + product.demoUrl;
+                    }
                 }
                 
                 console.log('=== Demo Loading Debug ===');
                 console.log('Product:', product.name);
                 console.log('Demo URL from data:', product.demoUrl);
-                console.log('Current location:', window.location.href);
+                console.log('Current URL:', currentUrl);
+                console.log('Current path:', currentPath);
                 console.log('Resolved demo path:', demoPath);
                 
                 // Create iframe
@@ -2876,17 +2887,11 @@
                 
                 // Add load event
                 iframe.onload = function() {
-                    console.log('✅ Demo iframe loaded successfully');
+                    console.log('✅ Demo iframe loaded successfully:', demoPath);
                 };
                 
                 iframe.onerror = function() {
-                    console.error('❌ Demo iframe failed to load');
-                    // Try fallback path
-                    const fallbackPath = product.demoUrl.startsWith('/') 
-                        ? product.demoUrl 
-                        : '/' + product.demoUrl;
-                    console.log('Trying fallback path:', fallbackPath);
-                    iframe.src = fallbackPath;
+                    console.error('❌ Demo iframe failed to load:', demoPath);
                 };
                 
                 // Clear and add iframe
@@ -2975,18 +2980,23 @@
                     const product = productData[productId];
                     let iframe = modalDemo.querySelector('iframe');
                     
-                    // If iframe doesn't exist or src is empty, create/recreate iframe
-                    if (!iframe || !iframe.src) {
-                        // Use URL constructor to resolve path
-                        let demoPath;
-                        try {
-                            const baseUrl = window.location.href;
-                            const demoUrl = new URL(product.demoUrl, baseUrl);
-                            demoPath = demoUrl.href;
-                        } catch (e) {
+                    // Resolve path for deployed site
+                    const currentUrl = window.location.href;
+                    const currentPath = window.location.pathname;
+                    let demoPath;
+                    
+                    if (currentUrl.startsWith('file://')) {
+                        demoPath = product.demoUrl;
+                    } else {
+                        if (currentPath.includes('/website/')) {
                             demoPath = product.demoUrl;
+                        } else {
+                            demoPath = '/website/' + product.demoUrl;
                         }
-                        
+                    }
+                    
+                    // If iframe doesn't exist or src is different, create/recreate iframe
+                    if (!iframe || iframe.src !== demoPath) {
                         console.log('Loading demo in tab:', demoPath);
                         
                         // Create iframe
@@ -3005,13 +3015,6 @@
                         // Clear and add iframe
                         modalDemo.innerHTML = '';
                         modalDemo.appendChild(iframe);
-                    } else {
-                        // Iframe exists, just reload it to ensure it displays
-                        const currentSrc = iframe.src;
-                        iframe.src = '';
-                        setTimeout(() => {
-                            iframe.src = currentSrc;
-                        }, 100);
                     }
                 }
             }
