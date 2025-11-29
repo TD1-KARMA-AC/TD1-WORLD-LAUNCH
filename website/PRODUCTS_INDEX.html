@@ -2898,15 +2898,33 @@
                         return;
                     }
                     
-                    iframe.src = demoUrl;
+                    // Set iframe attributes first
                     iframe.setAttribute('allowfullscreen', 'true');
                     iframe.setAttribute('frameborder', '0');
                     iframe.setAttribute('scrolling', 'auto');
                     iframe.style.cssText = 'width: 100%; height: clamp(400px, 70vh, 900px); min-height: 400px; border: 2px solid rgba(155, 92, 246, 0.3); border-radius: 12px; background: rgba(0, 0, 0, 0.5); display: block; opacity: 1; visibility: visible;';
                     
+                    // Set the src - the iframe will load it
+                    iframe.src = demoUrl;
+                    
                     console.log('Iframe created:', iframe);
                     console.log('Iframe src:', iframe.src);
                     console.log('Expected path format: /website/demos/TD1_XXX_demo.html');
+                    console.log('Full URL being loaded:', demoUrl);
+                    
+                    // Test if the demo file exists (for debugging)
+                    fetch(demoUrl, { method: 'HEAD', cache: 'no-cache' })
+                        .then(response => {
+                            console.log('Demo file HEAD request response:', response.status, response.statusText);
+                            console.log('Response URL (after redirects):', response.url);
+                            if (response.status !== 200) {
+                                console.warn('⚠️ Demo file returned status:', response.status);
+                            }
+                        })
+                        .catch(error => {
+                            console.warn('⚠️ Could not check demo file (CORS or network issue):', error.message);
+                            console.log('Iframe will still attempt to load');
+                        });
                     
                     // Handle iframe load
                     iframe.onload = function() {
