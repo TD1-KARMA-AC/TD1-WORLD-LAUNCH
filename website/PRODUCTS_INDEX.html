@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TD1.WORLD — 50 Premium AI Products</title>
     <!-- Stripe.js -->
     <script src="https://js.stripe.com/v3/"></script>
@@ -18,12 +15,6 @@
             --text-primary: #EAEAEA;
             --text-secondary: #A0A0A0;
         }
-        html {
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-            touch-action: manipulation;
-        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
             background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
@@ -31,8 +22,6 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
         }
         
         /* Neural Particles */
@@ -204,66 +193,10 @@
             font-style: italic;
         }
         
-        /* Collapsible Sections */
-        .collapsible-section {
-            margin-bottom: 40px;
-        }
+        /* Section Headers */
         .section-header {
             text-align: center;
-            padding: 60px 20px 30px;
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-            transition: all 0.3s ease;
-            border-radius: 16px;
-            margin-bottom: 20px;
-        }
-        .section-header:hover {
-            background: rgba(193, 162, 255, 0.05);
-        }
-        .section-header.collapsed {
-            padding-bottom: 20px;
-        }
-        .section-toggle {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: rgba(193, 162, 255, 0.15);
-            border: 1px solid rgba(193, 162, 255, 0.3);
-            transition: all 0.3s ease;
-            color: var(--td1-lilac);
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .section-header:hover .section-toggle {
-            background: rgba(193, 162, 255, 0.25);
-            border-color: rgba(193, 162, 255, 0.5);
-            transform: translateY(-50%) scale(1.1);
-        }
-        .section-toggle-icon {
-            transition: transform 0.3s ease;
-        }
-        .section-header.collapsed .section-toggle-icon {
-            transform: rotate(-90deg);
-        }
-        .section-content {
-            max-height: 10000px;
-            overflow: hidden;
-            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-            opacity: 1;
-        }
-        .section-content.collapsed {
-            max-height: 0;
-            opacity: 0;
-            margin: 0;
-            padding: 0;
+            padding: 80px 20px 40px;
         }
         .section-title {
             font-size: clamp(2rem, 5vw, 3rem);
@@ -590,10 +523,7 @@
         .demo-embed {
             background: rgba(0, 0, 0, 0.5);
             border-radius: 16px;
-            padding: 32px;
-            min-height: 600px;
-            width: 100%;
-            position: relative;
+            padding: clamp(12px, 2vw, 32px);
             margin-top: 24px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
@@ -601,158 +531,156 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Use aspect ratio for responsive sizing */
-            aspect-ratio: 16 / 9;
-            min-height: 400px;
         }
         .demo-iframe {
             width: 100%;
-            height: 100%;
+            height: clamp(350px, 60vh, 800px);
+            max-height: 90vh;
             border: none;
             border-radius: 12px;
             background: var(--bg-dark);
             display: block;
-            /* Ensure iframe scales properly */
-            object-fit: contain;
         }
         
         /* Responsive iframe sizing for different devices */
-        
-        /* Foldable devices (e.g., Galaxy Fold, Surface Duo) - smallest screens */
-        @media (max-width: 400px) {
-            .modal-content {
-                padding: 16px 12px;
-                max-width: 100vw;
-                margin: 0;
-            }
-            .modal-section {
-                padding: 16px;
-            }
+        /* Mobile devices (portrait) */
+        @media (max-width: 480px) {
             .demo-embed {
                 padding: 12px;
-                min-height: 300px;
-                aspect-ratio: 4 / 3;
+                min-height: 50vh;
             }
             .demo-iframe {
-                min-height: 300px;
+                min-height: 50vh;
+                max-height: 75vh;
             }
-        }
-        
-        /* Small mobile devices */
-        @media (min-width: 401px) and (max-width: 600px) {
             .modal-content {
                 padding: 20px 16px;
+                max-height: 95vh;
             }
             .modal-section {
-                padding: 20px;
-            }
-            .demo-embed {
                 padding: 16px;
-                min-height: 350px;
-                aspect-ratio: 16 / 10;
-            }
-            .demo-iframe {
-                min-height: 350px;
             }
         }
         
-        /* Standard mobile devices */
-        @media (min-width: 601px) and (max-width: 768px) {
-            .modal-content {
-                padding: 24px 20px;
-            }
-            .modal-section {
-                padding: 24px;
-            }
+        /* Foldable devices (Galaxy Fold, Surface Duo - narrow) */
+        @media (max-width: 400px) {
             .demo-embed {
-                padding: 20px;
-                min-height: 400px;
-                aspect-ratio: 16 / 9;
+                padding: 8px;
+                min-height: 45vh;
             }
             .demo-iframe {
-                min-height: 400px;
+                min-height: 45vh;
+                max-height: 70vh;
+            }
+        }
+        
+        /* Foldable devices (unfolded/wide) */
+        @media (min-width: 401px) and (max-width: 768px) {
+            .demo-embed {
+                padding: 16px;
+                min-height: 55vh;
+            }
+            .demo-iframe {
+                min-height: 55vh;
+                max-height: 80vh;
+            }
+        }
+        
+        /* Standard tablets (portrait) */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .demo-embed {
+                padding: 20px;
+                min-height: 60vh;
+            }
+            .demo-iframe {
+                min-height: 60vh;
+                max-height: 85vh;
+            }
+        }
+        
+        /* Standard tablets (landscape) and small laptops */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .demo-embed {
+                padding: 24px;
+                min-height: 65vh;
+            }
+            .demo-iframe {
+                min-height: 65vh;
+                max-height: 85vh;
             }
             .pricing-grid-modal {
                 grid-template-columns: 1fr;
             }
+        }
+        
+        /* Desktop screens */
+        @media (min-width: 1025px) and (max-width: 1439px) {
+            .demo-embed {
+                padding: 28px;
+                min-height: 70vh;
+            }
+            .demo-iframe {
+                min-height: 70vh;
+                max-height: 85vh;
+            }
+        }
+        
+        /* Large desktop screens (HD/Full HD) */
+        @media (min-width: 1440px) and (max-width: 1919px) {
+            .demo-embed {
+                padding: 32px;
+                min-height: 75vh;
+            }
+            .demo-iframe {
+                min-height: 75vh;
+                max-height: 85vh;
+            }
+        }
+        
+        /* Extra large desktop (2K/QHD) */
+        @media (min-width: 1920px) and (max-width: 2559px) {
+            .demo-embed {
+                padding: 32px;
+                min-height: 75vh;
+            }
+            .demo-iframe {
+                min-height: 75vh;
+                max-height: 85vh;
+            }
+        }
+        
+        /* Very large screens (4K/UHD) */
+        @media (min-width: 2560px) {
+            .demo-embed {
+                padding: 32px;
+                min-height: 80vh;
+            }
+            .demo-iframe {
+                min-height: 80vh;
+                max-height: 85vh;
+            }
+        }
+        
+        /* Landscape orientation adjustments */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .demo-embed {
+                min-height: 90vh;
+                padding: 12px;
+            }
+            .demo-iframe {
+                min-height: 90vh;
+                max-height: 95vh;
+            }
+        }
+        
+        /* Modal responsive adjustments */
+        @media (max-width: 768px) {
             .modal-tabs {
                 flex-direction: column;
             }
             .modal-tab {
                 width: 100%;
                 text-align: center;
-            }
-        }
-        
-        /* Tablet devices (portrait and landscape) */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .demo-embed {
-                padding: 24px;
-                min-height: 500px;
-                aspect-ratio: 16 / 9;
-            }
-            .demo-iframe {
-                min-height: 500px;
-            }
-        }
-        
-        /* Small desktop / large tablet */
-        @media (min-width: 1025px) and (max-width: 1366px) {
-            .demo-embed {
-                padding: 28px;
-                min-height: 550px;
-                aspect-ratio: 16 / 9;
-            }
-            .demo-iframe {
-                min-height: 550px;
-            }
-        }
-        
-        /* Standard desktop screens */
-        @media (min-width: 1367px) and (max-width: 1919px) {
-            .demo-embed {
-                padding: 32px;
-                min-height: 600px;
-                aspect-ratio: 16 / 9;
-            }
-            .demo-iframe {
-                min-height: 600px;
-            }
-        }
-        
-        /* Large desktop screens (Full HD+) */
-        @media (min-width: 1920px) and (max-width: 2559px) {
-            .demo-embed {
-                padding: 40px;
-                min-height: 700px;
-                aspect-ratio: 16 / 9;
-            }
-            .demo-iframe {
-                min-height: 700px;
-            }
-        }
-        
-        /* Very large screens (4K+ and ultrawide) */
-        @media (min-width: 2560px) {
-            .demo-embed {
-                padding: 48px;
-                min-height: 800px;
-                aspect-ratio: 16 / 9;
-            }
-            .demo-iframe {
-                min-height: 800px;
-            }
-        }
-        
-        /* Landscape orientation adjustments for mobile/tablet */
-        @media (max-height: 600px) and (orientation: landscape) {
-            .demo-embed {
-                min-height: 300px;
-                aspect-ratio: 16 / 9;
-                padding: 16px;
-            }
-            .demo-iframe {
-                min-height: 300px;
             }
         }
         
@@ -915,98 +843,10 @@
             margin-top: 60px;
         }
         
-        /* Mobile Responsive Fixes */
         @media (max-width: 768px) {
-            html {
-                -webkit-text-size-adjust: 100%;
-                -ms-text-size-adjust: 100%;
-                text-size-adjust: 100%;
-            }
-            body {
-                overflow-x: hidden;
-                width: 100%;
-                position: relative;
-            }
-            .products-grid { 
-                grid-template-columns: 1fr; 
-            }
-            .hero-stats { 
-                grid-template-columns: 1fr; 
-                gap: 1.5rem; 
-                padding: 0 1rem !important;
-            }
-            .nav { 
-                padding: 10px 16px; 
-                font-size: 12px; 
-                top: 10px;
-            }
-            .hero-title {
-                font-size: clamp(2rem, 10vw, 4rem) !important;
-                padding: 0 1rem;
-            }
-            .hero-subtitle {
-                font-size: clamp(0.875rem, 3vw, 1rem) !important;
-                padding: 0 1rem;
-            }
-            .section-header {
-                padding: 40px 1rem 20px !important;
-                position: relative;
-            }
-            .section-toggle {
-                right: 10px !important;
-                width: 32px !important;
-                height: 32px !important;
-                font-size: 14px !important;
-            }
-            .section-title {
-                font-size: clamp(1.5rem, 6vw, 2.5rem) !important;
-                padding-right: 40px;
-            }
-            .products-block {
-                grid-template-columns: 1fr !important;
-                padding: 20px 1rem 80px !important;
-            }
-            .product-block-card {
-                padding: 1.5rem !important;
-            }
-            .product-name {
-                font-size: 24px !important;
-            }
-            .product-desc {
-                font-size: 13px !important;
-            }
-            .modal-content {
-                width: 95vw !important;
-                max-width: 95vw !important;
-                margin: 10px auto !important;
-                padding: 20px 16px !important;
-            }
-            .modal-section {
-                padding: 20px 16px !important;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .nav {
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-            .hero-title {
-                font-size: clamp(1.75rem, 12vw, 3rem) !important;
-            }
-            .product-block-card {
-                padding: 1.25rem !important;
-            }
-            .product-name {
-                font-size: 22px !important;
-            }
-            .modal-content {
-                width: 100vw !important;
-                max-width: 100vw !important;
-                margin: 0 !important;
-                padding: 16px 12px !important;
-                border-radius: 0 !important;
-            }
+            .products-grid { grid-template-columns: 1fr; }
+            .hero-stats { grid-template-columns: 1fr; gap: 1.5rem; }
+            .nav { padding: 10px 16px; font-size: 12px; }
         }
     </style>
 </head>
@@ -1024,11 +864,11 @@
         <h1 class="hero-title">THE LEGO BLOCKS<br/>OF AI</h1>
         <p class="hero-subtitle">
             The complete TD1.WORLD suite. 26 forbidden AGI blocks + 24 proven products.<br/>
-            <strong style="color: var(--td1-lilac);">$2.3M in development infrastructure included. 80,000+ lines of production-ready code.</strong><br/>
-            Full local execution. Zero cloud reliance. Permanent, unrestricted ownership.
+            <strong style="color: var(--td1-lilac);">$2.3M of development investment. 80,000+ lines of code.</strong><br/>
+            One-time purchase. Complete ownership. Premium quality.
         </p>
         <p style="font-size: clamp(0.9rem, 2vw, 1rem); color: var(--text-secondary); max-width: 900px; margin: 1.5rem auto 0; line-height: 1.8; text-align: center; padding: 0 2rem;">
-            The complete TD1.WORLD codebase. Production-grade AGI infrastructure. The same building blocks powering <strong style="color: var(--td1-lilac);">Karma AC's autonomous intelligence core</strong>.
+            The complete TD1.WORLD codebase represents $2.3M of development investment and 80,000+ lines of production-ready AI infrastructure. You own everything you purchase. No servers, no subscriptions, no limits.
         </p>
         <div class="hero-stats">
             <div class="stat-card">
@@ -1056,19 +896,15 @@
     </section>
     
     <!-- BLOCK 1: Core Infrastructure (First 5) -->
-    <section class="container collapsible-section" style="margin-top: 60px;">
-        <div class="section-header" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">🏗️ BLOCK 1: CORE INFRASTRUCTURE<span class="section-product-count">5 products</span></div>
+    <section class="container" style="margin-top: 60px;">
+        <div class="section-header">
+            <div class="category-badge" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">🏗️ BLOCK 1: CORE INFRASTRUCTURE</div>
             <h2 class="section-title">Start Here: Essential AI Building Blocks</h2>
             <p style="font-size: 16px; color: var(--text-secondary); margin-top: 16px; max-width: 700px; margin-left: auto; margin-right: auto;">
                 Click any product below to test the live interactive demo. Each connects to a working API backend.
             </p>
         </div>
-        <div class="section-content">
-            <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
+        <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
             <div class="product-block-card">
@@ -1190,21 +1026,16 @@
                 <button class="explore-button" onclick="openProductModal('td1-router')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
     
     
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS<span class="section-product-count">26 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
             <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">FORBIDDEN AGI</div>
@@ -1783,20 +1614,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-overseer')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES<span class="section-product-count">12 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
             <h2 class="section-title">Core AI Infrastructure</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
@@ -1935,20 +1761,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-intent')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🔬 DEVELOPMENT TOOLS<span class="section-product-count">8 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
             <h2 class="section-title">Essential AI Development</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">DEVELOPMENT</div>
@@ -2104,20 +1925,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-load-tester')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🤖 ROBOTICS<span class="section-product-count">2 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🤖 ROBOTICS</div>
             <h2 class="section-title">Universal Robot AI</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(6, 182, 212, 0.2); color: #06b6d4;">ROBOTICS</div>
@@ -2163,20 +1979,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-robot-data-gen')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🏢 ENTERPRISE SUITE<span class="section-product-count">6 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
             <h2 class="section-title">Enterprise AI Tools</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">ENTERPRISE</div>
@@ -2288,20 +2099,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-compliance-auditor')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🧠 PERSONAL AI<span class="section-product-count">3 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🧠 PERSONAL AI</div>
             <h2 class="section-title">Personal Knowledge Tools</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(34, 197, 94, 0.2); color: #22c55e;">PERSONAL</div>
@@ -2347,20 +2153,15 @@
                 <button class="explore-button" onclick="openProductModal('td1-mirror-engine-pro')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
-    <section class="container collapsible-section">
-        <div class="section-header collapsed" onclick="toggleSection(this)">
-            <div class="section-toggle">
-                <span class="section-toggle-icon">▼</span>
-            </div>
-            <div class="category-badge ">🌐 AI PLATFORM<span class="section-product-count">2 products</span></div>
+    <section class="container">
+        <div class="section-header">
+            <div class="category-badge ">🌐 AI PLATFORM</div>
             <h2 class="section-title">Universal Infrastructure</h2>
         </div>
-        <div class="section-content collapsed">
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(155, 92, 246, 0.2); color: #9b5cf6;">PLATFORM</div>
@@ -2408,7 +2209,6 @@
                 <button class="explore-button" onclick="openProductModal('td1-ai')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
-            </div>
         </div>
     </section>
 
@@ -2427,21 +2227,6 @@
     </footer>
     
     <script>
-        // Collapsible Sections Toggle
-        function toggleSection(header) {
-            const section = header.closest('.collapsible-section');
-            const content = section.querySelector('.section-content');
-            const isCollapsed = header.classList.contains('collapsed');
-            
-            if (isCollapsed) {
-                header.classList.remove('collapsed');
-                content.classList.remove('collapsed');
-            } else {
-                header.classList.add('collapsed');
-                content.classList.add('collapsed');
-            }
-        }
-        
         // Neural Particles
         const p = document.getElementById('particles');
         for (let i = 0; i < 50; i++) {
@@ -2817,10 +2602,7 @@
         // Open Product Modal
         function openProductModal(productId) {
             const product = productData[productId];
-            if (!product) {
-                console.error('Product not found:', productId);
-                return;
-            }
+            if (!product) return;
             
             const modal = document.getElementById('productModal');
             if (!modal) {
@@ -2845,15 +2627,11 @@
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
             
-            // Clear demo area - iframe will be created when "Live Demo" tab is clicked
-            // This avoids timing issues and ensures iframe loads when visible
-            if (product.demoUrl) {
-                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Loading demo...</div>';
-            } else {
-                modalDemo.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>`;
-            }
+            // Demo will be loaded when "Live Demo" tab is clicked
+            // Clear the demo container for now
+            modalDemo.innerHTML = '';
             
-            // Set pricing
+            // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
             pricingGrid.innerHTML = product.pricing.map((tier, index) => {
                 const isStandard = tier.name === 'Standard';
@@ -2861,18 +2639,19 @@
                 const isEnterprise = tier.name === 'Enterprise' || tier.price === 'Contact Sales';
                 
                 // Standard → Stripe checkout, Master & Enterprise → Contact Sales
-                let buttonText, buttonClass, onClick;
+                let buttonText, buttonClass, buttonAttrs;
                 
                 if (isStandard) {
-                    // Standard tier: Stripe checkout
+                    // Standard tier: Stripe checkout - use data attributes
                     buttonText = `Buy ${tier.name} - ${tier.price}`;
-                    buttonClass = 'buy-button';
-                    onClick = `handleBuy('${productId}', '${tier.name}', '${tier.priceId || ''}', '${product.name} - ${tier.name}', this)`;
+                    buttonClass = 'buy-button stripe-checkout-btn';
+                    buttonAttrs = `data-product-id="${productId}" data-tier="${tier.name}" data-price-id="${tier.priceId || ''}" data-product-name="${product.name} - ${tier.name}"`;
                 } else {
                     // Master & Enterprise: Contact Sales
                     buttonText = 'Contact Sales';
                     buttonClass = 'buy-button contact-sales';
-                    onClick = `window.location.href='mailto:sales@td1.world?subject=Inquiry: ${product.name} - ${tier.name} (${tier.price})'`;
+                    const emailSubject = encodeURIComponent(`Inquiry: ${product.name} - ${tier.name} (${tier.price})`);
+                    buttonAttrs = `onclick="window.location.href='mailto:sales@td1.world?subject=${emailSubject}'"`;
                 }
                 
                 return `
@@ -2882,12 +2661,24 @@
                         <div class="pricing-tier-features-modal">
                             ${tier.features.map(f => `<div>${f}</div>`).join('')}
                         </div>
-                        <button class="${buttonClass}" onclick="${onClick}">
+                        <button class="${buttonClass}" ${buttonAttrs}>
                             ${buttonText}
                         </button>
                     </div>
                 `;
             }).join('');
+            
+            // Attach event listeners to Stripe checkout buttons
+            pricingGrid.querySelectorAll('.stripe-checkout-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const productId = this.dataset.productId;
+                    const tier = this.dataset.tier;
+                    const priceId = this.dataset.priceId;
+                    const productName = this.dataset.productName;
+                    handleBuy(productId, tier, priceId, productName, this);
+                });
+            });
             
             // Set content sections
             document.getElementById('modalWhatItsFor').innerHTML = `<p>${product.whatItsFor}</p>`;
@@ -2912,75 +2703,93 @@
             document.body.style.overflow = '';
         }
         
-        // Switch Tab
+        // Load Demo Iframe - Completely rebuilt from scratch
+        function loadDemoIframe(productId) {
+            const product = productData[productId];
+            const modalDemo = document.getElementById('modalDemo');
+            
+            if (!product || !product.demoUrl) {
+                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
+                return;
+            }
+            
+            // Resolve demo URL - always use absolute path for deployed sites
+            const currentUrl = window.location.href;
+            let demoUrl;
+            
+            if (currentUrl.startsWith('file://')) {
+                // Local development: use relative path
+                demoUrl = product.demoUrl;
+            } else {
+                // Deployed: always use absolute path starting with /website/
+                if (product.demoUrl.startsWith('/')) {
+                    demoUrl = window.location.origin + product.demoUrl;
+                } else {
+                    demoUrl = window.location.origin + '/website/' + product.demoUrl;
+                }
+            }
+            
+            console.log('=== Loading Demo Iframe ===');
+            console.log('Product:', product.name);
+            console.log('Demo URL:', demoUrl);
+            
+            // Completely clear the container
+            modalDemo.innerHTML = '';
+            
+            // Create fresh iframe element
+            const iframe = document.createElement('iframe');
+            iframe.src = demoUrl;
+            iframe.className = 'demo-iframe';
+            iframe.setAttribute('loading', 'eager');
+            iframe.setAttribute('allow', 'fullscreen');
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+            iframe.style.cssText = 'width: 100%; height: 100%; min-height: 500px; border: none; border-radius: 12px; background: var(--bg-dark);';
+            
+            // Success handler
+            iframe.onload = function() {
+                console.log('✅ Demo iframe loaded:', demoUrl);
+            };
+            
+            // Error handler
+            iframe.onerror = function() {
+                console.error('❌ Demo iframe failed to load:', demoUrl);
+                modalDemo.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                        <p>Failed to load demo.</p>
+                        <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">URL: ${demoUrl}</p>
+                    </div>
+                `;
+            };
+            
+            // Add iframe to container
+            modalDemo.appendChild(iframe);
+        }
+        
+        // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
             // Remove active from all tabs and contents
             document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
             
             // Add active to selected tab and content
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+            const tabContent = document.getElementById(`tab-${tabName}`);
             
-            // If switching to demo tab, ALWAYS create a completely fresh iframe
+            if (tabButton) tabButton.classList.add('active');
+            if (tabContent) tabContent.classList.add('active');
+            
+            // If switching to demo tab, load the demo
             if (tabName === 'demo') {
                 const modal = document.getElementById('productModal');
-                const productId = modal.dataset.productId;
-                const modalDemo = document.getElementById('modalDemo');
+                const productId = modal?.dataset?.productId;
                 
-                if (productId && productData[productId] && productData[productId].demoUrl) {
-                    const product = productData[productId];
-                    
-                    // Resolve path for deployed site
-                    const currentUrl = window.location.href;
-                    let demoPath;
-                    
-                    if (currentUrl.startsWith('file://')) {
-                        demoPath = product.demoUrl;
-                    } else {
-                        // Always use absolute path for deployed site
-                        if (product.demoUrl.startsWith('/')) {
-                            demoPath = product.demoUrl;
-                        } else {
-                            demoPath = '/website/' + product.demoUrl;
-                        }
+                if (productId) {
+                    loadDemoIframe(productId);
+                } else {
+                    const modalDemo = document.getElementById('modalDemo');
+                    if (modalDemo) {
+                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">No product selected</div>';
                     }
-                    
-                    // Build full URL for iframe
-                    const demoUrl = currentUrl.startsWith('file://') 
-                        ? demoPath 
-                        : window.location.origin + demoPath;
-                    
-                    console.log('=== Creating Fresh Demo Iframe ===');
-                    console.log('Product:', product.name);
-                    console.log('Full demo URL:', demoUrl);
-                    
-                    // ALWAYS clear and create completely fresh iframe - no reuse, no caching
-                    modalDemo.innerHTML = '';
-                    
-                    // Create brand new iframe
-                    const iframe = document.createElement('iframe');
-                    iframe.src = demoUrl;
-                    iframe.className = 'demo-iframe';
-                    iframe.setAttribute('loading', 'eager');
-                    iframe.setAttribute('allow', 'fullscreen');
-                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
-                    iframe.style.cssText = 'width: 100%; height: 100%; min-height: 500px; border: none; border-radius: 12px; background: var(--bg-dark);';
-                    
-                    iframe.onload = function() {
-                        console.log('✅ Fresh demo iframe loaded successfully');
-                    };
-                    
-                    iframe.onerror = function() {
-                        console.error('❌ Demo iframe failed to load:', demoUrl);
-                        modalDemo.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                            <p>Failed to load demo. Please try again.</p>
-                            <p style="font-size: 12px; margin-top: 10px;">URL: ${demoUrl}</p>
-                        </div>`;
-                    };
-                    
-                    // Add fresh iframe to container
-                    modalDemo.appendChild(iframe);
                 }
             }
         }
