@@ -2738,12 +2738,22 @@
                 } else {
                     // Deployed: Always use /website/ prefix (matches netlify.toml structure)
                     // Demos are always at /website/demos/ when deployed
-                    if (product.demoUrl.startsWith('/')) {
-                        // If already absolute, use as-is but ensure /website/ prefix
-                        demoUrl = window.location.origin + (product.demoUrl.startsWith('/website/') ? product.demoUrl : '/website' + product.demoUrl);
+                    // product.demoUrl is like "demos/TD1_INTENT_demo.html"
+                    // We need: "/website/demos/TD1_INTENT_demo.html"
+                    
+                    // Remove any leading slashes from product.demoUrl to avoid double slashes
+                    const cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
+                    
+                    // Ensure it starts with /website/
+                    if (cleanDemoUrl.startsWith('website/')) {
+                        // Already has website/ prefix
+                        demoUrl = window.location.origin + '/' + cleanDemoUrl;
+                    } else if (cleanDemoUrl.startsWith('demos/')) {
+                        // Has demos/ prefix, add website/
+                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                     } else {
-                        // Relative path: add /website/ prefix
-                        demoUrl = window.location.origin + '/website/' + product.demoUrl;
+                        // Fallback: add website/demos/
+                        demoUrl = window.location.origin + '/website/demos/' + cleanDemoUrl;
                     }
                 }
                 
@@ -2813,12 +2823,22 @@
                     } else {
                         // Deployed: Always use /website/ prefix (matches netlify.toml structure)
                         // Demos are always at /website/demos/ when deployed
-                        if (product.demoUrl.startsWith('/')) {
-                            // If already absolute, use as-is but ensure /website/ prefix
-                            demoUrl = window.location.origin + (product.demoUrl.startsWith('/website/') ? product.demoUrl : '/website' + product.demoUrl);
+                        // product.demoUrl is like "demos/TD1_INTENT_demo.html"
+                        // We need: "/website/demos/TD1_INTENT_demo.html"
+                        
+                        // Remove any leading slashes from product.demoUrl to avoid double slashes
+                        const cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
+                        
+                        // Ensure it starts with /website/
+                        if (cleanDemoUrl.startsWith('website/')) {
+                            // Already has website/ prefix
+                            demoUrl = window.location.origin + '/' + cleanDemoUrl;
+                        } else if (cleanDemoUrl.startsWith('demos/')) {
+                            // Has demos/ prefix, add website/
+                            demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                         } else {
-                            // Relative path: add /website/ prefix
-                            demoUrl = window.location.origin + '/website/' + product.demoUrl;
+                            // Fallback: add website/demos/
+                            demoUrl = window.location.origin + '/website/demos/' + cleanDemoUrl;
                         }
                     }
                     
@@ -2850,6 +2870,34 @@
                     const iframe = document.createElement('iframe');
                     iframe.className = 'demo-iframe';
                     iframe.id = 'productDemoIframe';
+                    
+                    // Ensure the URL is correct - verify it ends with .html
+                    if (!demoUrl.endsWith('.html')) {
+                        console.error('❌ Invalid demo URL (does not end with .html):', demoUrl);
+                        loadingDiv.innerHTML = `
+                            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                            <h3 style="color: var(--text-primary); margin-bottom: 16px;">Invalid Demo URL</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                                The demo URL appears to be incorrect: ${demoUrl}
+                            </p>
+                            <button onclick="openDemoInNewTab('${productId}')" style="
+                                padding: 12px 24px; 
+                                background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                border: none; 
+                                border-radius: 8px; 
+                                color: white; 
+                                font-size: 14px; 
+                                font-weight: 600; 
+                                cursor: pointer;
+                                margin-top: 16px;
+                            ">
+                                Open Demo in New Tab →
+                            </button>
+                        `;
+                        modalDemo.appendChild(wrapper);
+                        return;
+                    }
+                    
                     iframe.src = demoUrl;
                     iframe.setAttribute('allowfullscreen', 'true');
                     iframe.setAttribute('frameborder', '0');
@@ -2858,10 +2906,54 @@
                     
                     console.log('Iframe created:', iframe);
                     console.log('Iframe src:', iframe.src);
+                    console.log('Expected path format: /website/demos/TD1_XXX_demo.html');
                     
                     // Handle iframe load
                     iframe.onload = function() {
                         console.log('✅ Demo iframe loaded successfully');
+                        console.log('Iframe location:', iframe.contentWindow?.location?.href || 'Cannot access (cross-origin)');
+                        
+                        // Check if iframe actually loaded the demo or got redirected
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const iframeTitle = iframeDoc.title || iframeDoc.querySelector('title')?.textContent || '';
+                            const iframeBody = iframeDoc.body?.textContent || '';
+                            
+                            console.log('Iframe title:', iframeTitle);
+                            console.log('Iframe body preview:', iframeBody.substring(0, 100));
+                            
+                            // Check if it loaded the main site instead of demo
+                            if (iframeTitle.includes('TD1.WORLD') && !iframeTitle.includes('Demo') && !iframeBody.includes('Interactive Demo')) {
+                                console.warn('⚠️ Iframe may have loaded main site instead of demo');
+                                loadingDiv.innerHTML = `
+                                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                                    <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Redirected</h3>
+                                    <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                                        The demo appears to have been redirected. This may be a server configuration issue.
+                                    </p>
+                                    <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 12px;">
+                                        URL attempted: ${demoUrl}
+                                    </p>
+                                    <button onclick="openDemoInNewTab('${productId}')" style="
+                                        padding: 12px 24px; 
+                                        background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                        border: none; 
+                                        border-radius: 8px; 
+                                        color: white; 
+                                        font-size: 14px; 
+                                        font-weight: 600; 
+                                        cursor: pointer;
+                                        margin-top: 16px;
+                                    ">
+                                        Open Demo in New Tab →
+                                    </button>
+                                `;
+                                return;
+                            }
+                        } catch (e) {
+                            console.log('Cannot access iframe content (cross-origin):', e.message);
+                        }
+                        
                         const loader = document.getElementById('demoLoadingIndicator');
                         if (loader) {
                             loader.style.display = 'none';
