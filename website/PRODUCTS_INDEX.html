@@ -2777,7 +2777,7 @@
             if (tabButton) tabButton.classList.add('active');
             if (tabContent) tabContent.classList.add('active');
             
-            // If switching to demo tab, show a button to open demo in new tab
+            // If switching to demo tab, embed the demo in an iframe
             if (tabName === 'demo') {
                 console.log('=== Demo Tab Clicked ===');
                 const modal = document.getElementById('productModal');
@@ -2789,66 +2789,80 @@
                 console.log('Modal Demo element:', modalDemo);
                 
                 if (productId && productData[productId] && productData[productId].demoUrl) {
-                    console.log('Product found, creating demo button');
+                    console.log('Product found, embedding demo iframe');
                     const product = productData[productId];
                     
-                    // Clear and create container
+                    // Resolve demo URL - use same logic as openDemoInNewTab
+                    const currentUrl = window.location.href;
+                    let demoUrl;
+                    
+                    if (currentUrl.startsWith('file://')) {
+                        // Local development: use relative path
+                        demoUrl = product.demoUrl;
+                    } else {
+                        // Deployed: always use absolute path starting with /website/
+                        if (product.demoUrl.startsWith('/')) {
+                            demoUrl = window.location.origin + product.demoUrl;
+                        } else {
+                            demoUrl = window.location.origin + '/website/' + product.demoUrl;
+                        }
+                    }
+                    
+                    console.log('Embedding demo URL:', demoUrl);
+                    
+                    // Clear and create iframe
                     modalDemo.innerHTML = '';
                     
-                    // Create the demo button container
-                    const container = document.createElement('div');
-                    container.style.cssText = 'padding: 60px 40px; text-align: center; color: var(--text-primary);';
-                    
-                    container.innerHTML = `
+                    // Create loading indicator
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.style.cssText = 'padding: 40px; text-align: center; color: var(--text-primary);';
+                    loadingDiv.innerHTML = `
                         <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
-                        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">${product.name} Interactive Demo</h2>
-                        <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 16px;">
-                            Experience the full interactive demo in a new window
-                        </p>
-                        <button id="demoOpenButton" style="
-                            padding: 16px 32px; 
-                            background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                            border: none; 
-                            border-radius: 12px; 
-                            color: white; 
-                            font-size: 16px; 
-                            font-weight: 600; 
-                            cursor: pointer;
-                            transition: transform 0.2s, box-shadow 0.2s;
-                            box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
-                        ">
-                            Open Live Demo →
-                        </button>
-                        <p style="color: var(--text-secondary); margin-top: 24px; font-size: 14px; opacity: 0.7;">
-                            The demo will open in a new tab
-                        </p>
+                        <p style="color: var(--text-secondary);">Loading ${product.name} Interactive Demo...</p>
                     `;
+                    modalDemo.appendChild(loadingDiv);
                     
-                    modalDemo.appendChild(container);
+                    // Create iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'demo-iframe';
+                    iframe.src = demoUrl;
+                    iframe.setAttribute('allowfullscreen', 'true');
+                    iframe.setAttribute('loading', 'lazy');
+                    iframe.style.cssText = 'width: 100%; height: clamp(350px, 60vh, 800px); max-height: 90vh; border: none; border-radius: 12px; background: rgba(0, 0, 0, 0.3);';
                     
-                    // Add event listener to button (more reliable than onclick)
-                    const button = document.getElementById('demoOpenButton');
-                    console.log('Demo button element:', button);
-                    if (button) {
-                        console.log('Adding click listener to button');
-                        button.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Demo button clicked for product:', productId);
-                            openDemoInNewTab(productId);
-                        });
-                        
-                        // Add hover effects
-                        button.addEventListener('mouseenter', function() {
-                            this.style.transform = 'scale(1.05)';
-                            this.style.boxShadow = '0 6px 25px rgba(155, 92, 246, 0.4)';
-                        });
-                        
-                        button.addEventListener('mouseleave', function() {
-                            this.style.transform = 'scale(1)';
-                            this.style.boxShadow = '0 4px 20px rgba(155, 92, 246, 0.3)';
-                        });
-                    }
+                    // Handle iframe load
+                    iframe.onload = function() {
+                        console.log('Demo iframe loaded successfully');
+                        loadingDiv.remove();
+                    };
+                    
+                    // Handle iframe errors
+                    iframe.onerror = function() {
+                        console.error('Failed to load demo iframe');
+                        loadingDiv.innerHTML = `
+                            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                            <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Loading Error</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                                Unable to load the demo. You can try opening it in a new tab instead.
+                            </p>
+                            <button onclick="openDemoInNewTab('${productId}')" style="
+                                padding: 12px 24px; 
+                                background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                border: none; 
+                                border-radius: 8px; 
+                                color: white; 
+                                font-size: 14px; 
+                                font-weight: 600; 
+                                cursor: pointer;
+                            ">
+                                Open Demo in New Tab →
+                            </button>
+                        `;
+                    };
+                    
+                    // Add iframe to container
+                    modalDemo.appendChild(iframe);
+                    
                 } else {
                     console.warn('Demo not available - Product ID:', productId, 'Product data:', productId ? productData[productId] : 'not found');
                     modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
