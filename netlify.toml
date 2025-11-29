@@ -37,27 +37,18 @@
 # IMPORTANT: Netlify processes redirects in order - specific rules must come BEFORE catch-all
 # Netlify serves static files FIRST, but we need explicit rules to prevent catch-all from intercepting
 
-# IMPORTANT: Netlify serves static files FIRST before processing redirects
-# So /website/demos/*.html files will be served automatically if they exist
-# These rules are just to ensure the catch-all doesn't intercept them
+# IMPORTANT: Netlify serves static files FIRST before processing ANY redirects
+# So if a file exists at /website/demos/TD1_INTENT_demo.html, it will be served automatically
+# We don't need redirect rules for static files - they are served by default
+# The catch-all redirect below will ONLY match if no static file is found
 
-# Explicitly exclude demo files from catch-all redirect
-# This ensures /website/demos/*.html files are served as static files
-[[redirects]]
-  from = "/website/demos/*"
-  to = "/website/demos/:splat"
-  status = 200
-  force = false
+# Handle SPA routing - redirect root and other paths to index.html
+# BUT: Netlify serves static files FIRST, so /website/demos/*.html will be served automatically
+# The catch-all only matches if no static file exists
+# We need to ensure the catch-all doesn't interfere with static file serving
 
-# Explicitly exclude website HTML files from catch-all
-[[redirects]]
-  from = "/website/*.html"
-  to = "/website/:splat.html"
-  status = 200
-  force = false
-
-# Handle SPA routing - redirect all OTHER non-function requests to index.html
-# This catch-all comes LAST and only matches paths not handled above
+# Catch-all for SPA routing - this will only match if no static file is found
+# Static files in /website/demos/ will be served BEFORE this rule is processed
 [[redirects]]
   from = "/*"
   to = "/index.html"
