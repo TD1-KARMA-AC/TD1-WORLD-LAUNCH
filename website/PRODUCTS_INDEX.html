@@ -528,9 +528,15 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-height: clamp(350px, 60vh, 800px);
+            max-height: 85vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Style injected demo content */
+        .demo-embed > * {
+            max-width: 100%;
         }
         .demo-iframe {
             width: 100%;
@@ -904,7 +910,7 @@
                 Click any product below to test the live interactive demo. Each connects to a working API backend.
             </p>
         </div>
-            <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
+        <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
             <div class="product-block-card">
@@ -1035,7 +1041,7 @@
             <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
             <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">FORBIDDEN AGI</div>
@@ -1622,7 +1628,7 @@
             <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
             <h2 class="section-title">Core AI Infrastructure</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
@@ -1769,7 +1775,7 @@
             <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
             <h2 class="section-title">Essential AI Development</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">DEVELOPMENT</div>
@@ -1933,7 +1939,7 @@
             <div class="category-badge ">🤖 ROBOTICS</div>
             <h2 class="section-title">Universal Robot AI</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(6, 182, 212, 0.2); color: #06b6d4;">ROBOTICS</div>
@@ -1987,7 +1993,7 @@
             <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
             <h2 class="section-title">Enterprise AI Tools</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">ENTERPRISE</div>
@@ -2107,7 +2113,7 @@
             <div class="category-badge ">🧠 PERSONAL AI</div>
             <h2 class="section-title">Personal Knowledge Tools</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(34, 197, 94, 0.2); color: #22c55e;">PERSONAL</div>
@@ -2161,7 +2167,7 @@
             <div class="category-badge ">🌐 AI PLATFORM</div>
             <h2 class="section-title">Universal Infrastructure</h2>
         </div>
-            <div class="products-grid">
+        <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(155, 92, 246, 0.2); color: #9b5cf6;">PLATFORM</div>
@@ -2616,18 +2622,20 @@
             const modalIcon = document.getElementById('modalProductIcon');
             const modalTitle = document.getElementById('modalProductTitle');
             const modalTagline = document.getElementById('modalProductTagline');
+            const modalDemo = document.getElementById('modalDemo');
+            
+            if (!modalDemo) {
+                console.error('Modal demo element not found');
+                return;
+            }
             
             modalIcon.textContent = product.icon;
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
             
-            // Set up demo button if product has a demo
-            const demoButtonSection = document.getElementById('demoButtonSection');
-            if (product.demoUrl && demoButtonSection) {
-                demoButtonSection.style.display = 'block';
-            } else if (demoButtonSection) {
-                demoButtonSection.style.display = 'none';
-            }
+            // Demo will be loaded when "Live Demo" tab is clicked
+            // Clear the demo container for now
+            modalDemo.innerHTML = '';
             
             // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2701,21 +2709,13 @@
             document.body.style.overflow = '';
         }
         
-        // Open Demo in New Tab - Simple function that opens demo URL
-        function openDemoInNewTab() {
-            const modal = document.getElementById('productModal');
-            const productId = modal?.dataset?.productId;
-            
-            if (!productId) {
-                console.error('Product ID not found');
-                alert('Error: Product not found. Please close and reopen the modal.');
-                return;
-            }
-            
+        // Load Demo Content Directly - No iframe, fetch and inject HTML
+        async function loadDemoContent(productId) {
             const product = productData[productId];
+            const modalDemo = document.getElementById('modalDemo');
+            
             if (!product || !product.demoUrl) {
-                console.error('Product or demo URL not found');
-                alert('Demo not available for this product.');
+                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
                 return;
             }
             
@@ -2735,11 +2735,75 @@
                 }
             }
             
-            console.log('Opening demo:', demoUrl);
+            console.log('=== Loading Demo Content ===');
             console.log('Product:', product.name);
-            window.open(demoUrl, '_blank', 'noopener,noreferrer');
-        }
+            console.log('Demo URL:', demoUrl);
             
+            // Show loading state
+            modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Loading demo...</div>';
+            
+            try {
+                // Fetch the demo HTML
+                const response = await fetch(demoUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const html = await response.text();
+                
+                // Create a temporary DOM element to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // Extract the body content (skip html, head, body tags)
+                const bodyContent = tempDiv.querySelector('body');
+                
+                if (bodyContent) {
+                    // Extract styles from head if they exist
+                    const headContent = tempDiv.querySelector('head');
+                    let styles = '';
+                    if (headContent) {
+                        const styleTags = headContent.querySelectorAll('style');
+                        styleTags.forEach(style => {
+                            styles += style.outerHTML;
+                        });
+                    }
+                    
+                    // Inject styles and body content
+                    modalDemo.innerHTML = styles + bodyContent.innerHTML;
+                    
+                    // Re-execute any scripts that were in the demo
+                    const scripts = bodyContent.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        if (oldScript.src) {
+                            newScript.src = oldScript.src;
+                        } else {
+                            newScript.textContent = oldScript.textContent;
+                        }
+                        modalDemo.appendChild(newScript);
+                    });
+                    
+                    console.log('✅ Demo content loaded successfully');
+                } else {
+                    // If no body tag, just use the entire content
+                    modalDemo.innerHTML = html;
+                }
+                
+            } catch (error) {
+                console.error('❌ Failed to load demo:', error);
+                modalDemo.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                        <p>Failed to load demo.</p>
+                        <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">${error.message}</p>
+                        <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">URL: ${demoUrl}</p>
+                        <button onclick="loadDemoContent('${productId}')" style="margin-top: 20px; padding: 10px 20px; background: var(--td1-lilac); border: none; border-radius: 8px; color: white; cursor: pointer;">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
             // Remove active from all tabs and contents
@@ -2753,6 +2817,20 @@
             if (tabButton) tabButton.classList.add('active');
             if (tabContent) tabContent.classList.add('active');
             
+            // If switching to demo tab, load the demo content directly
+            if (tabName === 'demo') {
+                const modal = document.getElementById('productModal');
+                const productId = modal?.dataset?.productId;
+                
+                if (productId) {
+                    loadDemoContent(productId);
+                } else {
+                    const modalDemo = document.getElementById('modalDemo');
+                    if (modalDemo) {
+                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">No product selected</div>';
+                    }
+                }
+            }
         }
         
         // Close modal on background click
@@ -2868,6 +2946,7 @@
             
             <div class="modal-tabs">
                 <div class="modal-tab active" data-tab="overview" onclick="switchTab('overview')">📋 Overview</div>
+                <div class="modal-tab" data-tab="demo" onclick="switchTab('demo')">🚀 Live Demo</div>
                 <div class="modal-tab" data-tab="pricing" onclick="switchTab('pricing')">💰 Pricing</div>
                 <div class="modal-tab" data-tab="details" onclick="switchTab('details')">📚 Details</div>
             </div>
@@ -2888,35 +2967,13 @@
                     <div class="modal-section-title">👥 Who It's For</div>
                     <div class="modal-section-content" id="modalWhoItsFor"></div>
                 </div>
-                
-                <!-- Demo Button Section -->
-                <div class="modal-section" id="demoButtonSection" style="display: none;">
-                    <div class="modal-section-title">🚀 Try the Live Demo</div>
-                    <div class="modal-section-content" style="text-align: center; padding: 40px 20px;">
-                        <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 16px;">
-                            Experience the full interactive demo in a new window. This gives you the best experience with full screen and all features enabled.
-                        </p>
-                        <button 
-                            id="openDemoButton"
-                            onclick="openDemoInNewTab()"
-                            style="
-                                padding: 16px 32px;
-                                font-size: 16px;
-                                font-weight: 600;
-                                color: white;
-                                background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%);
-                                border: none;
-                                border-radius: 12px;
-                                cursor: pointer;
-                                transition: all 0.3s ease;
-                                box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
-                            "
-                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 30px rgba(155, 92, 246, 0.4)'"
-                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 20px rgba(155, 92, 246, 0.3)'"
-                        >
-                            🎮 Open Interactive Demo →
-                        </button>
-                    </div>
+            </div>
+            
+            <!-- Demo Tab -->
+            <div id="tab-demo" class="modal-tab-content">
+                <div class="modal-section">
+                    <div class="modal-section-title">🚀 Live Interactive Demo</div>
+                    <div class="demo-embed" id="modalDemo"></div>
                 </div>
             </div>
             
