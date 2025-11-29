@@ -2629,10 +2629,17 @@
             
             // Demo will be loaded when "Live Demo" tab is clicked
             // FORCE CLEAR the demo container - remove ANY iframes that might exist
+            // Remove ALL children first
+            while (modalDemo.firstChild) {
+                modalDemo.removeChild(modalDemo.firstChild);
+            }
             modalDemo.innerHTML = '';
             // Double-check: remove any iframes that might have been created
             const existingIframes = modalDemo.querySelectorAll('iframe');
-            existingIframes.forEach(iframe => iframe.remove());
+            existingIframes.forEach(iframe => {
+                console.error('🚫 Removing iframe on modal open:', iframe.src);
+                iframe.remove();
+            });
             
             // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2744,7 +2751,18 @@
             console.log('Demo URL:', demoUrl);
             
             // FORCE CLEAR container and create button - NO IFRAMES ALLOWED
+            // Remove ALL children, including any iframes
+            while (modalDemo.firstChild) {
+                modalDemo.removeChild(modalDemo.firstChild);
+            }
             modalDemo.innerHTML = '';
+            
+            // Double-check: remove any iframes one more time
+            const checkIframes = modalDemo.querySelectorAll('iframe');
+            checkIframes.forEach(iframe => {
+                console.error('🚫 FINAL CHECK: Removing iframe', iframe.src);
+                iframe.remove();
+            });
             
             // Create a nice button to open the demo in a new tab
             modalDemo.innerHTML = `
@@ -2820,30 +2838,74 @@
             }
         }
         
-        // PREVENT IFRAME CREATION - Watch for any iframes being added to modalDemo and remove them immediately
-        const modalDemo = document.getElementById('modalDemo');
-        if (modalDemo) {
-            const iframeObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeName === 'IFRAME' || (node.querySelector && node.querySelector('iframe'))) {
-                            console.warn('⚠️ IFRAME DETECTED - Removing immediately!', node);
-                            if (node.nodeName === 'IFRAME') {
-                                node.remove();
-                            } else {
-                                const iframes = node.querySelectorAll('iframe');
-                                iframes.forEach(iframe => iframe.remove());
-                            }
-                        }
+        // PREVENT IFRAME CREATION - Set up observer IMMEDIATELY and aggressively remove any iframes
+        (function preventIframes() {
+            function setupIframeObserver() {
+                const modalDemo = document.getElementById('modalDemo');
+                if (modalDemo) {
+                    // Remove any existing iframes immediately
+                    const existingIframes = modalDemo.querySelectorAll('iframe');
+                    existingIframes.forEach(iframe => {
+                        console.warn('⚠️ REMOVING EXISTING IFRAME:', iframe.src);
+                        iframe.remove();
                     });
-                });
-            });
+                    
+                    // Set up observer to catch any new iframes
+                    const iframeObserver = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            mutation.addedNodes.forEach((node) => {
+                                if (node.nodeName === 'IFRAME') {
+                                    console.error('🚫 IFRAME BLOCKED AND REMOVED!', node.src);
+                                    node.remove();
+                                } else if (node.querySelector && node.querySelector('iframe')) {
+                                    const iframes = node.querySelectorAll('iframe');
+                                    iframes.forEach(iframe => {
+                                        console.error('🚫 IFRAME BLOCKED AND REMOVED!', iframe.src);
+                                        iframe.remove();
+                                    });
+                                }
+                            });
+                        });
+                    });
+                    
+                    iframeObserver.observe(modalDemo, {
+                        childList: true,
+                        subtree: true,
+                        attributes: false,
+                        characterData: false
+                    });
+                } else {
+                    // Retry if element doesn't exist yet
+                    setTimeout(setupIframeObserver, 100);
+                }
+            }
             
-            iframeObserver.observe(modalDemo, {
-                childList: true,
-                subtree: true
-            });
-        }
+            // Set up immediately when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupIframeObserver);
+            } else {
+                setupIframeObserver();
+            }
+            
+            // Also set up a periodic check to remove any iframes that slip through
+            setInterval(() => {
+                const modalDemo = document.getElementById('modalDemo');
+                if (modalDemo) {
+                    const iframes = modalDemo.querySelectorAll('iframe');
+                    if (iframes.length > 0) {
+                        console.error('🚫 PERIODIC CHECK: Removing', iframes.length, 'iframes');
+                        iframes.forEach(iframe => {
+                            console.error('🚫 Removing iframe with src:', iframe.src);
+                            // Log stack trace to see where it came from
+                            console.trace('Iframe creation stack:');
+                            iframe.remove();
+                        });
+                        // Force clear and show button instead
+                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Iframe blocked. Please refresh the page.</div>';
+                    }
+                }
+            }, 500);
+        })();
         
         // Close modal on background click
         document.addEventListener('click', (e) => {
