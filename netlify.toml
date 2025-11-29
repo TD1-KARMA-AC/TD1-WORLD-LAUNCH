@@ -34,7 +34,29 @@
   force = true
 
 # Note: Netlify Functions at /.netlify/functions/* are handled automatically BEFORE redirects
-# Handle SPA routing - redirect all non-function requests to index.html
+
+# Allow demo files to be served directly (must come before catch-all)
+[[redirects]]
+  from = "/website/demos/*"
+  to = "/website/demos/:splat"
+  status = 200
+  force = false
+
+# Allow website files to be served directly
+[[redirects]]
+  from = "/website/*.html"
+  to = "/website/:splat"
+  status = 200
+  force = false
+
+# Allow assets to be served directly
+[[redirects]]
+  from = "/website/assets/*"
+  to = "/website/assets/:splat"
+  status = 200
+  force = false
+
+# Handle SPA routing - redirect all other non-function requests to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -46,9 +68,16 @@
   [headers.values]
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
+    X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
-    Content-Security-Policy = "default-src 'self' https: data:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; connect-src 'self' https: https://*.netlify.app https://*.netlify.com https://www.td1.world; upgrade-insecure-requests; block-all-mixed-content"
+    Content-Security-Policy = "default-src 'self' https: data:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; frame-src 'self' https://www.td1.world; connect-src 'self' https: https://*.netlify.app https://*.netlify.com https://www.td1.world; upgrade-insecure-requests; block-all-mixed-content"
+
+# Allow demo files to be embedded in iframes (override X-Frame-Options for demos)
+[[headers]]
+  for = "/website/demos/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https: data:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; frame-ancestors 'self' https://www.td1.world;"
 
