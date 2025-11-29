@@ -2845,13 +2845,9 @@
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
             
-            // Demo will redirect when "Live Demo" tab is clicked
-            // Just show a placeholder message
-            if (product.demoUrl) {
-                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Click "Live Demo" tab to view the interactive demo</div>';
-            } else {
-                modalDemo.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>`;
-            }
+            // Demo will be loaded when "Live Demo" tab is clicked
+            // Clear the demo container for now
+            modalDemo.innerHTML = '';
             
             // Set pricing
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2912,8 +2908,69 @@
             document.body.style.overflow = '';
         }
         
+        // Load Demo in iframe
+        function loadDemoIframe(productId) {
+            const product = productData[productId];
+            if (!product || !product.demoUrl) {
+                const modalDemo = document.getElementById('modalDemo');
+                modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
+                return;
+            }
+            
+            const modalDemo = document.getElementById('modalDemo');
+            if (!modalDemo) {
+                console.error('Modal demo element not found');
+                return;
+            }
+            
+            // Resolve path for deployed site
+            const currentUrl = window.location.href;
+            let demoPath;
+            
+            if (currentUrl.startsWith('file://')) {
+                demoPath = product.demoUrl;
+            } else {
+                // Always use absolute path for deployed site
+                if (product.demoUrl.startsWith('/')) {
+                    demoPath = product.demoUrl;
+                } else {
+                    demoPath = '/website/' + product.demoUrl;
+                }
+            }
+            
+            // Build full URL for iframe
+            const demoUrl = currentUrl.startsWith('file://') 
+                ? demoPath 
+                : window.location.origin + demoPath;
+            
+            console.log('=== Loading Demo in iframe ===');
+            console.log('Product:', product.name);
+            console.log('Demo URL from data:', product.demoUrl);
+            console.log('Resolved path:', demoPath);
+            console.log('Full demo URL:', demoUrl);
+            
+            // Load demo in iframe
+            modalDemo.innerHTML = `<iframe src="${demoUrl}" class="demo-iframe" loading="lazy"></iframe>`;
+        }
+        
         // Switch Tab
         function switchTab(tabName) {
+            // If switching to demo tab, load the demo in iframe
+            if (tabName === 'demo') {
+                const modal = document.getElementById('productModal');
+                const productId = modal?.dataset?.productId;
+                
+                console.log('Demo tab clicked. Product ID:', productId);
+                
+                if (productId) {
+                    // Load demo in iframe
+                    loadDemoIframe(productId);
+                } else {
+                    console.error('Cannot load demo: product ID missing');
+                }
+            }
+            
+            // Normal tab switching for all tabs
             // Remove active from all tabs and contents
             document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
@@ -2921,41 +2978,6 @@
             // Add active to selected tab and content
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
-            
-            // If switching to demo tab, redirect to the demo URL
-            if (tabName === 'demo') {
-                const modal = document.getElementById('productModal');
-                const productId = modal.dataset.productId;
-                
-                if (productId && productData[productId] && productData[productId].demoUrl) {
-                    const product = productData[productId];
-                    
-                    // Resolve path for deployed site
-                    const currentUrl = window.location.href;
-                    let demoPath;
-                    
-                    if (currentUrl.startsWith('file://')) {
-                        demoPath = product.demoUrl;
-                    } else {
-                        // Always use absolute path for deployed site
-                        if (product.demoUrl.startsWith('/')) {
-                            demoPath = product.demoUrl;
-                        } else {
-                            demoPath = '/website/' + product.demoUrl;
-                        }
-                    }
-                    
-                    // Build full URL for redirect
-                    const demoUrl = currentUrl.startsWith('file://') 
-                        ? demoPath 
-                        : window.location.origin + demoPath;
-                    
-                    console.log('Redirecting to demo:', demoUrl);
-                    
-                    // Redirect to the demo URL
-                    window.location.href = demoUrl;
-                }
-            }
         }
         
         // Close modal on background click
