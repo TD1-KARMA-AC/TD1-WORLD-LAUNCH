@@ -2842,9 +2842,12 @@
                         demoUrl = product.demoUrl;
                     } else {
                         // Deployed site - MUST use absolute URL for iframe to work correctly
-                        // product.demoUrl is "demos/TD1_INTENT_demo.html"
-                        // Need: "https://www.td1.world/website/demos/TD1_INTENT_demo.html"
-                        const cleanDemoUrl = product.demoUrl.replace(/^\/+/, ''); // Remove leading slashes
+                        // Netlify serves files case-insensitively and may strip .html extension
+                        // product.demoUrl is "demos/TD1_ROUTER_demo.html"
+                        // Convert to lowercase and remove .html extension for Netlify compatibility
+                        let cleanDemoUrl = product.demoUrl.replace(/^\/+/, ''); // Remove leading slashes
+                        cleanDemoUrl = cleanDemoUrl.toLowerCase(); // Convert to lowercase
+                        cleanDemoUrl = cleanDemoUrl.replace(/\.html$/, ''); // Remove .html extension
                         // Always use /website/ prefix when deployed
                         demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                     }
@@ -2880,8 +2883,9 @@
                     iframe.className = 'demo-iframe';
                     iframe.id = 'productDemoIframe';
                     
-                    // Ensure the URL is correct - verify it ends with .html
-                    if (!demoUrl.endsWith('.html')) {
+                    // For deployed sites, Netlify serves files without .html extension
+                    // So we don't need to check for .html extension when deployed
+                    if (currentUrl.startsWith('file://') && !demoUrl.endsWith('.html')) {
                         console.error('❌ Invalid demo URL (does not end with .html):', demoUrl);
                         loadingDiv.innerHTML = `
                             <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
