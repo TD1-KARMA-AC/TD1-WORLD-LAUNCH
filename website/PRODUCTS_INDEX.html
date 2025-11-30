@@ -2901,12 +2901,12 @@
                     const productId = modal?.dataset?.productId;
                     
                     if (!productId) {
-                        console.error('❌ No product ID found!');
+                        alert('No product selected');
                         return;
                     }
                     
                     if (!productData[productId]) {
-                        console.error('❌ Product not found in productData:', productId);
+                        alert('Product not found');
                         return;
                     }
                     
@@ -2915,29 +2915,27 @@
                         return;
                     }
                     
-                    const product = productData[productId];
-                    
-                    // Resolve demo URL
-                    const currentUrl = window.location.href;
+                    // FORCE navigation - no iframe, just redirect
                     let demoUrl;
+                    const currentUrl = window.location.href;
                     
                     if (currentUrl.startsWith('file://')) {
-                        // Local file:// - use relative path
-                        demoUrl = product.demoUrl;
+                        // Local: use relative path
+                        demoUrl = productData[productId].demoUrl;
                     } else {
-                        // Deployed site - use lowercase without extension (as confirmed working)
-                        let cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
-                        cleanDemoUrl = cleanDemoUrl.toLowerCase();
-                        cleanDemoUrl = cleanDemoUrl.replace(/\.html$/, '');
-                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
+                        // Deployed: EXACT format that works - lowercase, no extension
+                        const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
+                        const cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
+                        demoUrl = window.location.origin + '/website/' + cleanUrl;
                     }
                     
-                    // Store product ID in sessionStorage so demo can return to it
+                    // Store for return
                     sessionStorage.setItem('returnToProduct', productId);
                     sessionStorage.setItem('returnToTab', 'pricing');
                     
-                    // Navigate to demo page
+                    // IMMEDIATELY navigate - NO IFRAME
                     window.location.href = demoUrl;
+                    return;
                 }
             } catch (error) {
                 console.error('❌ Error in switchTab function:', error);
