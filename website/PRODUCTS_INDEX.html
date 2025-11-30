@@ -2788,6 +2788,7 @@
                 
                 // If switching to demo tab, show a button to open demo in new tab
                 if (tabName === 'demo') {
+                    console.log('✅ Demo tab clicked - showing button (NO IFRAME)');
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
                     const modalDemo = document.getElementById('modalDemo');
@@ -2816,7 +2817,10 @@
                     
                     const product = productData[productId];
                     
-                    // Create simple button to open demo in new tab
+                    // Clear any existing content (including any old iframes)
+                    modalDemo.innerHTML = '';
+                    
+                    // Create simple button to open demo in new tab (NO IFRAME)
                     modalDemo.innerHTML = `
                         <div style="padding: 60px 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
                             <div style="font-size: 64px; margin-bottom: 24px;">🚀</div>
