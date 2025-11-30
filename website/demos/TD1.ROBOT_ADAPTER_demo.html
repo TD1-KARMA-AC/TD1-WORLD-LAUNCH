@@ -67,9 +67,35 @@
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4); }
         @media (max-width: 768px) { .demo-panel { padding: 20px; } }
-    </style>
+    
+        .exit-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .exit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(155, 92, 246, 0.4);
+        }
+
+        </style>
 </head>
 <body>
+    <button class="exit-button" id="exitButton" onclick="returnToPricing()" style="display: none;">← Back to Pricing</button>
+    
+
     <div class="neural-particles" id="particles"></div>
     <div class="demo-container">
         <div class="demo-header">
@@ -109,6 +135,31 @@
             updateRobots();
         }
         updateRobots();
+    
+        // Exit button functionality
+        function returnToPricing() {
+            const productId = sessionStorage.getItem('returnToProduct');
+            if (productId) {
+                // Navigate to products page with product ID in hash
+                const productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-pricing';
+                window.location.href = productsUrl;
+            } else {
+                // Fallback: just go to products page
+                window.location.href = window.location.origin + '/website/PRODUCTS_INDEX.html';
+            }
+        }
+        
+        // Show exit button if we came from products page
+        window.addEventListener('DOMContentLoaded', function() {
+            const productId = sessionStorage.getItem('returnToProduct');
+            if (productId) {
+                const exitButton = document.getElementById('exitButton');
+                if (exitButton) {
+                    exitButton.style.display = 'block';
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
