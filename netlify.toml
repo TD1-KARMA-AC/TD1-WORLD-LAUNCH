@@ -41,24 +41,34 @@
 # However, explicit redirect rules can help ensure files are found
 # These rules come BEFORE the catch-all to ensure they're processed first
 
-# Explicitly serve demo files (must come BEFORE catch-all)
-# This ensures /website/demos/*.html files are served directly
+# CRITICAL: Netlify processes redirects in order - specific rules MUST come before catch-all
+# The catch-all /* will match everything, so we need explicit rules for /website/* paths
+
+# Serve demo files directly (must come BEFORE catch-all)
 [[redirects]]
   from = "/website/demos/*"
   to = "/website/demos/:splat"
   status = 200
   force = false
 
-# Explicitly serve website HTML files (must come BEFORE catch-all)
+# Serve website HTML files directly (must come BEFORE catch-all)
 [[redirects]]
   from = "/website/*.html"
   to = "/website/:splat.html"
   status = 200
   force = false
 
+# Serve website assets directly (must come BEFORE catch-all)
+[[redirects]]
+  from = "/website/assets/*"
+  to = "/website/assets/:splat"
+  status = 200
+  force = false
+
 # Handle SPA routing - redirect root and other paths to index.html
-# This catch-all comes LAST and will only match if no static file is found
-# Static files in /website/demos/ and /website/*.html are served BEFORE this rule
+# This catch-all comes LAST and will only match if:
+# 1. No static file exists at that path
+# 2. The path doesn't match any of the /website/* rules above
 [[redirects]]
   from = "/*"
   to = "/index.html"
