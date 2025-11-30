@@ -2769,301 +2769,125 @@
         
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
-            // DEBUG: Log immediately when function is called
-            console.log('🔵🔵🔵 switchTab called with:', tabName);
-            console.log('🔵🔵🔵 Current location:', window.location.href);
-            
-            // Make function globally accessible
-            window.switchTab = switchTab;
-            
-            // Remove active from all tabs and contents
-            document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
-            
-            // Add active to selected tab and content
-            const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
-            const tabContent = document.getElementById(`tab-${tabName}`);
-            
-            if (tabButton) tabButton.classList.add('active');
-            if (tabContent) tabContent.classList.add('active');
-            
-            // If switching to demo tab, embed the demo in an iframe
-            if (tabName === 'demo') {
-                console.log('🚀 === DEMO TAB CLICKED ===');
-                console.log('🚀 Current URL:', window.location.href);
-                console.log('🚀 Current pathname:', window.location.pathname);
+            try {
+                // DEBUG: Log immediately when function is called
+                console.log('🔵🔵🔵 switchTab called with:', tabName);
+                console.log('🔵🔵🔵 Current location:', window.location.href);
                 
-                const modal = document.getElementById('productModal');
-                const productId = modal?.dataset?.productId;
-                const modalDemo = document.getElementById('modalDemo');
+                // Remove active from all tabs and contents
+                document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
                 
-                console.log('🚀 Modal element:', modal);
-                console.log('🚀 Product ID:', productId);
-                console.log('🚀 Modal Demo element:', modalDemo);
+                // Add active to selected tab and content
+                const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+                const tabContent = document.getElementById(`tab-${tabName}`);
                 
-                if (!modalDemo) {
-                    console.error('❌ modalDemo element not found!');
-                    alert('Error: Demo container not found. Check console for details.');
-                    return;
-                }
+                if (tabButton) tabButton.classList.add('active');
+                if (tabContent) tabContent.classList.add('active');
                 
-                if (!productId) {
-                    console.error('❌ No product ID found!');
-                    alert('Error: No product selected. Check console for details.');
-                    return;
-                }
-                
-                // Always clear and reload when switching to demo tab
-                modalDemo.innerHTML = '';
-                
-                if (!productData[productId]) {
-                    console.error('❌ Product not found in productData:', productId);
-                    console.log('Available products:', Object.keys(productData));
-                    modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Product data not found</div>';
-                    return;
-                }
-                
-                if (!productData[productId].demoUrl) {
-                    console.error('❌ No demoUrl for product:', productId);
-                    modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
-                    return;
-                }
-                
-                console.log('✅ Product found, embedding demo iframe');
-                const product = productData[productId];
-                console.log('✅ Product data:', product);
-                
-                // Resolve demo URL - ALWAYS use absolute URLs when deployed (iframes need absolute URLs)
-                // Relative paths work locally but can fail in iframes when deployed
-                const currentUrl = window.location.href;
-                const currentPath = window.location.pathname;
-                let demoUrl;
-                
-                if (currentUrl.startsWith('file://')) {
-                    // Local file:// - use relative path (works fine locally)
-                    demoUrl = product.demoUrl;
-                } else {
-                    // Deployed site - MUST use absolute URL for iframe to work correctly
-                    // product.demoUrl is "demos/TD1_INTENT_demo.html"
-                    // Need: "https://www.td1.world/website/demos/TD1_INTENT_demo.html"
-                    const cleanDemoUrl = product.demoUrl.replace(/^\/+/, ''); // Remove leading slashes
-                    // Always use /website/ prefix when deployed
-                    demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
-                }
-                
-                console.log('=== DEMO LOADING DEBUG ===');
-                console.log('Product:', product.name);
-                console.log('Product ID:', productId);
-                console.log('Original demoUrl:', product.demoUrl);
-                console.log('Resolved demoUrl:', demoUrl);
-                console.log('Current URL:', currentUrl);
-                console.log('Current pathname:', currentPath);
-                console.log('Window origin:', window.location.origin);
-                console.log('Full iframe URL will be:', demoUrl);
-                
-                // Create wrapper for loading state and iframe
-                const wrapper = document.createElement('div');
-                wrapper.id = 'demoWrapper';
-                wrapper.style.cssText = 'position: relative; width: 100%; min-height: 400px; display: block; visibility: visible;';
-                console.log('Wrapper created');
-                
-                // Create loading indicator (will be removed when iframe loads)
-                const loadingDiv = document.createElement('div');
-                loadingDiv.id = 'demoLoadingIndicator';
-                loadingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; color: var(--text-primary); z-index: 1; background: rgba(0, 0, 0, 0.3); border-radius: 12px;';
-                loadingDiv.innerHTML = `
-                    <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
-                    <p style="color: var(--text-secondary); margin-top: 16px;">Loading ${product.name} Interactive Demo...</p>
-                `;
-                wrapper.appendChild(loadingDiv);
-                
-                // Create iframe
-                const iframe = document.createElement('iframe');
-                iframe.className = 'demo-iframe';
-                iframe.id = 'productDemoIframe';
-                
-                // Ensure the URL is correct - verify it ends with .html
-                if (!demoUrl.endsWith('.html')) {
-                    console.error('❌ Invalid demo URL (does not end with .html):', demoUrl);
+                // If switching to demo tab, embed the demo in an iframe
+                if (tabName === 'demo') {
+                    console.log('🚀 === DEMO TAB CLICKED ===');
+                    console.log('🚀 Current URL:', window.location.href);
+                    console.log('🚀 Current pathname:', window.location.pathname);
+                    
+                    const modal = document.getElementById('productModal');
+                    const productId = modal?.dataset?.productId;
+                    const modalDemo = document.getElementById('modalDemo');
+                    
+                    console.log('🚀 Modal element:', modal);
+                    console.log('🚀 Product ID:', productId);
+                    console.log('🚀 Modal Demo element:', modalDemo);
+                    
+                    if (!modalDemo) {
+                        console.error('❌ modalDemo element not found!');
+                        alert('Error: Demo container not found. Check console for details.');
+                        return;
+                    }
+                    
+                    if (!productId) {
+                        console.error('❌ No product ID found!');
+                        alert('Error: No product selected. Check console for details.');
+                        return;
+                    }
+                    
+                    // Always clear and reload when switching to demo tab
+                    modalDemo.innerHTML = '';
+                    
+                    if (!productData[productId]) {
+                        console.error('❌ Product not found in productData:', productId);
+                        console.log('Available products:', Object.keys(productData));
+                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Product data not found</div>';
+                        return;
+                    }
+                    
+                    if (!productData[productId].demoUrl) {
+                        console.error('❌ No demoUrl for product:', productId);
+                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
+                        return;
+                    }
+                    
+                    console.log('✅ Product found, embedding demo iframe');
+                    const product = productData[productId];
+                    console.log('✅ Product data:', product);
+                    
+                    // Resolve demo URL - ALWAYS use absolute URLs when deployed (iframes need absolute URLs)
+                    // Relative paths work locally but can fail in iframes when deployed
+                    const currentUrl = window.location.href;
+                    const currentPath = window.location.pathname;
+                    let demoUrl;
+                    
+                    if (currentUrl.startsWith('file://')) {
+                        // Local file:// - use relative path (works fine locally)
+                        demoUrl = product.demoUrl;
+                    } else {
+                        // Deployed site - MUST use absolute URL for iframe to work correctly
+                        // product.demoUrl is "demos/TD1_INTENT_demo.html"
+                        // Need: "https://www.td1.world/website/demos/TD1_INTENT_demo.html"
+                        const cleanDemoUrl = product.demoUrl.replace(/^\/+/, ''); // Remove leading slashes
+                        // Always use /website/ prefix when deployed
+                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
+                    }
+                    
+                    console.log('=== DEMO LOADING DEBUG ===');
+                    console.log('Product:', product.name);
+                    console.log('Product ID:', productId);
+                    console.log('Original demoUrl:', product.demoUrl);
+                    console.log('Resolved demoUrl:', demoUrl);
+                    console.log('Current URL:', currentUrl);
+                    console.log('Current pathname:', currentPath);
+                    console.log('Window origin:', window.location.origin);
+                    console.log('Full iframe URL will be:', demoUrl);
+                    
+                    // Create wrapper for loading state and iframe
+                    const wrapper = document.createElement('div');
+                    wrapper.id = 'demoWrapper';
+                    wrapper.style.cssText = 'position: relative; width: 100%; min-height: 400px; display: block; visibility: visible;';
+                    console.log('Wrapper created');
+                    
+                    // Create loading indicator (will be removed when iframe loads)
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.id = 'demoLoadingIndicator';
+                    loadingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; color: var(--text-primary); z-index: 1; background: rgba(0, 0, 0, 0.3); border-radius: 12px;';
                     loadingDiv.innerHTML = `
-                        <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                        <h3 style="color: var(--text-primary); margin-bottom: 16px;">Invalid Demo URL</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 24px;">
-                            The demo URL appears to be incorrect: ${demoUrl}
-                        </p>
-                        <button onclick="openDemoInNewTab('${productId}')" style="
-                            padding: 12px 24px; 
-                            background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                            border: none; 
-                            border-radius: 8px; 
-                            color: white; 
-                            font-size: 14px; 
-                            font-weight: 600; 
-                            cursor: pointer;
-                            margin-top: 16px;
-                        ">
-                            Open Demo in New Tab →
-                        </button>
+                        <div style="font-size: 48px; margin-bottom: 20px;">🚀</div>
+                        <p style="color: var(--text-secondary); margin-top: 16px;">Loading ${product.name} Interactive Demo...</p>
                     `;
-                    modalDemo.appendChild(wrapper);
-                    return;
-                }
-                
-                // Set iframe attributes first
-                iframe.setAttribute('allowfullscreen', 'true');
-                iframe.setAttribute('frameborder', '0');
-                iframe.setAttribute('scrolling', 'auto');
-                iframe.style.cssText = 'width: 100%; height: clamp(400px, 70vh, 900px); min-height: 400px; border: 2px solid rgba(155, 92, 246, 0.3); border-radius: 12px; background: rgba(0, 0, 0, 0.5); display: block; opacity: 1; visibility: visible;';
-                
-                // Set the src - the iframe will load it
-                iframe.src = demoUrl;
-                
-                console.log('Iframe created:', iframe);
-                console.log('Iframe src:', iframe.src);
-                console.log('Expected path format: /website/demos/TD1_XXX_demo.html');
-                console.log('Full URL being loaded:', demoUrl);
-                
-                // Test if the demo file exists (for debugging)
-                fetch(demoUrl, { method: 'HEAD', cache: 'no-cache' })
-                    .then(response => {
-                        console.log('Demo file HEAD request response:', response.status, response.statusText);
-                        console.log('Response URL (after redirects):', response.url);
-                        if (response.status !== 200) {
-                            console.warn('⚠️ Demo file returned status:', response.status);
-                        }
-                    })
-                    .catch(error => {
-                        console.warn('⚠️ Could not check demo file (CORS or network issue):', error.message);
-                        console.log('Iframe will still attempt to load');
-                    });
-                
-                // Handle iframe load
-                iframe.onload = function() {
-                    console.log('✅ Iframe load event fired');
-                    console.log('Iframe src attribute:', iframe.src);
-                    console.log('Expected URL:', demoUrl);
+                    wrapper.appendChild(loadingDiv);
                     
-                    // Try to get the actual loaded URL (may be blocked by CORS)
-                    let actualUrl = 'Cannot access (CORS)';
-                    try {
-                        actualUrl = iframe.contentWindow.location.href;
-                        console.log('Iframe actual location:', actualUrl);
-                        
-                        // Check if URL was redirected
-                        if (actualUrl !== demoUrl && !actualUrl.includes('demos/')) {
-                            console.error('❌ Iframe was redirected!');
-                            console.error('Expected:', demoUrl);
-                            console.error('Got:', actualUrl);
-                            
-                            loadingDiv.innerHTML = `
-                                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                                <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Redirected</h3>
-                                <p style="color: var(--text-secondary); margin-bottom: 12px;">
-                                    The demo was redirected to the main page.
-                                </p>
-                                <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 11px; word-break: break-all;">
-                                    Expected: ${demoUrl}<br/>
-                                    Got: ${actualUrl}
-                                </p>
-                                <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 12px;">
-                                    This is likely a server configuration issue (netlify.toml redirect).
-                                </p>
-                                <button onclick="openDemoInNewTab('${productId}')" style="
-                                    padding: 12px 24px; 
-                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                                    border: none; 
-                                    border-radius: 8px; 
-                                    color: white; 
-                                    font-size: 14px; 
-                                    font-weight: 600; 
-                                    cursor: pointer;
-                                    margin-top: 16px;
-                                ">
-                                    Open Demo in New Tab →
-                                </button>
-                            `;
-                            return;
-                        }
-                    } catch (e) {
-                        console.log('Cannot access iframe location (CORS):', e.message);
-                        // CORS blocked - can't check, but we'll try to check content
-                    }
+                    // Create iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'demo-iframe';
+                    iframe.id = 'productDemoIframe';
                     
-                    // Check iframe content to see if it loaded the demo
-                    try {
-                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                        const iframeTitle = iframeDoc.title || iframeDoc.querySelector('title')?.textContent || '';
-                        const iframeBody = iframeDoc.body?.textContent || '';
-                        
-                        console.log('Iframe title:', iframeTitle);
-                        console.log('Iframe body preview:', iframeBody.substring(0, 150));
-                        
-                        // Check if it loaded the main site instead of demo
-                        const isMainSite = (iframeTitle.includes('TD1.WORLD') || iframeTitle.includes('Launch')) && 
-                                         !iframeTitle.includes('Demo') && 
-                                         !iframeTitle.includes('Interactive') &&
-                                         !iframeBody.includes('Interactive Demo') &&
-                                         !iframeBody.includes('Live Interactive Demo');
-                        
-                        if (isMainSite) {
-                            console.error('❌ Iframe loaded main site instead of demo!');
-                            loadingDiv.innerHTML = `
-                                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                                <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Not Loading</h3>
-                                <p style="color: var(--text-secondary); margin-bottom: 12px;">
-                                    The iframe loaded the main website instead of the demo.
-                                </p>
-                                <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 11px; word-break: break-all;">
-                                    URL: ${demoUrl}
-                                </p>
-                                <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 12px;">
-                                    Check browser console (F12) for details.
-                                </p>
-                                <button onclick="openDemoInNewTab('${productId}')" style="
-                                    padding: 12px 24px; 
-                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                                    border: none; 
-                                    border-radius: 8px; 
-                                    color: white; 
-                                    font-size: 14px; 
-                                    font-weight: 600; 
-                                    cursor: pointer;
-                                    margin-top: 16px;
-                                ">
-                                    Open Demo in New Tab →
-                                </button>
-                            `;
-                            return;
-                        }
-                    } catch (e) {
-                        console.log('Cannot access iframe content (CORS):', e.message);
-                        // CORS blocked - assume it loaded correctly
-                    }
-                    
-                    // Success - hide loading indicator
-                    const loader = document.getElementById('demoLoadingIndicator');
-                    if (loader) {
-                        loader.style.display = 'none';
-                        console.log('✅ Loading indicator hidden - demo loaded successfully');
-                    }
-                    console.log('Iframe content loaded, dimensions:', iframe.offsetWidth, 'x', iframe.offsetHeight);
-                };
-                
-                // Handle iframe load errors (note: onerror doesn't work for iframes, but we can check after timeout)
-                iframe.onerror = function() {
-                    console.error('❌ Iframe error event fired');
-                };
-                
-                // Add timeout fallback (if iframe doesn't load within 10 seconds, show error)
-                setTimeout(function() {
-                    const loader = document.getElementById('demoLoadingIndicator');
-                    if (loader && loader.style.display !== 'none') {
-                        console.warn('Demo iframe loading timeout');
-                        loader.innerHTML = `
+                    // Ensure the URL is correct - verify it ends with .html
+                    if (!demoUrl.endsWith('.html')) {
+                        console.error('❌ Invalid demo URL (does not end with .html):', demoUrl);
+                        loadingDiv.innerHTML = `
                             <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                            <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Taking Longer Than Expected</h3>
+                            <h3 style="color: var(--text-primary); margin-bottom: 16px;">Invalid Demo URL</h3>
                             <p style="color: var(--text-secondary); margin-bottom: 24px;">
-                                The demo may still be loading, or there may be an issue. You can try opening it in a new tab.
+                                The demo URL appears to be incorrect: ${demoUrl}
                             </p>
                             <button onclick="openDemoInNewTab('${productId}')" style="
                                 padding: 12px 24px; 
@@ -3079,16 +2903,198 @@
                                 Open Demo in New Tab →
                             </button>
                         `;
+                        modalDemo.appendChild(wrapper);
+                        return;
                     }
-                }, 10000);
-                
-                // Add iframe to wrapper
-                wrapper.appendChild(iframe);
-                
-                // Add wrapper to container
-                modalDemo.appendChild(wrapper);
+                    
+                    // Set iframe attributes first
+                    iframe.setAttribute('allowfullscreen', 'true');
+                    iframe.setAttribute('frameborder', '0');
+                    iframe.setAttribute('scrolling', 'auto');
+                    iframe.style.cssText = 'width: 100%; height: clamp(400px, 70vh, 900px); min-height: 400px; border: 2px solid rgba(155, 92, 246, 0.3); border-radius: 12px; background: rgba(0, 0, 0, 0.5); display: block; opacity: 1; visibility: visible;';
+                    
+                    // Set the src - the iframe will load it
+                    iframe.src = demoUrl;
+                    
+                    console.log('Iframe created:', iframe);
+                    console.log('Iframe src:', iframe.src);
+                    console.log('Expected path format: /website/demos/TD1_XXX_demo.html');
+                    console.log('Full URL being loaded:', demoUrl);
+                    
+                    // Test if the demo file exists (for debugging)
+                    fetch(demoUrl, { method: 'HEAD', cache: 'no-cache' })
+                        .then(response => {
+                            console.log('Demo file HEAD request response:', response.status, response.statusText);
+                            console.log('Response URL (after redirects):', response.url);
+                            if (response.status !== 200) {
+                                console.warn('⚠️ Demo file returned status:', response.status);
+                            }
+                        })
+                        .catch(error => {
+                            console.warn('⚠️ Could not check demo file (CORS or network issue):', error.message);
+                            console.log('Iframe will still attempt to load');
+                        });
+                    
+                    // Handle iframe load
+                    iframe.onload = function() {
+                        console.log('✅ Iframe load event fired');
+                        console.log('Iframe src attribute:', iframe.src);
+                        console.log('Expected URL:', demoUrl);
+                        
+                        // Try to get the actual loaded URL (may be blocked by CORS)
+                        let actualUrl = 'Cannot access (CORS)';
+                        try {
+                            actualUrl = iframe.contentWindow.location.href;
+                            console.log('Iframe actual location:', actualUrl);
+                            
+                            // Check if URL was redirected
+                            if (actualUrl !== demoUrl && !actualUrl.includes('demos/')) {
+                                console.error('❌ Iframe was redirected!');
+                                console.error('Expected:', demoUrl);
+                                console.error('Got:', actualUrl);
+                                
+                                loadingDiv.innerHTML = `
+                                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                                    <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Redirected</h3>
+                                    <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                                        The demo was redirected to the main page.
+                                    </p>
+                                    <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 11px; word-break: break-all;">
+                                        Expected: ${demoUrl}<br/>
+                                        Got: ${actualUrl}
+                                    </p>
+                                    <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 12px;">
+                                        This is likely a server configuration issue (netlify.toml redirect).
+                                    </p>
+                                    <button onclick="openDemoInNewTab('${productId}')" style="
+                                        padding: 12px 24px; 
+                                        background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                        border: none; 
+                                        border-radius: 8px; 
+                                        color: white; 
+                                        font-size: 14px; 
+                                        font-weight: 600; 
+                                        cursor: pointer;
+                                        margin-top: 16px;
+                                    ">
+                                        Open Demo in New Tab →
+                                    </button>
+                                `;
+                                return;
+                            }
+                        } catch (e) {
+                            console.log('Cannot access iframe location (CORS):', e.message);
+                            // CORS blocked - can't check, but we'll try to check content
+                        }
+                        
+                        // Check iframe content to see if it loaded the demo
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const iframeTitle = iframeDoc.title || iframeDoc.querySelector('title')?.textContent || '';
+                            const iframeBody = iframeDoc.body?.textContent || '';
+                            
+                            console.log('Iframe title:', iframeTitle);
+                            console.log('Iframe body preview:', iframeBody.substring(0, 150));
+                            
+                            // Check if it loaded the main site instead of demo
+                            const isMainSite = (iframeTitle.includes('TD1.WORLD') || iframeTitle.includes('Launch')) && 
+                                             !iframeTitle.includes('Demo') && 
+                                             !iframeTitle.includes('Interactive') &&
+                                             !iframeBody.includes('Interactive Demo') &&
+                                             !iframeBody.includes('Live Interactive Demo');
+                            
+                            if (isMainSite) {
+                                console.error('❌ Iframe loaded main site instead of demo!');
+                                loadingDiv.innerHTML = `
+                                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                                    <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Not Loading</h3>
+                                    <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                                        The iframe loaded the main website instead of the demo.
+                                    </p>
+                                    <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 11px; word-break: break-all;">
+                                        URL: ${demoUrl}
+                                    </p>
+                                    <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 12px;">
+                                        Check browser console (F12) for details.
+                                    </p>
+                                    <button onclick="openDemoInNewTab('${productId}')" style="
+                                        padding: 12px 24px; 
+                                        background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                        border: none; 
+                                        border-radius: 8px; 
+                                        color: white; 
+                                        font-size: 14px; 
+                                        font-weight: 600; 
+                                        cursor: pointer;
+                                        margin-top: 16px;
+                                    ">
+                                        Open Demo in New Tab →
+                                    </button>
+                                `;
+                                return;
+                            }
+                        } catch (e) {
+                            console.log('Cannot access iframe content (CORS):', e.message);
+                            // CORS blocked - assume it loaded correctly
+                        }
+                        
+                        // Success - hide loading indicator
+                        const loader = document.getElementById('demoLoadingIndicator');
+                        if (loader) {
+                            loader.style.display = 'none';
+                            console.log('✅ Loading indicator hidden - demo loaded successfully');
+                        }
+                        console.log('Iframe content loaded, dimensions:', iframe.offsetWidth, 'x', iframe.offsetHeight);
+                    };
+                    
+                    // Handle iframe load errors (note: onerror doesn't work for iframes, but we can check after timeout)
+                    iframe.onerror = function() {
+                        console.error('❌ Iframe error event fired');
+                    };
+                    
+                    // Add timeout fallback (if iframe doesn't load within 10 seconds, show error)
+                    setTimeout(function() {
+                        const loader = document.getElementById('demoLoadingIndicator');
+                        if (loader && loader.style.display !== 'none') {
+                            console.warn('Demo iframe loading timeout');
+                            loader.innerHTML = `
+                                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                                <h3 style="color: var(--text-primary); margin-bottom: 16px;">Demo Taking Longer Than Expected</h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                                    The demo may still be loading, or there may be an issue. You can try opening it in a new tab.
+                                </p>
+                                <button onclick="openDemoInNewTab('${productId}')" style="
+                                    padding: 12px 24px; 
+                                    background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
+                                    border: none; 
+                                    border-radius: 8px; 
+                                    color: white; 
+                                    font-size: 14px; 
+                                    font-weight: 600; 
+                                    cursor: pointer;
+                                    margin-top: 16px;
+                                ">
+                                    Open Demo in New Tab →
+                                </button>
+                            `;
+                        }
+                    }, 10000);
+                    
+                    // Add iframe to wrapper
+                    wrapper.appendChild(iframe);
+                    
+                    // Add wrapper to container
+                    modalDemo.appendChild(wrapper);
+                }
+            } catch (error) {
+                console.error('❌ Error in switchTab function:', error);
+                console.error('Error stack:', error.stack);
+                alert('Error loading demo tab. Check console for details. Error: ' + error.message);
             }
         }
+        
+        // Make switchTab globally accessible
+        window.switchTab = switchTab;
         
         // Close modal on background click
         document.addEventListener('click', (e) => {
