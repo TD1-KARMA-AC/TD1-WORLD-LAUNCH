@@ -2924,7 +2924,7 @@
                         demoUrl = productData[productId].demoUrl;
                         console.log('📍 Local file:// detected. Using relative path:', demoUrl);
                     } else {
-                        // Deployed: EXACT format that works - lowercase, no extension
+                        // Deployed: Try lowercase without extension first (Netlify format)
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
                         const cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
                         demoUrl = window.location.origin + '/website/' + cleanUrl;
@@ -2940,7 +2940,8 @@
                     
                     console.log('🚀 Navigating to:', demoUrl);
                     
-                    // IMMEDIATELY navigate - NO IFRAME, NO DOM CHANGES
+                    // Navigate immediately - use href for reliable navigation
+                    // Clear any potential navigation blockers
                     window.location.href = demoUrl;
                     return; // Stop execution - don't do anything else
                 }
