@@ -2889,20 +2889,31 @@
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
                     
+                    console.log('🔍 Demo tab clicked. ProductId:', productId);
+                    console.log('🔍 Modal:', modal);
+                    console.log('🔍 ProductData keys:', Object.keys(productData));
+                    
                     if (!productId) {
+                        console.error('❌ No product ID found in modal');
                         alert('No product selected');
                         return;
                     }
                     
                     if (!productData[productId]) {
-                        alert('Product not found');
+                        console.error('❌ Product not found in productData:', productId);
+                        console.log('🔍 Available products:', Object.keys(productData));
+                        alert('Product not found: ' + productId);
                         return;
                     }
                     
                     if (!productData[productId].demoUrl) {
+                        console.error('❌ No demoUrl for product:', productId);
                         alert('Demo coming soon for this product!');
                         return;
                     }
+                    
+                    console.log('✅ Product found:', productId);
+                    console.log('✅ Demo URL from data:', productData[productId].demoUrl);
                     
                     // FORCE navigation - no iframe, just redirect
                     let demoUrl;
@@ -2911,16 +2922,23 @@
                     if (currentUrl.startsWith('file://')) {
                         // Local: use relative path
                         demoUrl = productData[productId].demoUrl;
+                        console.log('📍 Local file:// detected. Using relative path:', demoUrl);
                     } else {
                         // Deployed: EXACT format that works - lowercase, no extension
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
                         const cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
                         demoUrl = window.location.origin + '/website/' + cleanUrl;
+                        console.log('📍 Deployed site detected.');
+                        console.log('📍 Original URL:', originalUrl);
+                        console.log('📍 Clean URL:', cleanUrl);
+                        console.log('📍 Final demo URL:', demoUrl);
                     }
                     
                     // Store for return
                     sessionStorage.setItem('returnToProduct', productId);
                     sessionStorage.setItem('returnToTab', 'pricing');
+                    
+                    console.log('🚀 Navigating to:', demoUrl);
                     
                     // IMMEDIATELY navigate - NO IFRAME, NO DOM CHANGES
                     window.location.href = demoUrl;
