@@ -2895,31 +2895,23 @@
                 if (tabButton) tabButton.classList.add('active');
                 if (tabContent) tabContent.classList.add('active');
                 
-                // If switching to demo tab, display demo in iframe within the tab
+                // If switching to demo tab, navigate to the demo page
                 if (tabName === 'demo') {
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
-                    const modalDemo = document.getElementById('modalDemo');
-                    
-                    if (!modalDemo) {
-                        console.error('❌ modalDemo element not found!');
-                        return;
-                    }
                     
                     if (!productId) {
                         console.error('❌ No product ID found!');
-                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">No product selected</div>';
                         return;
                     }
                     
                     if (!productData[productId]) {
                         console.error('❌ Product not found in productData:', productId);
-                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Product data not found</div>';
                         return;
                     }
                     
                     if (!productData[productId].demoUrl) {
-                        modalDemo.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Demo coming soon</div>';
+                        alert('Demo coming soon for this product!');
                         return;
                     }
                     
@@ -2933,58 +2925,19 @@
                         // Local file:// - use relative path
                         demoUrl = product.demoUrl;
                     } else {
-                        // Deployed site - use full path with .html extension
-                        // Netlify should serve the file directly if it exists
+                        // Deployed site - use lowercase without extension (as confirmed working)
                         let cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
-                        // Use original case and keep .html extension for iframe
+                        cleanDemoUrl = cleanDemoUrl.toLowerCase();
+                        cleanDemoUrl = cleanDemoUrl.replace(/\.html$/, '');
                         demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                     }
                     
-                    // Debug: Log the URL being used
-                    console.log('Iframe loading demo URL:', demoUrl);
-                    console.log('Product demoUrl:', product.demoUrl);
-                    console.log('Current URL:', currentUrl);
+                    // Store product ID in sessionStorage so demo can return to it
+                    sessionStorage.setItem('returnToProduct', productId);
+                    sessionStorage.setItem('returnToTab', 'pricing');
                     
-                    // Clear and create iframe to display demo in the tab
-                    modalDemo.innerHTML = '';
-                    
-                    const iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'width: 100%; height: 70vh; min-height: 600px; border: none; border-radius: 12px; display: block; background: var(--bg-dark);';
-                    iframe.setAttribute('allowfullscreen', 'true');
-                    iframe.setAttribute('frameborder', '0');
-                    iframe.setAttribute('scrolling', 'auto');
-                    
-                    // Add load event to check what actually loaded
-                    iframe.onload = function() {
-                        console.log('Iframe loaded. Src:', iframe.src);
-                        try {
-                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                            const iframeTitle = iframeDoc.title || '';
-                            console.log('Iframe title:', iframeTitle);
-                            if (iframeTitle.includes('TD1.WORLD') && !iframeTitle.includes('Demo') && !iframeTitle.includes('ROUTER')) {
-                                console.error('❌ Iframe loaded main site instead of demo!');
-                                console.error('Expected demo, got main site. URL was:', demoUrl);
-                                // Try with .html extension as fallback
-                                const fallbackUrl = demoUrl + '.html';
-                                console.log('Trying fallback URL with .html extension:', fallbackUrl);
-                                iframe.src = fallbackUrl;
-                            }
-                        } catch (e) {
-                            console.log('Cannot access iframe content (CORS):', e.message);
-                        }
-                    };
-                    
-                    iframe.onerror = function() {
-                        console.error('Iframe error loading:', demoUrl);
-                        // Try with .html extension
-                        const fallbackUrl = demoUrl + '.html';
-                        console.log('Trying fallback URL:', fallbackUrl);
-                        iframe.src = fallbackUrl;
-                    };
-                    
-                    iframe.src = demoUrl;
-                    
-                    modalDemo.appendChild(iframe);
+                    // Navigate to demo page
+                    window.location.href = demoUrl;
                 }
             } catch (error) {
                 console.error('❌ Error in switchTab function:', error);
@@ -2995,6 +2948,28 @@
         
         // Make switchTab globally accessible
         window.switchTab = switchTab;
+        
+        // Handle return from demo page - open modal and switch to pricing tab
+        window.addEventListener('DOMContentLoaded', function() {
+            const hash = window.location.hash;
+            if (hash) {
+                // Hash format: #productId-pricing
+                const match = hash.match(/^#([^-]+)-pricing$/);
+                if (match) {
+                    const productId = match[1];
+                    // Small delay to ensure page is fully loaded
+                    setTimeout(function() {
+                        openProductModal(productId);
+                        // Switch to pricing tab after modal opens
+                        setTimeout(function() {
+                            switchTab('pricing');
+                        }, 100);
+                    }, 100);
+                    // Clear the hash
+                    window.history.replaceState(null, null, window.location.pathname);
+                }
+            }
+        });
         
         // Close modal on background click
         document.addEventListener('click', (e) => {
