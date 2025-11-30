@@ -2924,7 +2924,8 @@
                         demoUrl = productData[productId].demoUrl;
                         console.log('📍 Local file:// detected. Using relative path:', demoUrl);
                     } else {
-                        // Deployed: Try lowercase without extension first (Netlify format)
+                        // Deployed: Netlify serves files with or without .html extension
+                        // Try both formats - first without extension (cleaner URL)
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
                         const cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
                         demoUrl = window.location.origin + '/website/' + cleanUrl;
@@ -2932,18 +2933,30 @@
                         console.log('📍 Original URL:', originalUrl);
                         console.log('📍 Clean URL:', cleanUrl);
                         console.log('📍 Final demo URL:', demoUrl);
+                        
+                        // Verify URL format matches what works manually
+                        // User confirmed: https://www.td1.world/website/demos/td1_router_demo works
+                        // So our format should be correct
                     }
                     
-                    // Store for return
+                    // Store for return BEFORE navigation
                     sessionStorage.setItem('returnToProduct', productId);
                     sessionStorage.setItem('returnToTab', 'pricing');
                     
                     console.log('🚀 Navigating to:', demoUrl);
+                    console.log('🚀 Full URL:', demoUrl);
                     
-                    // Navigate immediately - use href for reliable navigation
-                    // Clear any potential navigation blockers
-                    window.location.href = demoUrl;
-                    return; // Stop execution - don't do anything else
+                    // Use the most reliable navigation method: create and click an anchor
+                    // This is the most browser-compatible way and bypasses blockers
+                    const link = document.createElement('a');
+                    link.href = demoUrl;
+                    link.target = '_self'; // Navigate in same window
+                    document.body.appendChild(link);
+                    link.click();
+                    // Don't remove - navigation will happen immediately
+                    
+                    // Prevent any further execution
+                    return false;
                 }
                 
                 // Only do DOM manipulation for non-demo tabs
@@ -3107,7 +3120,7 @@
             
             <div class="modal-tabs">
                 <div class="modal-tab active" data-tab="overview" onclick="switchTab('overview')">📋 Overview</div>
-                <div class="modal-tab" data-tab="demo" onclick="switchTab('demo')">🚀 Live Demo</div>
+                <div class="modal-tab" data-tab="demo" onclick="switchTab('demo'); return false;">🚀 Live Demo</div>
                 <div class="modal-tab" data-tab="pricing" onclick="switchTab('pricing')">💰 Pricing</div>
                 <div class="modal-tab" data-tab="details" onclick="switchTab('details')">📚 Details</div>
             </div>
