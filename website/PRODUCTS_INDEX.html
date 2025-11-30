@@ -2933,12 +2933,17 @@
                         // Local file:// - use relative path
                         demoUrl = product.demoUrl;
                     } else {
-                        // Deployed site - use absolute URL (lowercase, no .html extension for Netlify)
+                        // Deployed site - use full path with .html extension
+                        // Netlify should serve the file directly if it exists
                         let cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
-                        cleanDemoUrl = cleanDemoUrl.toLowerCase();
-                        cleanDemoUrl = cleanDemoUrl.replace(/\.html$/, '');
+                        // Use original case and keep .html extension for iframe
                         demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                     }
+                    
+                    // Debug: Log the URL being used
+                    console.log('Iframe loading demo URL:', demoUrl);
+                    console.log('Product demoUrl:', product.demoUrl);
+                    console.log('Current URL:', currentUrl);
                     
                     // Clear and create iframe to display demo in the tab
                     modalDemo.innerHTML = '';
@@ -2948,6 +2953,35 @@
                     iframe.setAttribute('allowfullscreen', 'true');
                     iframe.setAttribute('frameborder', '0');
                     iframe.setAttribute('scrolling', 'auto');
+                    
+                    // Add load event to check what actually loaded
+                    iframe.onload = function() {
+                        console.log('Iframe loaded. Src:', iframe.src);
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const iframeTitle = iframeDoc.title || '';
+                            console.log('Iframe title:', iframeTitle);
+                            if (iframeTitle.includes('TD1.WORLD') && !iframeTitle.includes('Demo') && !iframeTitle.includes('ROUTER')) {
+                                console.error('❌ Iframe loaded main site instead of demo!');
+                                console.error('Expected demo, got main site. URL was:', demoUrl);
+                                // Try with .html extension as fallback
+                                const fallbackUrl = demoUrl + '.html';
+                                console.log('Trying fallback URL with .html extension:', fallbackUrl);
+                                iframe.src = fallbackUrl;
+                            }
+                        } catch (e) {
+                            console.log('Cannot access iframe content (CORS):', e.message);
+                        }
+                    };
+                    
+                    iframe.onerror = function() {
+                        console.error('Iframe error loading:', demoUrl);
+                        // Try with .html extension
+                        const fallbackUrl = demoUrl + '.html';
+                        console.log('Trying fallback URL:', fallbackUrl);
+                        iframe.src = fallbackUrl;
+                    };
+                    
                     iframe.src = demoUrl;
                     
                     modalDemo.appendChild(iframe);
