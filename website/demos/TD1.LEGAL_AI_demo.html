@@ -77,28 +77,37 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: var(--text-primary);
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 1;
             cursor: pointer;
             z-index: 1000;
-            box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         
         .exit-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(155, 92, 246, 0.4);
+            background: rgba(239, 68, 68, 0.8);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(239, 68, 68, 0.4);
         }
 
         </style>
 </head>
 <body>
-    <button class="exit-button" id="exitButton" onclick="returnToPricing()" style="display: none;">← Back to Pricing</button>
+    <button class="exit-button" id="exitButton" onclick="returnToOverview()" style="display: none;" title="Return to Product Overview">×</button>
     
 
     <div class="neural-particles" id="particles"></div>
@@ -141,11 +150,11 @@
         }
     
         // Exit button functionality
-        function returnToPricing() {
+        function returnToOverview() {
             const productId = sessionStorage.getItem('returnToProduct');
             if (productId) {
                 // Navigate to products page with product ID in hash
-                const productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-pricing';
+                const productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-overview';
                 window.location.href = productsUrl;
             } else {
                 // Fallback: just go to products page
