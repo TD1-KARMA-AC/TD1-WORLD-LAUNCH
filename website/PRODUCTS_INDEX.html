@@ -2884,8 +2884,8 @@
         function switchTab(tabName) {
             try {
                 // CRITICAL: Check for demo tab FIRST, before ANY DOM manipulation
+                // This ensures immediate navigation without UI changes
                 if (tabName === 'demo') {
-                    console.log('🚀 Demo tab clicked - navigating immediately');
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
                     
@@ -2918,14 +2918,12 @@
                         demoUrl = window.location.origin + '/website/' + cleanUrl;
                     }
                     
-                    console.log('📍 Navigating to:', demoUrl);
-                    
-                    // Store for return (to overview tab, not pricing)
+                    // Store for return
                     sessionStorage.setItem('returnToProduct', productId);
-                    sessionStorage.setItem('returnToTab', 'overview');
+                    sessionStorage.setItem('returnToTab', 'pricing');
                     
-                    // IMMEDIATELY navigate - NO IFRAME, NO TAB ACTIVATION, NO DOM CHANGES
-                    window.location.replace(demoUrl); // Use replace() instead of href to prevent back button issues
+                    // IMMEDIATELY navigate - NO IFRAME, NO DOM CHANGES
+                    window.location.href = demoUrl;
                     return; // Stop execution - don't do anything else
                 }
                 
@@ -2950,20 +2948,26 @@
         // Make switchTab globally accessible
         window.switchTab = switchTab;
         
-        // Handle return from demo page - open modal and switch to overview tab
+        // Handle return from demo page - open modal and switch to pricing tab
         window.addEventListener('DOMContentLoaded', function() {
             const hash = window.location.hash;
             if (hash) {
-                // Hash format: #productId-overview
-                const match = hash.match(/^#([^-]+)-overview$/);
+                // Hash format: #productId-pricing
+                const match = hash.match(/^#([^-]+)-pricing$/);
                 if (match) {
                     const productId = match[1];
+                    const returnToTab = sessionStorage.getItem('returnToTab') || 'pricing';
+                    
+                    // Clear sessionStorage items
+                    sessionStorage.removeItem('returnToProduct');
+                    sessionStorage.removeItem('returnToTab');
+                    
                     // Small delay to ensure page is fully loaded
                     setTimeout(function() {
                         openProductModal(productId);
-                        // Switch to overview tab after modal opens
+                        // Switch to pricing tab after modal opens
                         setTimeout(function() {
-                            switchTab('overview');
+                            switchTab(returnToTab);
                         }, 100);
                     }, 100);
                     // Clear the hash
