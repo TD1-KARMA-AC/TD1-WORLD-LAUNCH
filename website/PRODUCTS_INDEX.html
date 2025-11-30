@@ -219,10 +219,80 @@
             letter-spacing: 1px;
             margin-bottom: 32px;
         }
+        .category-badge.infrastructure {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #60a5fa;
+        }
+        .category-badge.development {
+            background: rgba(249, 115, 22, 0.2);
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            color: #fb923c;
+        }
         .category-badge.forbidden {
             background: rgba(239, 68, 68, 0.2);
             border: 1px solid rgba(239, 68, 68, 0.4);
             color: #fca5a5;
+        }
+        .category-badge.robotics {
+            background: rgba(234, 179, 8, 0.2);
+            border: 1px solid rgba(234, 179, 8, 0.4);
+            color: #fcd34d;
+        }
+        .category-badge.enterprise {
+            background: rgba(168, 85, 247, 0.2);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            color: #c084fc;
+        }
+        .category-badge.personal {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #4ade80;
+        }
+        .category-badge.platform {
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            color: #22d3ee;
+        }
+        
+        /* Collapsible Section Styles */
+        .category-section {
+            margin-bottom: 40px;
+        }
+        .category-header {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .category-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .category-header.collapsed .section-title {
+            opacity: 0.7;
+        }
+        .category-content {
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+            max-height: 10000px;
+            opacity: 1;
+        }
+        .category-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+            padding: 0;
+        }
+        .category-toggle {
+            display: inline-block;
+            margin-left: 12px;
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+        .category-header.collapsed .category-toggle {
+            transform: rotate(-90deg);
         }
         
         /* Product Block Cards (DEMO_LAUNCHER Style) */
@@ -902,15 +972,18 @@
     </section>
     
     <!-- BLOCK 1: Core Infrastructure (First 5) -->
-    <section class="container" style="margin-top: 60px;">
-        <div class="section-header">
-            <div class="category-badge" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">🏗️ BLOCK 1: CORE INFRASTRUCTURE</div>
-            <h2 class="section-title">Start Here: Essential AI Building Blocks</h2>
-            <p style="font-size: 16px; color: var(--text-secondary); margin-top: 16px; max-width: 700px; margin-left: auto; margin-right: auto;">
-                Click any product below to test the live interactive demo. Each connects to a working API backend.
-            </p>
+    <section class="container category-section" style="margin-top: 60px;">
+        <div class="category-header" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge infrastructure">🏗️ BLOCK 1: CORE INFRASTRUCTURE</div>
+                <h2 class="section-title">Start Here: Essential AI Building Blocks <span class="category-toggle">▼</span></h2>
+                <p style="font-size: 16px; color: var(--text-secondary); margin-top: 16px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                    Click any product below to test the live interactive demo. Each connects to a working API backend.
+                </p>
+            </div>
         </div>
-        <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
+        <div class="category-content">
+            <div class="products-block" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; padding: 20px 20px 80px; max-width: 1600px; margin: 0 auto;">
             
             <!-- TD1.MEM -->
             <div class="product-block-card">
@@ -1032,16 +1105,21 @@
                 <button class="explore-button" onclick="openProductModal('td1-router')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
+            </div>
         </div>
     </section>
     
     
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
-            <h2 class="section-title">The Super-Weapons AI Labs Won't Ship</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge forbidden">🔥 FORBIDDEN AGI BLOCKS</div>
+                <h2 class="section-title">The Super-Weapons AI Labs Won't Ship <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">FORBIDDEN AGI</div>
@@ -1623,12 +1701,15 @@
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🏗️ INFRASTRUCTURE ENGINES</div>
-            <h2 class="section-title">Core AI Infrastructure</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge infrastructure">🏗️ INFRASTRUCTURE ENGINES</div>
+                <h2 class="section-title">Core AI Infrastructure <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(59, 130, 246, 0.2); color: #3b82f6;">INFRASTRUCTURE</div>
@@ -1767,15 +1848,19 @@
                 <button class="explore-button" onclick="openProductModal('td1-intent')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🔬 DEVELOPMENT TOOLS</div>
-            <h2 class="section-title">Essential AI Development</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge development">🔬 DEVELOPMENT TOOLS</div>
+                <h2 class="section-title">Essential AI Development <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">DEVELOPMENT</div>
@@ -1931,15 +2016,19 @@
                 <button class="explore-button" onclick="openProductModal('td1-load-tester')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🤖 ROBOTICS</div>
-            <h2 class="section-title">Universal Robot AI</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge robotics">🤖 ROBOTICS</div>
+                <h2 class="section-title">Universal Robot AI <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(6, 182, 212, 0.2); color: #06b6d4;">ROBOTICS</div>
@@ -1985,15 +2074,19 @@
                 <button class="explore-button" onclick="openProductModal('td1-robot-data-gen')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🏢 ENTERPRISE SUITE</div>
-            <h2 class="section-title">Enterprise AI Tools</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge enterprise">🏢 ENTERPRISE SUITE</div>
+                <h2 class="section-title">Enterprise AI Tools <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">ENTERPRISE</div>
@@ -2105,15 +2198,19 @@
                 <button class="explore-button" onclick="openProductModal('td1-compliance-auditor')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🧠 PERSONAL AI</div>
-            <h2 class="section-title">Personal Knowledge Tools</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge personal">🧠 PERSONAL AI</div>
+                <h2 class="section-title">Personal Knowledge Tools <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(34, 197, 94, 0.2); color: #22c55e;">PERSONAL</div>
@@ -2159,15 +2256,19 @@
                 <button class="explore-button" onclick="openProductModal('td1-mirror-engine-pro')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
-    <section class="container">
-        <div class="section-header">
-            <div class="category-badge ">🌐 AI PLATFORM</div>
-            <h2 class="section-title">Universal Infrastructure</h2>
+    <section class="container category-section">
+        <div class="category-header collapsed" onclick="toggleCategory(this)">
+            <div class="section-header">
+                <div class="category-badge platform">🌐 AI PLATFORM</div>
+                <h2 class="section-title">Universal Infrastructure <span class="category-toggle">▼</span></h2>
+            </div>
         </div>
-        <div class="products-grid">
+        <div class="category-content collapsed">
+            <div class="products-grid">
 
             <div class="product-block-card">
                 <div class="product-tier" style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-bottom: 16px; background: rgba(155, 92, 246, 0.2); color: #9b5cf6;">PLATFORM</div>
@@ -2215,6 +2316,7 @@
                 <button class="explore-button" onclick="openProductModal('td1-ai')" style="display: block; width: 100%; padding: 12px 24px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.3s ease;">Explore More →</button>
             </div>
 
+            </div>
         </div>
     </section>
 
@@ -2605,6 +2707,21 @@
             }
         });
         
+        // Toggle Category Collapse/Expand
+        function toggleCategory(header) {
+            const section = header.closest('.category-section');
+            const content = section.querySelector('.category-content');
+            const isCollapsed = header.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                header.classList.remove('collapsed');
+                content.classList.remove('collapsed');
+            } else {
+                header.classList.add('collapsed');
+                content.classList.add('collapsed');
+            }
+        }
+        
         // Open Product Modal
         function openProductModal(productId) {
             const product = productData[productId];
@@ -2711,7 +2828,6 @@
         
         // Open Demo in New Tab - Simple and reliable
         function openDemoInNewTab(productId) {
-            console.log('openDemoInNewTab called with productId:', productId);
             
             try {
                 const product = productData[productId];
@@ -2748,10 +2864,6 @@
                     demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
                 }
                 
-                console.log('=== Opening Demo in New Tab ===');
-                console.log('Product:', product.name);
-                console.log('Demo URL:', demoUrl);
-                console.log('Full URL:', demoUrl);
                 
                 // Open in new tab
                 const newWindow = window.open(demoUrl, '_blank', 'noopener,noreferrer');
@@ -2771,9 +2883,6 @@
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName) {
             try {
-                // DEBUG: Log immediately when function is called
-                console.log('🔵🔵🔵 switchTab called with:', tabName);
-                console.log('🔵🔵🔵 Current location:', window.location.href);
                 
                 // Remove active from all tabs and contents
                 document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
@@ -2786,9 +2895,8 @@
                 if (tabButton) tabButton.classList.add('active');
                 if (tabContent) tabContent.classList.add('active');
                 
-                // If switching to demo tab, show a button to open demo in new tab
+                // If switching to demo tab, display demo in iframe within the tab
                 if (tabName === 'demo') {
-                    console.log('✅ Demo tab clicked - showing button (NO IFRAME)');
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
                     const modalDemo = document.getElementById('modalDemo');
@@ -2817,35 +2925,32 @@
                     
                     const product = productData[productId];
                     
-                    // Clear any existing content (including any old iframes)
+                    // Resolve demo URL
+                    const currentUrl = window.location.href;
+                    let demoUrl;
+                    
+                    if (currentUrl.startsWith('file://')) {
+                        // Local file:// - use relative path
+                        demoUrl = product.demoUrl;
+                    } else {
+                        // Deployed site - use absolute URL (lowercase, no .html extension for Netlify)
+                        let cleanDemoUrl = product.demoUrl.replace(/^\/+/, '');
+                        cleanDemoUrl = cleanDemoUrl.toLowerCase();
+                        cleanDemoUrl = cleanDemoUrl.replace(/\.html$/, '');
+                        demoUrl = window.location.origin + '/website/' + cleanDemoUrl;
+                    }
+                    
+                    // Clear and create iframe to display demo in the tab
                     modalDemo.innerHTML = '';
                     
-                    // Create simple button to open demo in new tab (NO IFRAME)
-                    modalDemo.innerHTML = `
-                        <div style="padding: 60px 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
-                            <div style="font-size: 64px; margin-bottom: 24px;">🚀</div>
-                            <h2 style="color: var(--text-primary); font-size: 28px; font-weight: 700; margin-bottom: 16px; background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                                ${product.name} Interactive Demo
-                            </h2>
-                            <p style="color: var(--text-secondary); font-size: 16px; margin-bottom: 32px; max-width: 500px; line-height: 1.6;">
-                                Experience the full interactive demo in a new tab. Explore all features and capabilities of ${product.name}.
-                            </p>
-                            <button onclick="openDemoInNewTab('${productId}')" style="
-                                padding: 16px 32px; 
-                                background: linear-gradient(135deg, #9b5cf6 0%, #7c3aed 100%); 
-                                border: none; 
-                                border-radius: 12px; 
-                                color: white; 
-                                font-size: 16px; 
-                                font-weight: 600; 
-                                cursor: pointer;
-                                transition: transform 0.2s, box-shadow 0.2s;
-                                box-shadow: 0 4px 20px rgba(155, 92, 246, 0.3);
-                            " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 30px rgba(155, 92, 246, 0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 20px rgba(155, 92, 246, 0.3)';">
-                                🚀 Open Live Demo →
-                            </button>
-                        </div>
-                    `;
+                    const iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width: 100%; height: 70vh; min-height: 600px; border: none; border-radius: 12px; display: block; background: var(--bg-dark);';
+                    iframe.setAttribute('allowfullscreen', 'true');
+                    iframe.setAttribute('frameborder', '0');
+                    iframe.setAttribute('scrolling', 'auto');
+                    iframe.src = demoUrl;
+                    
+                    modalDemo.appendChild(iframe);
                 }
             } catch (error) {
                 console.error('❌ Error in switchTab function:', error);
@@ -2921,7 +3026,6 @@
                 }
                 
                 const data = await response.json();
-                console.log('Checkout session created:', data);
                 
                 // Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({
