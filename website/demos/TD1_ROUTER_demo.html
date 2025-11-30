@@ -349,8 +349,8 @@
         <div class="demo-panel">
             <h2 class="panel-title">🚀 Route AI Request</h2>
             <div class="input-group">
-                <label class="input-label">Request Type</label>
-                <select id="requestType" class="input-field">
+                <label class="input-label" for="requestType">Request Type</label>
+                <select id="requestType" name="requestType" class="input-field">
                     <option value="simple">Simple Query (e.g., "What is the weather?")</option>
                     <option value="complex">Complex Analysis (e.g., "Analyze this document")</option>
                     <option value="creative">Creative Task (e.g., "Write a story")</option>
@@ -359,16 +359,17 @@
                 </select>
             </div>
             <div class="input-group">
-                <label class="input-label">Request Content</label>
+                <label class="input-label" for="requestContent">Request Content</label>
                 <textarea 
                     id="requestContent" 
+                    name="requestContent"
                     class="input-field" 
                     placeholder="Enter your AI request..."
                 ></textarea>
             </div>
             <div class="input-group">
-                <label class="input-label">Priority</label>
-                <select id="priority" class="input-field">
+                <label class="input-label" for="priority">Priority</label>
+                <select id="priority" name="priority" class="input-field">
                     <option value="cost">Cost Optimized</option>
                     <option value="speed">Speed Optimized</option>
                     <option value="quality">Quality Optimized</option>
