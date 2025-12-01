@@ -2930,19 +2930,22 @@
                         demoUrl = productData[productId].demoUrl;
                         console.log('📍 Local file:// detected. Using relative path:', demoUrl);
                     } else {
-                        // Deployed: Netlify serves files with or without .html extension
-                        // Try both formats - first without extension (cleaner URL)
+                        // Deployed: Build exact URL that works
+                        // User confirmed: https://www.td1.world/website/demos/td1_router_demo works
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
-                        const cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
-                        demoUrl = window.location.origin + '/website/' + cleanUrl;
+                        // Convert to lowercase and remove .html extension
+                        let cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
+                        // Ensure no leading/trailing slashes
+                        cleanUrl = cleanUrl.replace(/^\/+|\/+$/g, '');
+                        // Build URL - ensure single slash between origin and path
+                        const origin = window.location.origin.replace(/\/$/, '');
+                        demoUrl = origin + '/website/' + cleanUrl;
                         console.log('📍 Deployed site detected.');
                         console.log('📍 Original URL:', originalUrl);
                         console.log('📍 Clean URL:', cleanUrl);
+                        console.log('📍 Origin:', origin);
                         console.log('📍 Final demo URL:', demoUrl);
-                        
-                        // Verify URL format matches what works manually
-                        // User confirmed: https://www.td1.world/website/demos/td1_router_demo works
-                        // So our format should be correct
+                        console.log('📍 Expected: https://www.td1.world/website/demos/td1_router_demo');
                     }
                     
                     // Store for return
@@ -2951,11 +2954,31 @@
                     
                     console.log('🚀 FINAL NAVIGATION URL:', demoUrl);
                     console.log('🚀 Current URL:', window.location.href);
+                    console.log('🚀 URL validation:', {
+                        hasProtocol: demoUrl.startsWith('http'),
+                        hasOrigin: demoUrl.includes(window.location.origin),
+                        fullUrl: demoUrl
+                    });
                     
-                    // SIMPLEST POSSIBLE: Direct assignment - nothing fancy
-                    window.location = demoUrl;
+                    // Validate URL before navigation
+                    if (!demoUrl || !demoUrl.startsWith('http')) {
+                        console.error('❌ Invalid URL format:', demoUrl);
+                        alert('Invalid demo URL. Please contact support.');
+                        return false;
+                    }
                     
-                    // Should never reach here, but just in case
+                    // IMMEDIATE navigation - don't wait, don't delay
+                    // Use window.location.replace() to prevent back button issues
+                    console.log('🚀 NAVIGATING NOW to:', demoUrl);
+                    
+                    // Store navigation intent
+                    sessionStorage.setItem('navigationInProgress', 'true');
+                    sessionStorage.setItem('navigationTarget', demoUrl);
+                    
+                    // Force navigation immediately
+                    window.location.replace(demoUrl);
+                    
+                    // Should never reach here
                     return false;
                 }
                 
