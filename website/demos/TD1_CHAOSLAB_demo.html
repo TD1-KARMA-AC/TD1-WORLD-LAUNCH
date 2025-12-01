@@ -144,24 +144,76 @@
     
         // Exit button functionality
         function returnToOverview() {
-            const productId = sessionStorage.getItem('returnToProduct');
-            if (productId) {
-                // Navigate to products page with product ID in hash
-                const productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-overview';
-                window.location.href = productsUrl;
-            } else {
-                // Fallback: just go to products page
-                window.location.href = window.location.origin + '/website/PRODUCTS_INDEX.html';
+            try {
+                // Check if we're in an iframe
+                if (window.self !== window.top) {
+                    // We're in an iframe - try to switch parent tab
+                    try {
+                        if (window.parent && typeof window.parent.switchTab === 'function') {
+                            window.parent.switchTab('overview');
+                            return;
+                        }
+                    } catch (e) {
+                        console.log('Cannot access parent.switchTab, trying alternative method');
+                    }
+                    
+                    // Fallback: navigate parent to overview
+                    const currentUrl = window.location.href;
+                    let productsUrl;
+                    
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html';
+                    }
+                    
+                    try {
+                        window.parent.location.href = productsUrl;
+                    } catch (e) {
+                        console.error('Cannot navigate parent:', e);
+                    }
+                } else {
+                    // We're not in an iframe - navigate normally
+                    const productId = sessionStorage.getItem('returnToProduct');
+                    const currentUrl = window.location.href;
+                    let productsUrl;
+                    
+                    if (productId) {
+                        if (currentUrl.startsWith('file://')) {
+                            productsUrl = '../PRODUCTS_INDEX.html#' + productId + '-overview';
+                        } else {
+                            productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-overview';
+                        }
+                    } else {
+                        if (currentUrl.startsWith('file://')) {
+                            productsUrl = '../PRODUCTS_INDEX.html';
+                        } else {
+                            productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html';
+                        }
+                    }
+                    
+                    window.location.href = productsUrl;
+                }
+            } catch (error) {
+                console.error('Error in returnToPricing:', error);
             }
         }
         
-        // Show exit button if we came from products page
+                // Hide exit button when in iframe (user can switch tabs in parent)
         window.addEventListener('DOMContentLoaded', function() {
-            const productId = sessionStorage.getItem('returnToProduct');
-            if (productId) {
-                const exitButton = document.getElementById('exitButton');
-                if (exitButton) {
-                    exitButton.style.display = 'block';
+            const isInIframe = window.self !== window.top;
+            
+            const exitButton = document.getElementById('exitButton');
+            if (exitButton) {
+                // Hide exit button if in iframe - user can switch tabs in parent modal
+                if (isInIframe) {
+                    exitButton.style.display = 'none';
+                } else {
+                    // Only show if not in iframe and we have a productId
+                    const productId = sessionStorage.getItem('returnToProduct');
+                    if (productId) {
+                        exitButton.style.display = 'block';
+                    }
                 }
             }
         });
