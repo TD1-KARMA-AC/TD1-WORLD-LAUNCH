@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TD1.MINDSET — Live Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .exit-button {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            background: rgba(15, 15, 20, 0.8);
+            backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 48px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .exit-button:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: rgba(15, 15, 20, 0.95);
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 6px 30px rgba(193, 162, 255, 0.2);
+        }
+        
+        .exit-button:active {
+            transform: scale(0.95) rotate(90deg);
+        }
+
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --glass-night: rgba(15, 15, 20, 0.6);
+            --border-night: rgba(193, 162, 255, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .demo-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .demo-panel {
+            background: var(--glass-night);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-night);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .demo-panel:hover {
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(193, 162, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--td1-lilac);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Cognitive Bias Dials */
+        .dial-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .dial-card {
+            padding: 24px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .dial-card:hover {
+            border-color: rgba(193, 162, 255, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .dial-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .dial-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--td1-lilac);
+            margin-bottom: 20px;
+        }
+
+        .dial-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin-bottom: 12px;
+        }
+
+        .dial-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(193, 162, 255, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .dial-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.8);
+        }
+
+        .dial-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(193, 162, 255, 0.6);
+        }
+
+        .dial-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+
+        /* Response Preview */
+        .response-preview {
+            margin-top: 32px;
+            padding: 24px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+        }
+
+        .response-title {
+            font-weight: 600;
+            color: var(--td1-lilac);
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .response-content {
+            color: var(--text-primary);
+            line-height: 1.8;
+            font-size: 15px;
+            padding: 16px;
+            background: rgba(193, 162, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--td1-lilac);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--td1-lilac);
+            box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .demo-panel {
+                padding: 20px;
+            }
+
+            .dial-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+                
+        
+        
+
+        </style>
+</head>
+<body>
+            <button class="exit-button" id="exitButton" onclick="returnToPricing()" style="display: none;" title="Return to Pricing" aria-label="Close demo and return to pricing">×</button>
+    
+
+    <div class="neural-particles" id="particles"></div>
+
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">🎛️ TD1.MINDSET</h1>
+            <p class="demo-subtitle">AI Cognitive Bias Controller - The dials labs won't ship</p>
+        </div>
+
+        <!-- Cognitive Bias Dials -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🎛️ Cognitive Bias Controls</h2>
+            <div class="dial-container" id="dialContainer"></div>
+        </div>
+
+        <!-- Response Test -->
+        <div class="demo-panel">
+            <h2 class="panel-title">💬 Test Response</h2>
+            <div class="input-group">
+                <label class="input-label" for="testInput">Enter a Question or Statement</label>
+                <input name="testInput" 
+                    type="text" 
+                    id="testInput" 
+                    class="input-field" 
+                    placeholder="e.g., 'What should I do about this problem?'"
+                >
+            </div>
+            <button class="btn" onclick="generateResponse()">Generate Response</button>
+            
+            <div class="response-preview" id="responsePreview" style="display: none;">
+                <div class="response-title">AI Response (with current mindset settings)</div>
+                <div class="response-content" id="responseContent"></div>
+            </div>
+        </div>
+
+        <!-- Preset Mindsets -->
+        <div class="demo-panel">
+            <h2 class="panel-title">⚡ Preset Mindsets</h2>
+            <button class="btn btn-secondary" onclick="loadPreset('conservative')">Conservative</button>
+            <button class="btn btn-secondary" onclick="loadPreset('creative')">Creative</button>
+            <button class="btn btn-secondary" onclick="loadPreset('confident')">Confident</button>
+            <button class="btn btn-secondary" onclick="loadPreset('compassionate')">Compassionate</button>
+            <button class="btn btn-secondary" onclick="loadPreset('analytical')">Analytical</button>
+            <button class="btn btn-secondary" onclick="loadPreset('balanced')">Balanced</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            particles.appendChild(particle);
+        }
+
+        // Cognitive Biases
+        const biases = [
+            { id: 'confidence', label: 'Confidence', value: 50, description: 'How certain the AI is in its responses' },
+            { id: 'compassion', label: 'Compassion', value: 50, description: 'Level of empathy and emotional understanding' },
+            { id: 'creativity', label: 'Creativity', value: 50, description: 'Willingness to explore unconventional ideas' },
+            { id: 'rigidity', label: 'Rigidity', value: 50, description: 'Stickiness to rules and established patterns' },
+            { id: 'optimism', label: 'Optimism', value: 50, description: 'Tendency toward positive outlook' },
+            { id: 'skepticism', label: 'Skepticism', value: 50, description: 'Level of critical questioning' }
+        ];
+
+        // Initialize Dials
+        function initDials() {
+            const container = document.getElementById('dialContainer');
+            container.innerHTML = biases.map(bias => `
+                <div class="dial-card">
+                    <div class="dial-label">${bias.label}</div>
+                    <div class="dial-value" id="value-${bias.id}">${bias.value}%</div>
+                    <input 
+                        type="range" 
+                        class="dial-slider" 
+                        id="dial-${bias.id}"
+                        min="0" 
+                        max="100" 
+                        value="${bias.value}"
+                        oninput="updateDial('${bias.id}', this.value)"
+                    >
+                    <div class="dial-description">${bias.description}</div>
+                </div>
+            `).join('');
+        }
+
+        // Update Dial
+        function updateDial(id, value) {
+            const bias = biases.find(b => b.id === id);
+            if (bias) {
+                bias.value = parseInt(value);
+                document.getElementById(`value-${id}`).textContent = `${bias.value}%`;
+            }
+        }
+
+        // Get Bias Value
+        function getBias(id) {
+            const bias = biases.find(b => b.id === id);
+            return bias ? bias.value : 50;
+        }
+
+        // Generate Response
+        function generateResponse() {
+            const query = document.getElementById('testInput').value.trim();
+            
+            if (!query) {
+                alert('Please enter a question or statement');
+                return;
+            }
+
+            const confidence = getBias('confidence');
+            const compassion = getBias('compassion');
+            const creativity = getBias('creativity');
+            const rigidity = getBias('rigidity');
+            const optimism = getBias('optimism');
+            const skepticism = getBias('skepticism');
+
+            let response = '';
+
+            if (confidence > 70) {
+                response += 'I\'m quite confident that ';
+            } else if (confidence < 30) {
+                response += 'I\'m uncertain, but ';
+            } else {
+                response += 'I believe ';
+            }
+
+            if (compassion > 70) {
+                response += 'I understand this might be challenging for you. ';
+            }
+
+            if (creativity > 70) {
+                response += 'Here\'s a creative approach: ';
+            } else if (rigidity > 70) {
+                response += 'Following established best practices: ';
+            }
+
+            if (optimism > 70) {
+                response += 'The situation has great potential. ';
+            } else if (skepticism > 70) {
+                response += 'However, we should carefully consider potential risks. ';
+            }
+
+            response += `Based on the current mindset settings (Confidence: ${confidence}%, Compassion: ${compassion}%, Creativity: ${creativity}%, Rigidity: ${rigidity}%), `;
+            response += `I would suggest ${query.toLowerCase()}. The response tone reflects the configured cognitive biases.`;
+
+            document.getElementById('responseContent').textContent = response;
+            document.getElementById('responsePreview').style.display = 'block';
+        }
+
+        // Load Preset
+        function loadPreset(preset) {
+            const presets = {
+                conservative: { confidence: 60, compassion: 40, creativity: 20, rigidity: 80, optimism: 40, skepticism: 70 },
+                creative: { confidence: 50, compassion: 60, creativity: 90, rigidity: 20, optimism: 70, skepticism: 30 },
+                confident: { confidence: 90, compassion: 50, creativity: 60, rigidity: 50, optimism: 80, skepticism: 20 },
+                compassionate: { confidence: 50, compassion: 90, creativity: 50, rigidity: 30, optimism: 70, skepticism: 30 },
+                analytical: { confidence: 60, compassion: 40, creativity: 40, rigidity: 70, optimism: 40, skepticism: 80 },
+                balanced: { confidence: 50, compassion: 50, creativity: 50, rigidity: 50, optimism: 50, skepticism: 50 }
+            };
+
+            const presetValues = presets[preset];
+            if (presetValues) {
+                biases.forEach(bias => {
+                    bias.value = presetValues[bias.id];
+                    const slider = document.getElementById(`dial-${bias.id}`);
+                    const valueDisplay = document.getElementById(`value-${bias.id}`);
+                    if (slider) slider.value = bias.value;
+                    if (valueDisplay) valueDisplay.textContent = `${bias.value}%`;
+                });
+            }
+        }
+
+        // Initialize
+        initDials();
+    
+                // Exit button functionality - return to pricing tab
+                function returnToPricing() {
+            try {
+                const productId = sessionStorage.getItem('returnToProduct');
+                const currentUrl = window.location.href;
+                let productsUrl;
+                
+                if (productId) {
+                    // Navigate to products page with product ID hash to open modal on pricing tab
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    }
+                } else {
+                    // Fallback: just go to products page
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html';
+                    }
+                }
+                
+                // Smooth transition
+                window.location.href = productsUrl;
+            } catch (error) {
+                console.error('Error in returnToPricing:', error);
+            }
+        }
+        
+        // Show exit button (always visible in fullscreen mode)
+        window.addEventListener('DOMContentLoaded', function() {
+            const exitButton = document.getElementById('exitButton');
+            if (exitButton) {
+                // Always show exit button in fullscreen demo mode
+                exitButton.style.display = 'block';
+                
+                // Add smooth fade-in animation
+                exitButton.style.opacity = '0';
+                exitButton.style.transition = 'opacity 0.3s ease-in';
+                setTimeout(function() {
+                    exitButton.style.opacity = '1';
+                }, 100);
+            }
+        });
+
+    </script>
+</body>
+</html>

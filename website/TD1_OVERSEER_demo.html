@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TD1.OVERSEER — Live Interactive Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .exit-button {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            background: rgba(15, 15, 20, 0.8);
+            backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 48px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .exit-button:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: rgba(15, 15, 20, 0.95);
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 6px 30px rgba(193, 162, 255, 0.2);
+        }
+        
+        .exit-button:active {
+            transform: scale(0.95) rotate(90deg);
+        }
+
+        :root {
+            --td1-lilac: #C1A2FF; --td1-purple: #B38DFF; --bg-dark: #050507;
+            --text-primary: #EAEAEA; --text-secondary: #A0A0A0;
+            --glass-night: rgba(15, 15, 20, 0.6); --border-night: rgba(193, 162, 255, 0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased;
+            overflow-x: hidden; padding: 20px;
+        }
+        .neural-particles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+        .particle {
+            position: absolute; width: 2px; height: 2px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+        .demo-container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 10; }
+        .demo-header { text-align: center; margin-bottom: 40px; padding: 20px; }
+        .demo-title {
+            font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; margin-bottom: 12px;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .demo-subtitle { font-size: clamp(1rem, 2vw, 1.25rem); color: var(--text-secondary); margin-bottom: 24px; }
+        .demo-panel {
+            background: var(--glass-night); backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-night); border-radius: 20px; padding: 32px;
+            margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); transition: all 0.3s ease;
+        }
+        .demo-panel:hover { border-color: rgba(193, 162, 255, 0.3); box-shadow: 0 12px 48px rgba(193, 162, 255, 0.2); }
+        .panel-title {
+            font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: var(--td1-lilac);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .agent-list {
+            margin-top: 24px;
+        }
+        .agent-item {
+            padding: 16px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2); border-radius: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .agent-name { font-weight: 600; color: var(--td1-lilac); }
+        .agent-status {
+            padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;
+            background: rgba(34, 197, 94, 0.2); color: #22c55e;
+        }
+        .btn {
+            padding: 14px 28px; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none; border-radius: 12px; color: white; font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; font-family: inherit; margin-right: 12px; margin-bottom: 12px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4); }
+        @media (max-width: 768px) { .demo-panel { padding: 20px; } }
+    
+                
+        
+        
+
+        </style>
+</head>
+<body>
+            <button class="exit-button" id="exitButton" onclick="returnToPricing()" style="display: none;" title="Return to Pricing" aria-label="Close demo and return to pricing">×</button>
+    
+
+    <div class="neural-particles" id="particles"></div>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">👁️ TD1.OVERSEER</h1>
+            <p class="demo-subtitle">Multi-Agent Orchestration - Manage multiple AI agents</p>
+        </div>
+        <div class="demo-panel">
+            <h2 class="panel-title">👁️ Active Agents</h2>
+            <div class="agent-list" id="agentList"></div>
+            <button class="btn" onclick="addAgent()">Add Agent</button>
+        </div>
+    </div>
+    <script>
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = `${Math.random() * 100}%`;
+            p.style.top = `${Math.random() * 100}%`;
+            p.style.animationDelay = `${Math.random() * 10}s`;
+            particles.appendChild(p);
+        }
+        let agents = [
+            { name: 'Agent Alpha', status: 'Active' },
+            { name: 'Agent Beta', status: 'Active' }
+        ];
+        function updateAgents() {
+            document.getElementById('agentList').innerHTML = agents.map(a => `
+                <div class="agent-item">
+                    <div class="agent-name">${a.name}</div>
+                    <div class="agent-status">${a.status}</div>
+                </div>
+            `).join('');
+        }
+        function addAgent() {
+            agents.push({ name: `Agent ${String.fromCharCode(65 + agents.length)}`, status: 'Active' });
+            updateAgents();
+        }
+        updateAgents();
+    
+                // Exit button functionality - return to pricing tab
+                function returnToPricing() {
+            try {
+                const productId = sessionStorage.getItem('returnToProduct');
+                const currentUrl = window.location.href;
+                let productsUrl;
+                
+                if (productId) {
+                    // Navigate to products page with product ID hash to open modal on pricing tab
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    }
+                } else {
+                    // Fallback: just go to products page
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html';
+                    }
+                }
+                
+                // Smooth transition
+                window.location.href = productsUrl;
+            } catch (error) {
+                console.error('Error in returnToPricing:', error);
+            }
+        }
+        
+        // Show exit button (always visible in fullscreen mode)
+        window.addEventListener('DOMContentLoaded', function() {
+            const exitButton = document.getElementById('exitButton');
+            if (exitButton) {
+                // Always show exit button in fullscreen demo mode
+                exitButton.style.display = 'block';
+                
+                // Add smooth fade-in animation
+                exitButton.style.opacity = '0';
+                exitButton.style.transition = 'opacity 0.3s ease-in';
+                setTimeout(function() {
+                    exitButton.style.opacity = '1';
+                }, 100);
+            }
+        });
+
+    </script>
+</body>
+</html>

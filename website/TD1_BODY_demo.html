@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TD1.BODY — Live Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .exit-button {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            background: rgba(15, 15, 20, 0.8);
+            backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 48px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .exit-button:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: rgba(15, 15, 20, 0.95);
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 6px 30px rgba(193, 162, 255, 0.2);
+        }
+        
+        .exit-button:active {
+            transform: scale(0.95) rotate(90deg);
+        }
+
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --glass-night: rgba(15, 15, 20, 0.6);
+            --border-night: rgba(193, 162, 255, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: linear-gradient(to bottom, var(--bg-dark), #0A0A0C, #111115);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .neural-particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            animation: float-particle 12s infinite ease-in-out;
+        }
+
+        @keyframes float-particle {
+            0%, 100% { opacity: 0; transform: translateY(0) translateX(0); }
+            25% { opacity: 0.4; transform: translateY(-20px) translateX(10px); }
+            50% { opacity: 0.6; transform: translateY(-40px) translateX(-10px); }
+            75% { opacity: 0.4; transform: translateY(-20px) translateX(5px); }
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .demo-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, white, var(--td1-lilac));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .demo-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .demo-panel {
+            background: var(--glass-night);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-night);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .demo-panel:hover {
+            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(193, 162, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--td1-lilac);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Robot Visualization */
+        .robot-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            margin: 32px 0;
+            position: relative;
+        }
+
+        .robot-body {
+            position: relative;
+            width: 200px;
+            height: 300px;
+        }
+
+        .robot-part {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(193, 162, 255, 0.3), rgba(179, 141, 255, 0.2));
+            border: 2px solid var(--td1-lilac);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(193, 162, 255, 0.3);
+        }
+
+        .robot-part:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(193, 162, 255, 0.5);
+        }
+
+        .robot-part.active {
+            background: linear-gradient(135deg, rgba(193, 162, 255, 0.5), rgba(179, 141, 255, 0.4));
+            box-shadow: 0 0 30px rgba(193, 162, 255, 0.8);
+        }
+
+        .robot-head {
+            width: 120px;
+            height: 120px;
+            top: 0;
+            left: 40px;
+            border-radius: 50%;
+        }
+
+        .robot-torso {
+            width: 160px;
+            height: 140px;
+            top: 100px;
+            left: 20px;
+        }
+
+        .robot-arm-left {
+            width: 60px;
+            height: 100px;
+            top: 120px;
+            left: -40px;
+            transform-origin: right center;
+        }
+
+        .robot-arm-right {
+            width: 60px;
+            height: 100px;
+            top: 120px;
+            right: -40px;
+            transform-origin: left center;
+        }
+
+        .robot-leg-left {
+            width: 50px;
+            height: 80px;
+            top: 240px;
+            left: 40px;
+            transform-origin: top center;
+        }
+
+        .robot-leg-right {
+            width: 50px;
+            height: 80px;
+            top: 240px;
+            right: 40px;
+            transform-origin: top center;
+        }
+
+        /* Control Panel */
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .control-card {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+        }
+
+        .control-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .control-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin-bottom: 8px;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--td1-lilac);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(193, 162, 255, 0.6);
+        }
+
+        .control-value {
+            font-size: 14px;
+            color: var(--td1-lilac);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(193, 162, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(193, 162, 255, 0.15);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+        }
+
+        .status-panel {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(193, 162, 255, 0.05);
+            border: 1px solid rgba(193, 162, 255, 0.2);
+            border-radius: 12px;
+        }
+
+        .status-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(193, 162, 255, 0.1);
+            font-size: 13px;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+
+        .status-value {
+            color: var(--td1-lilac);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .demo-panel {
+                padding: 20px;
+            }
+
+            .robot-body {
+                transform: scale(0.8);
+            }
+        }
+    
+                
+        
+        
+
+        </style>
+</head>
+<body>
+            <button class="exit-button" id="exitButton" onclick="returnToPricing()" style="display: none;" title="Return to Pricing" aria-label="Close demo and return to pricing">×</button>
+    
+
+    <div class="neural-particles" id="particles"></div>
+
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">🤖 TD1.BODY</h1>
+            <p class="demo-subtitle">Robot Embodiment Adapter - Connect AI to physical robots</p>
+        </div>
+        
+        <!-- Robot Visualization -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🤖 Robot Body</h2>
+            <div class="robot-container">
+                <div class="robot-body">
+                    <div class="robot-part robot-head" id="part-head" onclick="selectPart('head')">🧠</div>
+                    <div class="robot-part robot-torso" id="part-torso" onclick="selectPart('torso')">⚙️</div>
+                    <div class="robot-part robot-arm-left" id="part-arm-left" onclick="selectPart('arm-left')">🦾</div>
+                    <div class="robot-part robot-arm-right" id="part-arm-right" onclick="selectPart('arm-right')">🦾</div>
+                    <div class="robot-part robot-leg-left" id="part-leg-left" onclick="selectPart('leg-left')">🦵</div>
+                    <div class="robot-part robot-leg-right" id="part-leg-right" onclick="selectPart('leg-right')">🦵</div>
+                </div>
+            </div>
+            </div>
+            
+        <!-- Motion Controls -->
+        <div class="demo-panel">
+            <h2 class="panel-title">🎮 Motion Controls</h2>
+            <div class="control-grid">
+                <div class="control-card">
+                    <div class="control-label">Left Arm</div>
+                    <input type="range" class="control-slider" id="arm-left-slider" min="0" max="180" value="90" oninput="movePart('arm-left', this.value)">
+                    <div class="control-value" id="arm-left-value">90°</div>
+                </div>
+                <div class="control-card">
+                    <div class="control-label">Right Arm</div>
+                    <input type="range" class="control-slider" id="arm-right-slider" min="0" max="180" value="90" oninput="movePart('arm-right', this.value)">
+                    <div class="control-value" id="arm-right-value">90°</div>
+            </div>
+                <div class="control-card">
+                    <div class="control-label">Left Leg</div>
+                    <input type="range" class="control-slider" id="leg-left-slider" min="0" max="45" value="0" oninput="movePart('leg-left', this.value)">
+                    <div class="control-value" id="leg-left-value">0°</div>
+                </div>
+                <div class="control-card">
+                    <div class="control-label">Right Leg</div>
+                    <input type="range" class="control-slider" id="leg-right-slider" min="0" max="45" value="0" oninput="movePart('leg-right', this.value)">
+                    <div class="control-value" id="leg-right-value">0°</div>
+                </div>
+            </div>
+            <div style="margin-top: 24px;">
+                <button class="btn" onclick="executeAction('wave')">Wave</button>
+                <button class="btn btn-secondary" onclick="executeAction('walk')">Walk</button>
+                <button class="btn btn-secondary" onclick="executeAction('reset')">Reset Position</button>
+            </div>
+        </div>
+
+        <!-- Status Panel -->
+        <div class="demo-panel">
+            <h2 class="panel-title">📊 Robot Status</h2>
+            <div class="status-panel" id="statusPanel"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            particles.appendChild(particle);
+        }
+
+        let selectedPart = null;
+        let robotState = {
+            'arm-left': 90,
+            'arm-right': 90,
+            'leg-left': 0,
+            'leg-right': 0,
+            'head': 0,
+            'torso': 0
+        };
+
+        // Select Part
+        function selectPart(part) {
+            // Remove active class from all parts
+            document.querySelectorAll('.robot-part').forEach(p => p.classList.remove('active'));
+            
+            // Add active class to selected part
+            const partEl = document.getElementById(`part-${part}`);
+            if (partEl) {
+                partEl.classList.add('active');
+                selectedPart = part;
+            }
+        }
+
+        // Move Part
+        function movePart(part, value) {
+            robotState[part] = parseInt(value);
+            
+            const partEl = document.getElementById(`part-${part}`);
+            const valueEl = document.getElementById(`${part}-value`);
+            
+            if (valueEl) {
+                valueEl.textContent = `${value}°`;
+            }
+            
+            if (partEl) {
+                if (part.includes('arm-left')) {
+                    partEl.style.transform = `rotate(${value - 90}deg)`;
+                } else if (part.includes('arm-right')) {
+                    partEl.style.transform = `rotate(${90 - value}deg)`;
+                } else if (part.includes('leg-left')) {
+                    partEl.style.transform = `rotate(${value}deg)`;
+                } else if (part.includes('leg-right')) {
+                    partEl.style.transform = `rotate(-${value}deg)`;
+                }
+            }
+            
+            updateStatus();
+        }
+
+        // Execute Action
+        function executeAction(action) {
+            if (action === 'wave') {
+                animateWave();
+            } else if (action === 'walk') {
+                animateWalk();
+            } else if (action === 'reset') {
+                resetPosition();
+            }
+        }
+
+        // Animate Wave
+        function animateWave() {
+            const arm = document.getElementById('part-arm-right');
+            const slider = document.getElementById('arm-right-slider');
+            
+            let angle = 90;
+            const interval = setInterval(() => {
+                angle += 10;
+                if (angle > 180) {
+                    clearInterval(interval);
+                    angle = 90;
+                }
+                slider.value = angle;
+                movePart('arm-right', angle);
+            }, 50);
+        }
+
+        // Animate Walk
+        function animateWalk() {
+            const leftLeg = document.getElementById('leg-left-slider');
+            const rightLeg = document.getElementById('leg-right-slider');
+            
+            let step = 0;
+            const interval = setInterval(() => {
+                if (step % 2 === 0) {
+                    leftLeg.value = 20;
+                    rightLeg.value = 0;
+                } else {
+                    leftLeg.value = 0;
+                    rightLeg.value = 20;
+                }
+                movePart('leg-left', leftLeg.value);
+                movePart('leg-right', rightLeg.value);
+                step++;
+                if (step > 6) {
+                    clearInterval(interval);
+                    resetPosition();
+                }
+            }, 300);
+        }
+
+        // Reset Position
+        function resetPosition() {
+            robotState = {
+                'arm-left': 90,
+                'arm-right': 90,
+                'leg-left': 0,
+                'leg-right': 0,
+                'head': 0,
+                'torso': 0
+            };
+            
+            document.getElementById('arm-left-slider').value = 90;
+            document.getElementById('arm-right-slider').value = 90;
+            document.getElementById('leg-left-slider').value = 0;
+            document.getElementById('leg-right-slider').value = 0;
+            
+            movePart('arm-left', 90);
+            movePart('arm-right', 90);
+            movePart('leg-left', 0);
+            movePart('leg-right', 0);
+        }
+
+        // Update Status
+        function updateStatus() {
+            const statusPanel = document.getElementById('statusPanel');
+            statusPanel.innerHTML = `
+                <div class="status-item">
+                    <span class="status-label">Connection:</span>
+                    <span class="status-value">Connected</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Left Arm:</span>
+                    <span class="status-value">${robotState['arm-left']}°</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Right Arm:</span>
+                    <span class="status-value">${robotState['arm-right']}°</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Left Leg:</span>
+                    <span class="status-value">${robotState['leg-left']}°</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Right Leg:</span>
+                    <span class="status-value">${robotState['leg-right']}°</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">API Status:</span>
+                    <span class="status-value">Ready</span>
+                </div>
+            `;
+        }
+
+        // Initialize
+        updateStatus();
+    
+                // Exit button functionality - return to pricing tab
+                function returnToPricing() {
+            try {
+                const productId = sessionStorage.getItem('returnToProduct');
+                const currentUrl = window.location.href;
+                let productsUrl;
+                
+                if (productId) {
+                    // Navigate to products page with product ID hash to open modal on pricing tab
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html#' + productId + '-pricing';
+                    }
+                } else {
+                    // Fallback: just go to products page
+                    if (currentUrl.startsWith('file://')) {
+                        productsUrl = '../PRODUCTS_INDEX.html';
+                    } else {
+                        productsUrl = window.location.origin + '/website/PRODUCTS_INDEX.html';
+                    }
+                }
+                
+                // Smooth transition
+                window.location.href = productsUrl;
+            } catch (error) {
+                console.error('Error in returnToPricing:', error);
+            }
+        }
+        
+        // Show exit button (always visible in fullscreen mode)
+        window.addEventListener('DOMContentLoaded', function() {
+            const exitButton = document.getElementById('exitButton');
+            if (exitButton) {
+                // Always show exit button in fullscreen demo mode
+                exitButton.style.display = 'block';
+                
+                // Add smooth fade-in animation
+                exitButton.style.opacity = '0';
+                exitButton.style.transition = 'opacity 0.3s ease-in';
+                setTimeout(function() {
+                    exitButton.style.opacity = '1';
+                }, 100);
+            }
+        });
+
+    </script>
+</body>
+</html>
