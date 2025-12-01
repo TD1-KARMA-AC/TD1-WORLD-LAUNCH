@@ -2989,6 +2989,14 @@
                             // Track if we've tried fallback
                             let fallbackTried = false;
                             
+                            // Handle iframe load - clear timeout on success
+                            iframe.onload = function() {
+                                clearTimeout(iframeLoadTimeout);
+                                console.log('✅ Demo iframe loaded successfully:', demoUrl);
+                                const errorMsg = demoContainer.querySelector('div[style*="padding: 40px"]');
+                                if (errorMsg) errorMsg.remove();
+                            };
+                            
                             // Handle iframe load errors with timeout and fallback
                             const iframeLoadTimeout = setTimeout(function() {
                                 if (!fallbackTried && !currentUrl.startsWith('file://')) {
