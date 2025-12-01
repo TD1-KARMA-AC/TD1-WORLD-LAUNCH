@@ -2751,8 +2751,8 @@
             modalTagline.textContent = product.tagline;
             
             // Demo will be loaded when "Live Demo" tab is clicked
-            // Clear the demo container for now
-            modalDemo.innerHTML = '';
+            // Don't clear the demo container here - let it persist to avoid flickering
+            // Only clear if switching to a different product (handled in switchTab)
             
             // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2883,103 +2883,166 @@
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName, event) {
             try {
-                // CRITICAL: Check for demo tab FIRST, before ANY DOM manipulation
-                // This ensures immediate navigation without UI changes
+                // Handle demo tab - show iframe
                 if (tabName === 'demo') {
                     // Prevent any default behavior
                     if (event) {
                         event.preventDefault();
                         event.stopPropagation();
-                        event.stopImmediatePropagation();
                     }
+                    
                     const modal = document.getElementById('productModal');
                     const productId = modal?.dataset?.productId;
                     
-                    console.log('🔍 Demo tab clicked. ProductId:', productId);
-                    console.log('🔍 Modal:', modal);
-                    console.log('🔍 ProductData keys:', Object.keys(productData));
-                    
                     if (!productId) {
-                        console.error('❌ No product ID found in modal');
                         alert('No product selected');
                         return;
                     }
                     
                     if (!productData[productId]) {
-                        console.error('❌ Product not found in productData:', productId);
-                        console.log('🔍 Available products:', Object.keys(productData));
                         alert('Product not found: ' + productId);
                         return;
                     }
                     
                     if (!productData[productId].demoUrl) {
-                        console.error('❌ No demoUrl for product:', productId);
                         alert('Demo coming soon for this product!');
                         return;
                     }
                     
-                    console.log('✅ Product found:', productId);
-                    console.log('✅ Demo URL from data:', productData[productId].demoUrl);
-                    
-                    // FORCE navigation - no iframe, just redirect
+                    // Build demo URL
                     let demoUrl;
                     const currentUrl = window.location.href;
                     
                     if (currentUrl.startsWith('file://')) {
                         // Local: use relative path
                         demoUrl = productData[productId].demoUrl;
-                        console.log('📍 Local file:// detected. Using relative path:', demoUrl);
+                        console.log('📍 Local mode - Demo URL:', demoUrl);
                     } else {
-                        // Deployed: Build exact URL that works
-                        // User confirmed: https://www.td1.world/website/demos/td1_router_demo works
+                        // Deployed: Try multiple URL formats for Netlify compatibility
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
-                        // Convert to lowercase and remove .html extension
+                        
+                        // Format 1: Lowercase, no extension (Netlify's default)
                         let cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
-                        // Ensure no leading/trailing slashes
                         cleanUrl = cleanUrl.replace(/^\/+|\/+$/g, '');
-                        // Build URL - ensure single slash between origin and path
                         const origin = window.location.origin.replace(/\/$/, '');
                         demoUrl = origin + '/website/' + cleanUrl;
-                        console.log('📍 Deployed site detected.');
-                        console.log('📍 Original URL:', originalUrl);
-                        console.log('📍 Clean URL:', cleanUrl);
-                        console.log('📍 Origin:', origin);
-                        console.log('📍 Final demo URL:', demoUrl);
-                        console.log('📍 Expected: https://www.td1.world/website/demos/td1_router_demo');
+                        
+                        console.log('📍 Deployed mode - Original URL:', originalUrl);
+                        console.log('📍 Deployed mode - Clean URL:', cleanUrl);
+                        console.log('📍 Deployed mode - Final URL:', demoUrl);
                     }
                     
-                    // Store for return
+                    // Store for exit button in demo
                     sessionStorage.setItem('returnToProduct', productId);
-                    sessionStorage.setItem('returnToTab', 'pricing');
+                    sessionStorage.setItem('returnToTab', 'overview');
                     
-                    console.log('🚀 FINAL NAVIGATION URL:', demoUrl);
-                    console.log('🚀 Current URL:', window.location.href);
-                    console.log('🚀 URL validation:', {
-                        hasProtocol: demoUrl.startsWith('http'),
-                        hasOrigin: demoUrl.includes(window.location.origin),
-                        fullUrl: demoUrl
-                    });
+                    // Remove active from all tabs and contents
+                    document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+                    document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
                     
-                    // Validate URL before navigation
-                    if (!demoUrl || !demoUrl.startsWith('http')) {
-                        console.error('❌ Invalid URL format:', demoUrl);
-                        alert('Invalid demo URL. Please contact support.');
-                        return false;
+                    // Add active to demo tab
+                    const tabButton = document.querySelector(`[data-tab="demo"]`);
+                    const tabContent = document.getElementById('tab-demo');
+                    
+                    if (tabButton) tabButton.classList.add('active');
+                    if (tabContent) tabContent.classList.add('active');
+                    
+                    // Create or update iframe (only if needed)
+                    const demoContainer = document.getElementById('modalDemo');
+                    if (demoContainer) {
+                        // Check if iframe already exists and is for the same product
+                        let existingIframe = demoContainer.querySelector('iframe');
+                        const currentDemoUrl = existingIframe ? existingIframe.getAttribute('data-demo-url') : null;
+                        const currentProductId = existingIframe ? existingIframe.getAttribute('data-product-id') : null;
+                        
+                        if (existingIframe && currentDemoUrl === demoUrl && currentProductId === productId) {
+                            // Iframe already exists for this product, just ensure it's visible
+                            existingIframe.style.display = 'block';
+                            // Remove any error messages
+                            const errorMsg = demoContainer.querySelector('div[style*="padding: 40px"]');
+                            if (errorMsg) errorMsg.remove();
+                        } else {
+                            // Clear existing content only if product changed
+                            if (currentProductId !== productId) {
+                                demoContainer.innerHTML = '';
+                            } else {
+                                // Same product, just remove old iframe if URL changed
+                                if (existingIframe) {
+                                    existingIframe.remove();
+                                }
+                            }
+                            
+                            // Create iframe
+                            const iframe = document.createElement('iframe');
+                            iframe.src = demoUrl;
+                            iframe.setAttribute('data-demo-url', demoUrl);
+                            iframe.setAttribute('data-product-id', productId);
+                            iframe.style.width = '100%';
+                            iframe.style.height = '80vh';
+                            iframe.style.minHeight = '600px';
+                            iframe.style.border = 'none';
+                            iframe.style.borderRadius = '12px';
+                            iframe.style.background = 'var(--bg-dark)';
+                            iframe.style.display = 'block';
+                            iframe.setAttribute('allowfullscreen', '');
+                            
+                            // Track if we've tried fallback
+                            let fallbackTried = false;
+                            
+                            // Handle iframe load errors with timeout and fallback
+                            const iframeLoadTimeout = setTimeout(function() {
+                                if (!fallbackTried && !currentUrl.startsWith('file://')) {
+                                    // Try fallback URL with .html extension
+                                    fallbackTried = true;
+                                    const fallbackUrl = demoUrl + '.html';
+                                    console.log('⚠️ Iframe load timeout, trying fallback URL:', fallbackUrl);
+                                    iframe.src = fallbackUrl;
+                                    iframe.setAttribute('data-demo-url', fallbackUrl);
+                                    clearTimeout(iframeLoadTimeout);
+                                    // Set new timeout for fallback
+                                    setTimeout(function() {
+                                        console.error('❌ Both URL formats failed to load');
+                                        demoContainer.innerHTML = `
+                                            <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                                                <p style="font-size: 18px; margin-bottom: 12px;">⚠️ Demo failed to load</p>
+                                                <p style="font-size: 14px; margin-bottom: 20px;">Tried both URL formats but neither worked.</p>
+                                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL 1: ${demoUrl}</p>
+                                                <p style="font-size: 12px; color: var(--text-secondary);">URL 2: ${fallbackUrl}</p>
+                                                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 12px;">Check browser console (F12) for more details.</p>
+                                            </div>
+                                        `;
+                                    }, 5000);
+                                }
+                            }, 5000);
+                            
+                            // Handle iframe load errors (note: onerror doesn't always fire for iframes)
+                            iframe.onerror = function() {
+                                console.error('❌ Demo iframe onerror fired:', demoUrl);
+                                if (!fallbackTried && !currentUrl.startsWith('file://')) {
+                                    fallbackTried = true;
+                                    clearTimeout(iframeLoadTimeout);
+                                    const fallbackUrl = demoUrl + '.html';
+                                    console.log('🔄 Trying fallback URL:', fallbackUrl);
+                                    iframe.src = fallbackUrl;
+                                    iframe.setAttribute('data-demo-url', fallbackUrl);
+                                } else {
+                                    clearTimeout(iframeLoadTimeout);
+                                    demoContainer.innerHTML = `
+                                        <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                                            <p style="font-size: 18px; margin-bottom: 12px;">⚠️ Demo failed to load</p>
+                                            <p style="font-size: 14px; margin-bottom: 20px;">The demo URL may be incorrect or the file may not exist.</p>
+                                            <p style="font-size: 12px; color: var(--text-secondary);">URL: ${demoUrl}</p>
+                                        </div>
+                                    `;
+                                }
+                            };
+                            
+                            // Append iframe immediately
+                            demoContainer.appendChild(iframe);
+                        }
                     }
                     
-                    // IMMEDIATE navigation - don't wait, don't delay
-                    // Use window.location.replace() to prevent back button issues
-                    console.log('🚀 NAVIGATING NOW to:', demoUrl);
-                    
-                    // Store navigation intent
-                    sessionStorage.setItem('navigationInProgress', 'true');
-                    sessionStorage.setItem('navigationTarget', demoUrl);
-                    
-                    // Force navigation immediately
-                    window.location.replace(demoUrl);
-                    
-                    // Should never reach here
-                    return false;
+                    return;
                 }
                 
                 // Only do DOM manipulation for non-demo tabs
