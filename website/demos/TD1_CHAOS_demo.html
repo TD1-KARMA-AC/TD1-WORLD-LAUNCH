@@ -329,13 +329,13 @@
         <div class="demo-panel">
             <h2 class="panel-title">🎲 Creative Chaos Generator</h2>
             <div class="chaos-level">
-                <label class="input-label" style="margin: 0;">Chaos Level:</label>
-                <input type="range" class="chaos-slider" id="chaosLevel" min="0" max="100" value="50" oninput="updateChaosLevel(this.value)">
+                <label class="input-label" for="chaosLevel">Chaos Level:</label>
+                <input name="chaosLevel" type="range" class="chaos-slider" id="chaosLevel" min="0" max="100" value="50" oninput="updateChaosLevel(this.value)">
                 <div class="chaos-value" id="chaosValue">50%</div>
             </div>
             <div class="input-group">
-                <label class="input-label">Input Prompt</label>
-                <textarea 
+                <label class="input-label" for="chaosInput">Input Prompt</label>
+                <textarea name="chaosInput" 
                     id="chaosInput" 
                     class="input-field" 
                     placeholder="Enter a prompt or idea to explode creatively..."
