@@ -2739,20 +2739,10 @@
             const modalIcon = document.getElementById('modalProductIcon');
             const modalTitle = document.getElementById('modalProductTitle');
             const modalTagline = document.getElementById('modalProductTagline');
-            const modalDemo = document.getElementById('modalDemo');
-            
-            if (!modalDemo) {
-                console.error('Modal demo element not found');
-                return;
-            }
             
             modalIcon.textContent = product.icon;
             modalTitle.textContent = product.name;
             modalTagline.textContent = product.tagline;
-            
-            // Demo will be loaded when "Live Demo" tab is clicked
-            // Don't clear the demo container here - let it persist to avoid flickering
-            // Only clear if switching to a different product (handled in switchTab)
             
             // Set pricing - use data attributes and event delegation for Stripe buttons
             const pricingGrid = document.getElementById('modalPricingGrid');
@@ -2883,7 +2873,7 @@
         // Switch Tab - Rebuilt from scratch
         function switchTab(tabName, event) {
             try {
-                // Handle demo tab - show iframe
+                // Handle demo tab - navigate to fullscreen demo
                 if (tabName === 'demo') {
                     // Prevent any default behavior
                     if (event) {
@@ -2896,17 +2886,17 @@
                     
                     if (!productId) {
                         alert('No product selected');
-                        return;
+                        return false;
                     }
                     
                     if (!productData[productId]) {
                         alert('Product not found: ' + productId);
-                        return;
+                        return false;
                     }
                     
                     if (!productData[productId].demoUrl) {
                         alert('Demo coming soon for this product!');
-                        return;
+                        return false;
                     }
                     
                     // Build demo URL
@@ -2916,141 +2906,26 @@
                     if (currentUrl.startsWith('file://')) {
                         // Local: use relative path
                         demoUrl = productData[productId].demoUrl;
-                        console.log('📍 Local mode - Demo URL:', demoUrl);
                     } else {
-                        // Deployed: Try multiple URL formats for Netlify compatibility
+                        // Deployed: Build URL for Netlify
                         const originalUrl = productData[productId].demoUrl; // "demos/TD1_ROUTER_demo.html"
-                        
-                        // Format 1: Lowercase, no extension (Netlify's default)
+                        // Convert to lowercase and remove .html extension
                         let cleanUrl = originalUrl.toLowerCase().replace(/\.html$/, ''); // "demos/td1_router_demo"
                         cleanUrl = cleanUrl.replace(/^\/+|\/+$/g, '');
                         const origin = window.location.origin.replace(/\/$/, '');
                         demoUrl = origin + '/website/' + cleanUrl;
-                        
-                        console.log('📍 Deployed mode - Original URL:', originalUrl);
-                        console.log('📍 Deployed mode - Clean URL:', cleanUrl);
-                        console.log('📍 Deployed mode - Final URL:', demoUrl);
                     }
                     
-                    // Store for exit button in demo
+                    // Store for exit button in demo - return to pricing tab
                     sessionStorage.setItem('returnToProduct', productId);
-                    sessionStorage.setItem('returnToTab', 'overview');
+                    sessionStorage.setItem('returnToTab', 'pricing');
                     
-                    // Remove active from all tabs and contents
-                    document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
-                    document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+                    // Navigate directly to demo page (fullscreen) - NO IFRAME
+                    // This replaces the old iframe approach for better reliability
+                    console.log('🚀 Navigating to fullscreen demo:', demoUrl);
+                    window.location.href = demoUrl;
                     
-                    // Add active to demo tab
-                    const tabButton = document.querySelector(`[data-tab="demo"]`);
-                    const tabContent = document.getElementById('tab-demo');
-                    
-                    if (tabButton) tabButton.classList.add('active');
-                    if (tabContent) tabContent.classList.add('active');
-                    
-                    // Create or update iframe (only if needed)
-                    const demoContainer = document.getElementById('modalDemo');
-                    if (demoContainer) {
-                        // Check if iframe already exists and is for the same product
-                        let existingIframe = demoContainer.querySelector('iframe');
-                        const currentDemoUrl = existingIframe ? existingIframe.getAttribute('data-demo-url') : null;
-                        const currentProductId = existingIframe ? existingIframe.getAttribute('data-product-id') : null;
-                        
-                        if (existingIframe && currentDemoUrl === demoUrl && currentProductId === productId) {
-                            // Iframe already exists for this product, just ensure it's visible
-                            existingIframe.style.display = 'block';
-                            // Remove any error messages
-                            const errorMsg = demoContainer.querySelector('div[style*="padding: 40px"]');
-                            if (errorMsg) errorMsg.remove();
-                        } else {
-                            // Clear existing content only if product changed
-                            if (currentProductId !== productId) {
-                                demoContainer.innerHTML = '';
-                            } else {
-                                // Same product, just remove old iframe if URL changed
-                                if (existingIframe) {
-                                    existingIframe.remove();
-                                }
-                            }
-                            
-                            // Create iframe
-                            const iframe = document.createElement('iframe');
-                            iframe.src = demoUrl;
-                            iframe.setAttribute('data-demo-url', demoUrl);
-                            iframe.setAttribute('data-product-id', productId);
-                            iframe.style.width = '100%';
-                            iframe.style.height = '80vh';
-                            iframe.style.minHeight = '600px';
-                            iframe.style.border = 'none';
-                            iframe.style.borderRadius = '12px';
-                            iframe.style.background = 'var(--bg-dark)';
-                            iframe.style.display = 'block';
-                            iframe.setAttribute('allowfullscreen', '');
-                            
-                            // Track if we've tried fallback
-                            let fallbackTried = false;
-                            
-                            // Handle iframe load - clear timeout on success
-                            iframe.onload = function() {
-                                clearTimeout(iframeLoadTimeout);
-                                console.log('✅ Demo iframe loaded successfully:', demoUrl);
-                                const errorMsg = demoContainer.querySelector('div[style*="padding: 40px"]');
-                                if (errorMsg) errorMsg.remove();
-                            };
-                            
-                            // Handle iframe load errors with timeout and fallback
-                            const iframeLoadTimeout = setTimeout(function() {
-                                if (!fallbackTried && !currentUrl.startsWith('file://')) {
-                                    // Try fallback URL with .html extension
-                                    fallbackTried = true;
-                                    const fallbackUrl = demoUrl + '.html';
-                                    console.log('⚠️ Iframe load timeout, trying fallback URL:', fallbackUrl);
-                                    iframe.src = fallbackUrl;
-                                    iframe.setAttribute('data-demo-url', fallbackUrl);
-                                    clearTimeout(iframeLoadTimeout);
-                                    // Set new timeout for fallback
-                                    setTimeout(function() {
-                                        console.error('❌ Both URL formats failed to load');
-                                        demoContainer.innerHTML = `
-                                            <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                                                <p style="font-size: 18px; margin-bottom: 12px;">⚠️ Demo failed to load</p>
-                                                <p style="font-size: 14px; margin-bottom: 20px;">Tried both URL formats but neither worked.</p>
-                                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL 1: ${demoUrl}</p>
-                                                <p style="font-size: 12px; color: var(--text-secondary);">URL 2: ${fallbackUrl}</p>
-                                                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 12px;">Check browser console (F12) for more details.</p>
-                                            </div>
-                                        `;
-                                    }, 5000);
-                                }
-                            }, 5000);
-                            
-                            // Handle iframe load errors (note: onerror doesn't always fire for iframes)
-                            iframe.onerror = function() {
-                                console.error('❌ Demo iframe onerror fired:', demoUrl);
-                                if (!fallbackTried && !currentUrl.startsWith('file://')) {
-                                    fallbackTried = true;
-                                    clearTimeout(iframeLoadTimeout);
-                                    const fallbackUrl = demoUrl + '.html';
-                                    console.log('🔄 Trying fallback URL:', fallbackUrl);
-                                    iframe.src = fallbackUrl;
-                                    iframe.setAttribute('data-demo-url', fallbackUrl);
-                                } else {
-                                    clearTimeout(iframeLoadTimeout);
-                                    demoContainer.innerHTML = `
-                                        <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                                            <p style="font-size: 18px; margin-bottom: 12px;">⚠️ Demo failed to load</p>
-                                            <p style="font-size: 14px; margin-bottom: 20px;">The demo URL may be incorrect or the file may not exist.</p>
-                                            <p style="font-size: 12px; color: var(--text-secondary);">URL: ${demoUrl}</p>
-                                        </div>
-                                    `;
-                                }
-                            };
-                            
-                            // Append iframe immediately
-                            demoContainer.appendChild(iframe);
-                        }
-                    }
-                    
-                    return;
+                    return false;
                 }
                 
                 // Only do DOM manipulation for non-demo tabs
@@ -3088,13 +2963,22 @@
                     sessionStorage.removeItem('returnToProduct');
                     sessionStorage.removeItem('returnToTab');
                     
-                    // Small delay to ensure page is fully loaded
+                    // Small delay to ensure page is fully loaded, then smooth transition
                     setTimeout(function() {
                         openProductModal(productId);
-                        // Switch to pricing tab after modal opens
+                        // Switch to pricing tab after modal opens with smooth animation
                         setTimeout(function() {
                             switchTab(returnToTab);
-                        }, 100);
+                            // Add smooth fade-in for modal content
+                            const modal = document.getElementById('productModal');
+                            if (modal) {
+                                modal.style.opacity = '0';
+                                modal.style.transition = 'opacity 0.3s ease-in';
+                                setTimeout(function() {
+                                    modal.style.opacity = '1';
+                                }, 10);
+                            }
+                        }, 150);
                     }, 100);
                     // Clear the hash
                     window.history.replaceState(null, null, window.location.pathname);
@@ -3241,7 +3125,10 @@
             <div id="tab-demo" class="modal-tab-content">
                 <div class="modal-section">
                     <div class="modal-section-title">🚀 Live Interactive Demo</div>
-                    <div class="demo-embed" id="modalDemo"></div>
+                    <div style="padding: 60px 20px; text-align: center; color: var(--text-secondary);">
+                        <p style="font-size: 18px; margin-bottom: 16px;">Click "🚀 Live Demo" tab to open the fullscreen interactive demo</p>
+                        <p style="font-size: 14px; opacity: 0.8;">Experience the product in fullscreen mode with all features available</p>
+                    </div>
                 </div>
             </div>
             
