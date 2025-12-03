@@ -580,6 +580,23 @@
                 font-size: 12px;
                 padding: 6px 10px;
             }
+            .hero-stats {
+                grid-template-columns: 1fr !important;
+                gap: 1.5rem !important;
+                padding: 0 1rem !important;
+            }
+            .stat-card {
+                padding: 1.5rem !important;
+            }
+            .hero-cta {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            .magnetic-btn {
+                width: 100%;
+                text-align: center;
+            }
         }
         
         @media (max-width: 480px) {
@@ -592,6 +609,19 @@
             .nav-link {
                 padding: 4px 8px;
                 font-size: 11px;
+            }
+            .hero-stats {
+                padding: 0 0.5rem !important;
+                gap: 1rem !important;
+            }
+            .stat-card {
+                padding: 1.25rem !important;
+            }
+            .hero-description {
+                padding: 0 1rem;
+            }
+            .hero-tagline {
+                padding: 15px 25px;
             }
         }
     </style>
@@ -624,7 +654,7 @@
             <strong style="color: var(--td1-lilac); font-size: 1.1em;">$2.3M worth of production-grade AGI infrastructure.</strong><br/>
             Available today. Zero subscriptions. Full ownership.
         </p>
-        <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1200px; margin: 3rem auto; padding: 0 2rem;">
+        <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; max-width: 1200px; margin: 3rem auto; padding: 0 2rem;">
             <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
                 <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$2.3M</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Development Cost</div>
