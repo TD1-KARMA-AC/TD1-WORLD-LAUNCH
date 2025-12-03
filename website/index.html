@@ -21,8 +21,6 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
-            width: 100%;
-            position: relative;
         }
         
         /* Neural Particles */
@@ -572,80 +570,28 @@
             }
         }
         
-        /* Mobile Navigation */
         @media (max-width: 768px) {
-            body {
-                overflow-x: hidden;
-                width: 100%;
-            }
             .nav {
-                padding: 8px 10px;
-                gap: 4px;
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                transform: none;
-                max-width: none;
-                width: calc(100% - 20px);
-                overflow-x: auto;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-                box-sizing: border-box;
-            }
-            .nav::-webkit-scrollbar {
-                display: none;
+                padding: 10px 16px;
+                gap: 12px;
+                font-size: 12px;
             }
             .nav-link {
-                font-size: 11px;
-                padding: 5px 8px;
-                white-space: nowrap;
-                flex-shrink: 0;
-                min-width: auto;
-            }
-            .hero {
-                padding: 6rem 1rem 4rem;
-                margin-top: 60px;
-                box-sizing: border-box;
-            }
-            .hero-cta {
-                flex-direction: column;
-                gap: 12px;
-                width: 100%;
-                padding: 0 1rem;
-                box-sizing: border-box;
-            }
-            .magnetic-btn {
-                width: 100%;
-                max-width: 300px;
-                box-sizing: border-box;
-            }
-            .section {
-                padding: 80px 1rem;
-                box-sizing: border-box;
+                font-size: 12px;
+                padding: 6px 10px;
             }
         }
         
         @media (max-width: 480px) {
             .nav {
-                padding: 6px 8px;
-                gap: 3px;
-                top: 8px;
-                left: 8px;
-                right: 8px;
-                width: calc(100% - 16px);
+                padding: 6px 12px;
+                font-size: 11px;
+                gap: 8px;
+                max-width: calc(100vw - 1.5rem);
             }
             .nav-link {
-                font-size: 10px;
-                padding: 4px 6px;
-            }
-            .hero {
-                padding: 5rem 1rem 3rem;
-                margin-top: 50px;
-            }
-            .hero-title {
-                font-size: clamp(3rem, 15vw, 6rem);
+                padding: 4px 8px;
+                font-size: 11px;
             }
         }
     </style>
