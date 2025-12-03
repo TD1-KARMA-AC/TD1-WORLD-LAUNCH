@@ -70,20 +70,24 @@
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-logo">TD1.WORLD</a>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="index.html">NeuroBlock</a>
-                <a href="explore.html">Explore</a>
-                <a href="submit.html">Submit</a>
-                <a href="account.html">Account</a>
-            </div>
-        </div>
+    <!-- Main Navigation (same on all pages) -->
+    <nav class="nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/website/PRODUCTS_INDEX.html" class="nav-link">Products</a>
+        <a href="index.html" class="nav-link active">NeuroBlock</a>
+        <a href="/realm" class="nav-link">Realm</a>
+        <a href="/website/ABOUT.html" class="nav-link">About</a>
     </nav>
 
-    <main style="padding-top: 6rem; padding-bottom: 4rem;">
+    <!-- Secondary Navigation (only on NeuroBlock pages) -->
+    <nav class="nav-secondary">
+        <a href="index.html" class="nav-secondary-link">Marketplace</a>
+        <a href="explore.html" class="nav-secondary-link">Explore</a>
+        <a href="submit.html" class="nav-secondary-link">Submit</a>
+        <a href="account.html" class="nav-secondary-link">Account</a>
+    </nav>
+
+    <main style="padding-top: 140px; padding-bottom: 4rem;">
         <div class="product-container">
             <div class="product-main">
                 <h1>NLP Sentiment Analyzer</h1>
@@ -179,6 +183,17 @@ console.log(result.sentiment); // "positive"</code></pre>
             </div>
         </div>
     </footer>
+    <script>
+        // Smooth navigation animations (matching main site)
+        document.querySelectorAll('.nav-link, .nav-secondary-link').forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            link.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
 </body>
 </html>
 

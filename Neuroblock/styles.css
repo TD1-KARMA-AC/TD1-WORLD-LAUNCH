@@ -42,50 +42,92 @@ h1, h2, h3, h4 {
     background: #D4BAFF;
 }
 
-/* Navigation */
-.navbar {
+/* Unified Navigation (matches main site - smooth pill style) */
+.nav {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1000;
-    background: rgba(5, 5, 7, 0.8);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1rem 0;
-}
-
-.nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
+    padding: 12px 24px;
+    border-radius: 48px;
+    background: rgba(15, 15, 20, 0.6);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(193, 162, 255, 0.1);
     display: flex;
-    justify-content: space-between;
+    gap: 20px;
     align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-logo {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #C1A2FF;
-    text-decoration: none;
-    letter-spacing: 0.1em;
+.nav:hover {
+    box-shadow: 0 8px 32px rgba(193, 162, 255, 0.2);
+    border-color: rgba(193, 162, 255, 0.3);
 }
 
-.nav-links {
-    display: flex;
-    gap: 2rem;
-}
-
-.nav-links a {
+.nav-link {
     color: #EAEAEA;
     text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.3s;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
-.nav-links a:hover {
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: #C1A2FF;
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    color: #C1A2FF;
+    background: rgba(193, 162, 255, 0.1);
+}
+
+/* Secondary Navigation for NeuroBlock internal pages */
+.nav-secondary {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    padding: 8px 16px;
+    border-radius: 24px;
+    background: rgba(5, 5, 7, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(193, 162, 255, 0.2);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-secondary:hover {
+    box-shadow: 0 4px 20px rgba(193, 162, 255, 0.15);
+    border-color: rgba(193, 162, 255, 0.4);
+}
+
+.nav-secondary-link {
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.nav-secondary-link:hover {
+    background: rgba(193, 162, 255, 0.15);
+    color: #C1A2FF;
+    transform: translateY(-2px);
+}
+
+.nav-secondary-link.active {
+    color: #C1A2FF;
+    background: rgba(193, 162, 255, 0.2);
 }
 
 /* Hero Section */
@@ -95,7 +137,7 @@ h1, h2, h3, h4 {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8rem 2rem 4rem;
+    padding: 140px 2rem 4rem; /* Extra space for both nav bars */
     overflow: hidden;
 }
 
@@ -434,9 +476,30 @@ h1, h2, h3, h4 {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .nav-links {
-        gap: 1rem;
-        font-size: 0.875rem;
+    .nav {
+        padding: 10px 16px;
+        gap: 12px;
+        font-size: 12px;
+    }
+    
+    .nav-link {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+    
+    .nav-secondary {
+        top: 70px;
+        padding: 6px 12px;
+        gap: 8px;
+    }
+    
+    .nav-secondary-link {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+    
+    .hero-section {
+        padding: 120px 2rem 4rem;
     }
     
     .hero-buttons {
