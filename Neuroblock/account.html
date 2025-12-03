@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account — TD1.WORLD</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
+    <link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@700,500,400&display=swap" rel="stylesheet">
+    <style>
+        .account-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #C1A2FF;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">TD1.WORLD</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="index.html">NeuroBlock</a>
+                <a href="explore.html">Explore</a>
+                <a href="submit.html">Submit</a>
+                <a href="account.html" class="active">Account</a>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top: 6rem; padding-bottom: 4rem;">
+        <div class="account-container">
+            <h1 class="section-title" style="margin-bottom: 2rem;">My Account</h1>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">My Blocks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Total Sales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$0.00</div>
+                    <div class="stat-label">Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Downloads</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 3rem;">
+                <div class="section-header">
+                    <h2 style="font-size: 1.5rem;">My NeuroBlocks</h2>
+                    <a href="submit.html" class="btn btn-secondary">Submit New Block</a>
+                </div>
+                <div class="empty-state">
+                    <p>You haven't submitted any blocks yet.</p>
+                    <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                </div>
+            </div>
+
+            <div>
+                <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Purchased NeuroBlocks</h2>
+                <div class="empty-state">
+                    <p>You haven't purchased any blocks yet.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>NeuroBlock</h4>
+                    <ul>
+                        <li><a href="explore.html">Explore Marketplace</a></li>
+                        <li><a href="submit.html">Sell NeuroBlocks</a></li>
+                        <li><a href="terms.html">Terms & Conditions</a></li>
+                        <li><a href="account.html">Creator Onboarding</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About TD1</a></li>
+                        <li><a href="#">Our Vision</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="terms.html">NeuroBlock Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TD1.WORLD. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+

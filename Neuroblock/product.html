@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroBlock Product — TD1.WORLD</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
+    <link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@700,500,400&display=swap" rel="stylesheet">
+    <style>
+        .product-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 3rem;
+        }
+        .product-main h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #C1A2FF, #B38DFF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .product-description {
+            font-size: 1.25rem;
+            color: #9ca3af;
+            margin-bottom: 2rem;
+        }
+        .product-sidebar {
+            position: sticky;
+            top: 6rem;
+            height: fit-content;
+        }
+        .price-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #C1A2FF;
+            margin-bottom: 0.5rem;
+        }
+        .product-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.875rem;
+        }
+        .product-info:last-child {
+            border-bottom: none;
+        }
+        .product-info span:first-child {
+            color: #9ca3af;
+        }
+        .product-info span:last-child {
+            color: #EAEAEA;
+        }
+        @media (max-width: 968px) {
+            .product-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">TD1.WORLD</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="index.html">NeuroBlock</a>
+                <a href="explore.html">Explore</a>
+                <a href="submit.html">Submit</a>
+                <a href="account.html">Account</a>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top: 6rem; padding-bottom: 4rem;">
+        <div class="product-container">
+            <div class="product-main">
+                <h1>NLP Sentiment Analyzer</h1>
+                <p class="product-description">
+                    Advanced sentiment analysis block for processing text data with high accuracy. 
+                    Perfect for social media monitoring, customer feedback analysis, and content moderation.
+                </p>
+
+                <div style="background: rgba(255, 255, 255, 0.05); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Features</h2>
+                    <ul style="list-style: none; line-height: 2;">
+                        <li>✓ Real-time sentiment analysis</li>
+                        <li>✓ Multi-language support</li>
+                        <li>✓ Custom model training</li>
+                        <li>✓ API integration ready</li>
+                    </ul>
+                </div>
+
+                <div style="background: rgba(255, 255, 255, 0.05); padding: 2rem; border-radius: 1rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Documentation</h2>
+                    <pre style="background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; color: #d1d5db;"><code>// Example usage
+const analyzer = new SentimentAnalyzer();
+const result = analyzer.analyze("I love this product!");
+console.log(result.sentiment); // "positive"</code></pre>
+                </div>
+            </div>
+
+            <div class="product-sidebar">
+                <div class="price-card">
+                    <div class="price">$29.99</div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem;">One-time purchase</p>
+
+                    <div class="product-info">
+                        <span>Creator</span>
+                        <span>AI Developer</span>
+                    </div>
+                    <div class="product-info">
+                        <span>Version</span>
+                        <span>1.0.0</span>
+                    </div>
+                    <div class="product-info">
+                        <span>Downloads</span>
+                        <span>120</span>
+                    </div>
+                    <div class="product-info">
+                        <span>Rating</span>
+                        <span>⭐ 4.5</span>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Buy for $29.99</button>
+
+                    <div style="margin-top: 1rem; font-size: 0.75rem; color: #6b7280;">
+                        <p>✓ Instant download after payment</p>
+                        <p>✓ Secure checkout</p>
+                        <p>✓ 30-day money-back guarantee</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>NeuroBlock</h4>
+                    <ul>
+                        <li><a href="explore.html">Explore Marketplace</a></li>
+                        <li><a href="submit.html">Sell NeuroBlocks</a></li>
+                        <li><a href="terms.html">Terms & Conditions</a></li>
+                        <li><a href="account.html">Creator Onboarding</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About TD1</a></li>
+                        <li><a href="#">Our Vision</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="terms.html">NeuroBlock Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TD1.WORLD. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+
