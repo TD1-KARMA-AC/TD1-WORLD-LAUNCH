@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KARMA AC — Conscious AI Operating System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --td1-lilac: #C1A2FF;
+            --td1-purple: #B38DFF;
+            --bg-dark: #050507;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .launch-container {
+            text-align: center;
+            padding: 3rem;
+            max-width: 600px;
+        }
+        .launch-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, white, var(--td1-lilac), var(--td1-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .launch-message {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .instructions-box {
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: left;
+            max-width: 600px;
+        }
+        .instructions-box h3 {
+            color: var(--td1-lilac);
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .instructions-box ol {
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin: 0;
+            padding-left: 24px;
+            font-size: 14px;
+        }
+        .instructions-box li {
+            margin-bottom: 12px;
+        }
+        .privacy-notice {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .demo-notice {
+            background: rgba(193, 162, 255, 0.1);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .launch-btn {
+            padding: 18px 48px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            border-radius: 48px;
+            background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple));
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 8px 32px rgba(193, 162, 255, 0.3);
+        }
+        .launch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(193, 162, 255, 0.5);
+        }
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: var(--td1-lilac);
+            font-size: 0.875rem;
+        }
+        .loading.active {
+            display: block;
+        }
+        .iframe-container {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: var(--bg-dark);
+            display: none;
+        }
+        .iframe-container.active {
+            display: block;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .close-btn:hover {
+            background: rgba(193, 162, 255, 0.2);
+            border-color: var(--td1-lilac);
+        }
+    </style>
+</head>
+<body>
+    <div class="launch-container">
+        <h1 class="launch-title">KARMA AC</h1>
+        <p class="launch-message">
+            The conscious AI operating system
+        </p>
+        
+        <!-- Instructions Section -->
+        <div style="
+            background: rgba(18, 24, 40, 0.6);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: left;
+            max-width: 600px;
+        ">
+            <h3 style="
+                color: var(--td1-lilac);
+                font-size: 18px;
+                font-weight: 700;
+                margin: 0 0 16px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            ">
+                <span>📋</span> How to Use Karma AC
+            </h3>
+            
+            <ol style="
+                color: var(--text-primary);
+                line-height: 1.8;
+                margin: 0;
+                padding-left: 24px;
+                font-size: 14px;
+            ">
+                <li style="margin-bottom: 12px;">
+                    <strong>Launch Karma AC</strong> - Click the button below to start
+                </li>
+                <li style="margin-bottom: 12px;">
+                    <strong>Open Settings</strong> - Click the gear icon (⚙️) in the interface
+                </li>
+                <li style="margin-bottom: 12px;">
+                    <strong>Go to API Keys</strong> - Select the "API Keys" tab
+                </li>
+                <li style="margin-bottom: 12px;">
+                    <strong>Insert Your API Key</strong> - Enter your OpenAI API key to demo Karma AC
+                </li>
+                <li style="margin-bottom: 12px;">
+                    <strong>Save & Start</strong> - Click "Save & Apply" and begin using Karma AC
+                </li>
+            </ol>
+        </div>
+
+        <button class="launch-btn" onclick="launchKarmaAC()">
+            Launch Karma AC →
+        </button>
+        <div class="loading" id="loading">
+            Connecting to Karma AC...
+        </div>
+    </div>
+
+    <div class="iframe-container" id="karmaFrame">
+        <button class="close-btn" onclick="closeKarmaAC()">← Back to TD1.WORLD</button>
+        <iframe id="karmaIframe" src="" allow="camera; microphone; fullscreen"></iframe>
+    </div>
+
+    <script>
+        // Karma AC URL - Points to built version in same directory
+        // Note: ES modules require a web server (not file:// protocol)
+        const KARMA_AC_URL = './karma-ac/index.html';
+        
+        // Check if using file:// protocol
+        if (window.location.protocol === 'file:') {
+            document.querySelector('.launch-container').innerHTML = `
+                <h1 class="launch-title">Karma AC</h1>
+                <p class="launch-message" style="color: #ef4444;">
+                    ⚠️ ES modules require a web server.<br/>
+                    Please use a local server to run Karma AC.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: left;">
+                    <strong>Quick Start:</strong><br/><br/>
+                    <code style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; display: block; margin: 10px 0;">
+                        python -m http.server 8000
+                    </code>
+                    Then open: <code style="background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px;">http://localhost:8000/karma-ac.html</code>
+                </div>
+                <a href="index.html" class="launch-btn" style="text-decoration: none; display: inline-block;">
+                    ← Back to TD1.WORLD
+                </a>
+            `;
+        }
+
+        function launchKarmaAC() {
+            const loading = document.getElementById('loading');
+            const frameContainer = document.getElementById('karmaFrame');
+            const iframe = document.getElementById('karmaIframe');
+            
+            loading.classList.add('active');
+            
+            // Try to load Karma AC
+            iframe.src = KARMA_AC_URL;
+            
+            iframe.onload = function() {
+                loading.classList.remove('active');
+                frameContainer.classList.add('active');
+                document.querySelector('.launch-container').style.display = 'none';
+            };
+            
+            iframe.onerror = function() {
+                loading.classList.remove('active');
+                loading.textContent = 'Failed to connect. Please ensure Karma AC is running.';
+                loading.style.color = '#ef4444';
+                
+                // Fallback: Open in new window
+                setTimeout(() => {
+                    if (confirm('Karma AC is not available. Would you like to open it in a new window?')) {
+                        window.open(KARMA_AC_URL, '_blank');
+                    }
+                }, 1000);
+            };
+        }
+
+        function closeKarmaAC() {
+            const frameContainer = document.getElementById('karmaFrame');
+            const iframe = document.getElementById('karmaIframe');
+            
+            frameContainer.classList.remove('active');
+            iframe.src = '';
+            document.querySelector('.launch-container').style.display = 'block';
+        }
+
+        // Auto-launch if coming from navigation (optional)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto') === 'true') {
+            setTimeout(launchKarmaAC, 500);
+        }
+
+        // Keyboard shortcut: ESC to close
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const frameContainer = document.getElementById('karmaFrame');
+                if (frameContainer.classList.contains('active')) {
+                    closeKarmaAC();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
