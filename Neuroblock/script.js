@@ -14,66 +14,17 @@ function createParticles() {
     }
 }
 
-// Tab switching functionality
+// Tab switching functionality (removed - now using scrollable sections)
+// Keeping function name for backwards compatibility but it's no longer needed
 function initTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    // Set initial active tab button styles
-    tabButtons.forEach(btn => {
-        if (btn.classList.contains('active')) {
-            btn.style.background = 'rgba(193, 162, 255, 0.2)';
-            btn.style.borderColor = 'rgba(193, 162, 255, 0.4)';
-            btn.style.color = '#C1A2FF';
-        } else {
-            btn.style.background = 'rgba(255, 255, 255, 0.05)';
-            btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            btn.style.color = '#EAEAEA';
-        }
-    });
-    
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const targetTab = this.dataset.tab;
-            
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(b => {
-                b.classList.remove('active');
-                b.style.background = 'rgba(255, 255, 255, 0.05)';
-                b.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                b.style.color = '#EAEAEA';
-            });
-            
-            tabContents.forEach(c => {
-                c.classList.remove('active');
-                c.style.display = 'none';
-            });
-            
-            // Add active class to clicked button
-            this.classList.add('active');
-            this.style.background = 'rgba(193, 162, 255, 0.2)';
-            this.style.borderColor = 'rgba(193, 162, 255, 0.4)';
-            this.style.color = '#C1A2FF';
-            
-            // Show corresponding content
-            const targetContent = document.getElementById(targetTab + '-tab');
-            if (targetContent) {
-                targetContent.classList.add('active');
-                targetContent.style.display = 'block';
-            }
-            
-            // Load TD1 products if switching to that tab
-            if (targetTab === 'td1-products') {
-                loadTD1Products();
-            }
-        });
-    });
+    // Tabs removed - now using scrollable sections
+    // This function is kept for backwards compatibility but does nothing
 }
 
 // Category filtering
 document.addEventListener('DOMContentLoaded', function() {
     createParticles();
-    initTabs();
+    initTabs(); // No longer needed but kept for compatibility
     
     const categoryButtons = document.querySelectorAll('.category-btn');
     const blocksGrid = document.getElementById('blocksGrid');
@@ -97,6 +48,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const query = this.value.toLowerCase();
             filterBlocks(null, query);
         });
+    }
+    
+    // Lazy load TD1 Products when section comes into view (if not already loaded)
+    const td1Section = document.getElementById('td1-products-section');
+    if (td1Section && typeof IntersectionObserver !== 'undefined') {
+        const observerOptions = {
+            root: null,
+            rootMargin: '200px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && typeof loadTD1Products === 'function') {
+                    loadTD1Products();
+                    observer.unobserve(entry.target); // Only load once
+                }
+            });
+        }, observerOptions);
+        
+        observer.observe(td1Section);
     }
 });
 
