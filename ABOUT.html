@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About TD1.WORLD — Engineering the Foundations of Autonomous Intelligence</title>
     <style>
         * {
@@ -95,59 +92,60 @@
         /* Navigation - Premium */
         .nav {
             position: fixed;
-            top: 20px;
+            top: 24px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            padding: 12px 24px;
+            padding: 14px 28px;
             border-radius: 48px;
-            background: rgba(15, 15, 20, 0.6);
-            backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(193, 162, 255, 0.1);
+            background: rgba(15, 15, 20, 0.7);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border: 1px solid rgba(193, 162, 255, 0.15);
             display: flex;
-            gap: 20px;
+            gap: 24px;
             align-items: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
+                        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
         }
 
         .nav:hover {
-            box-shadow: 0 8px 32px rgba(193, 162, 255, 0.2);
-            border-color: rgba(193, 162, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(193, 162, 255, 0.25), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            border-color: rgba(193, 162, 255, 0.35);
+            transform: translateX(-50%) translateY(-2px);
         }
 
         .nav-link {
-            color: var(--text-secondary);
+            color: var(--text-primary);
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
-            padding: 6px 12px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
 
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-        }
-
-        .nav-link.active,
-        .nav-link[style*="color: var(--td1-lilac)"] {
-            color: var(--td1-lilac) !important;
-            background: rgba(193, 162, 255, 0.15);
-            box-shadow: 0 0 20px rgba(193, 162, 255, 0.3);
-        }
-
-        .nav-link.active::after,
-        .nav-link[style*="color: var(--td1-lilac)"]::after {
+        .nav-link::before {
             content: '';
             position: absolute;
-            bottom: 2px;
-            left: 12px;
-            right: 12px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--td1-lilac), transparent);
-            border-radius: 2px;
+            inset: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(193, 162, 255, 0.2), rgba(179, 141, 255, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        .nav-link:hover {
+            color: var(--td1-lilac);
+            transform: translateY(-1px);
         }
 
         /* Hero Section - Trillion-Dollar Grade */
@@ -656,14 +654,29 @@
                 padding: 140px 20px 60px;
             }
         }
+        
+        @media (max-width: 480px) {
+            .nav {
+                padding: 6px 12px;
+                font-size: 11px;
+                gap: 8px;
+                max-width: calc(100vw - 1.5rem);
+            }
+            .nav-link {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
 
-    <nav class="nav">
+    <nav class="nav glass">
         <a href="index.html" class="nav-link">Home</a>
+        <a href="/realm" class="nav-link">Realm</a>
+        <a href="karma-ac.html" class="nav-link">Karma AC</a>
         <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
         <a href="ABOUT.html" class="nav-link" style="color: var(--td1-lilac);">About</a>
     </nav>
