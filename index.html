@@ -1037,6 +1037,15 @@
             document.getElementById('contactSection').scrollIntoView({ behavior: 'smooth' });
         });
         
+        // Realm Link - Ensure navigation works
+        const realmLink = document.querySelector('a[href="/realm"]');
+        if (realmLink) {
+            realmLink.addEventListener('click', (e) => {
+                // Allow default navigation, but ensure it happens
+                window.location.href = '/realm';
+            });
+        }
+        
         // Form Submit
         document.getElementById('contactForm').addEventListener('submit', (e) => {
             e.preventDefault();
