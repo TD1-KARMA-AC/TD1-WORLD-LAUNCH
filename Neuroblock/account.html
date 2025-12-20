@@ -90,16 +90,20 @@
                     <h2 style="font-size: 1.5rem;">My NeuroBlocks</h2>
                     <a href="submit.html" class="btn btn-secondary">Submit New Block</a>
                 </div>
-                <div class="empty-state">
-                    <p>You haven't submitted any blocks yet.</p>
-                    <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                <div id="myBlocksContainer">
+                    <div class="empty-state">
+                        <p>You haven't submitted any blocks yet.</p>
+                        <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                    </div>
                 </div>
             </div>
 
             <div>
                 <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Purchased NeuroBlocks</h2>
-                <div class="empty-state">
-                    <p>You haven't purchased any blocks yet.</p>
+                <div id="purchasedBlocksContainer">
+                    <div class="empty-state">
+                        <p>You haven't purchased any blocks yet.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,7 +143,78 @@
             </div>
         </div>
     </footer>
+    <script src="script.js"></script>
     <script>
+        // Load user's blocks and purchases
+        function loadAccountData() {
+            // Load my blocks (simplified - in real app would filter by creator)
+            const allBlocks = getStoredBlocks();
+            const myBlocks = allBlocks.filter(block => block.creator === 'You');
+            const myBlocksContainer = document.getElementById('myBlocksContainer');
+            
+            if (myBlocks.length > 0) {
+                // Update stats
+                const stats = document.querySelectorAll('.stat-value');
+                if (stats.length >= 1) stats[0].textContent = myBlocks.length;
+                
+                // Display blocks
+                myBlocksContainer.innerHTML = `
+                    <div class="blocks-grid" style="margin-top: 1.5rem;">
+                        ${myBlocks.map(block => `
+                            <a href="product.html?id=${block.id}" class="block-card">
+                                <h3>${block.name}</h3>
+                                <p class="block-creator">by ${block.creator}</p>
+                                <p class="block-description">${block.description}</p>
+                                <div class="block-footer">
+                                    <div>
+                                        <span>⭐ ${block.rating || 0}</span>
+                                        <span style="margin-left: 1rem;">⬇️ ${block.downloads || 0}</span>
+                                    </div>
+                                    <div class="block-price">$${block.price || 0}</div>
+                                </div>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Load purchased blocks
+            const purchasedBlocks = JSON.parse(localStorage.getItem('purchasedBlocks') || '[]');
+            const purchasedContainer = document.getElementById('purchasedBlocksContainer');
+            
+            if (purchasedBlocks.length > 0) {
+                // Update stats
+                const stats = document.querySelectorAll('.stat-value');
+                if (stats.length >= 4) stats[3].textContent = purchasedBlocks.reduce((sum, b) => sum + (b.downloads || 0), 0);
+                
+                purchasedContainer.innerHTML = `
+                    <div class="blocks-grid" style="margin-top: 1.5rem;">
+                        ${purchasedBlocks.map(block => `
+                            <a href="product.html?id=${block.id}" class="block-card">
+                                <h3>${block.name}</h3>
+                                <p class="block-creator">by ${block.creator}</p>
+                                <p class="block-description">${block.description}</p>
+                                <div class="block-footer">
+                                    <div>
+                                        <span>⭐ ${block.rating || 0}</span>
+                                        <span style="margin-left: 1rem;">⬇️ ${block.downloads || 0}</span>
+                                    </div>
+                                    <div class="block-price">✓ Purchased</div>
+                                </div>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+        
+        // Load account data on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadAccountData);
+        } else {
+            loadAccountData();
+        }
+        
         // Smooth navigation animations (matching main site)
         document.querySelectorAll('.nav-link, .nav-secondary-link').forEach(link => {
             link.addEventListener('mouseenter', function() {

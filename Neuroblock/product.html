@@ -183,7 +183,86 @@ console.log(result.sentiment); // "positive"</code></pre>
             </div>
         </div>
     </footer>
+    <script src="script.js"></script>
     <script>
+        // Load product data from URL parameter
+        function loadProduct() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+            
+            if (!productId) {
+                document.querySelector('.product-container').innerHTML = `
+                    <div style="text-align: center; padding: 4rem 2rem;">
+                        <h1 style="color: #C1A2FF; margin-bottom: 1rem;">Product Not Found</h1>
+                        <p style="color: #A0A0A0; margin-bottom: 2rem;">The product you're looking for doesn't exist.</p>
+                        <a href="index.html" class="btn btn-primary">Back to Marketplace</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            const block = getBlockById(productId);
+            
+            if (!block) {
+                document.querySelector('.product-container').innerHTML = `
+                    <div style="text-align: center; padding: 4rem 2rem;">
+                        <h1 style="color: #C1A2FF; margin-bottom: 1rem;">Product Not Found</h1>
+                        <p style="color: #A0A0A0; margin-bottom: 2rem;">The product you're looking for doesn't exist.</p>
+                        <a href="index.html" class="btn btn-primary">Back to Marketplace</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Update product content
+            const productMain = document.querySelector('.product-main');
+            const productSidebar = document.querySelector('.product-sidebar');
+            
+            if (productMain) {
+                productMain.querySelector('h1').textContent = block.name;
+                productMain.querySelector('.product-description').textContent = block.description;
+                
+                // Update features section
+                const featuresList = productMain.querySelector('ul');
+                if (featuresList && block.tags) {
+                    featuresList.innerHTML = block.tags.map(tag => 
+                        `<li>✓ ${tag.charAt(0).toUpperCase() + tag.slice(1)}</li>`
+                    ).join('');
+                }
+            }
+            
+            if (productSidebar) {
+                productSidebar.querySelector('.price').textContent = `$${block.price || 0}`;
+                productSidebar.querySelector('.product-info:nth-of-type(1) span:last-child').textContent = block.creator;
+                productSidebar.querySelector('.product-info:nth-of-type(2) span:last-child').textContent = block.version || '1.0.0';
+                productSidebar.querySelector('.product-info:nth-of-type(3) span:last-child').textContent = block.downloads || 0;
+                productSidebar.querySelector('.product-info:nth-of-type(4) span:last-child').textContent = `⭐ ${block.rating || 0}`;
+                
+                const buyButton = productSidebar.querySelector('.btn');
+                if (buyButton) {
+                    buyButton.textContent = `Buy for $${block.price || 0}`;
+                    buyButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Store purchased block
+                        const purchased = JSON.parse(localStorage.getItem('purchasedBlocks') || '[]');
+                        if (!purchased.find(b => b.id === block.id)) {
+                            purchased.push(block);
+                            localStorage.setItem('purchasedBlocks', JSON.stringify(purchased));
+                        }
+                        alert(`Thank you for purchasing ${block.name}! The download link has been added to your account.`);
+                        window.location.href = 'account.html';
+                    });
+                }
+            }
+        }
+        
+        // Load product on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadProduct);
+        } else {
+            loadProduct();
+        }
+        
         // Smooth navigation animations (matching main site)
         document.querySelectorAll('.nav-link, .nav-secondary-link').forEach(link => {
             link.addEventListener('mouseenter', function() {

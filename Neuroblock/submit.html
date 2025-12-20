@@ -221,6 +221,7 @@
         </div>
     </footer>
 
+    <script src="script.js"></script>
     <script>
         // Mode selector
         const modeCards = document.querySelectorAll('.mode-card');
@@ -288,7 +289,49 @@
         // Form submission
         document.getElementById('submitForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            alert('Submission functionality requires backend API. This is a static demo.');
+            
+            const formData = new FormData(this);
+            const mode = document.querySelector('.mode-card.active').dataset.mode;
+            
+            const blockData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                category: formData.get('category'),
+                price: mode === 'sell' ? parseFloat(formData.get('price')) : 0,
+                license: formData.get('license') || 'Proprietary',
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                creator: 'You', // In a real app, this would come from user account
+                mode: mode
+            };
+            
+            // Validate required fields
+            if (!blockData.name || !blockData.description || !blockData.category) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            if (mode === 'sell' && (!blockData.price || blockData.price <= 0)) {
+                alert('Please enter a valid price for sell mode.');
+                return;
+            }
+            
+            // Check if file was selected
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please upload a ZIP file.');
+                return;
+            }
+            
+            // Add block to storage (in a real app, this would be sent to a backend)
+            if (typeof addBlock === 'function') {
+                addBlock(blockData);
+                alert(`Thank you! Your NeuroBlock "${blockData.name}" has been submitted for review.`);
+                this.reset();
+                fileInfo.style.display = 'none';
+                window.location.href = 'account.html';
+            } else {
+                alert('Submission functionality requires script.js to be loaded. Please refresh the page.');
+            }
         });
 
         // Smooth navigation animations (matching main site)
