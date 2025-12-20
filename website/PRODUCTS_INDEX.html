@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TD1.WORLD — 50 Premium AI Products</title>
+    <link rel="stylesheet" href="/atlas/ui/unified-nav-styles.css">
     <!-- Stripe.js -->
     <script src="https://js.stripe.com/v3/"></script>
     <style>
@@ -838,6 +839,8 @@
     </style>
 </head>
 <body>
+    <!-- Unified Navigation Bar -->
+    <div id="unified-nav-container"></div>
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
     
@@ -2973,5 +2976,16 @@
         </div>
     </div>
     
+    <script type="module">
+        // Initialize Unified Navigation Bar
+        (async () => {
+            try {
+                const { UnifiedNavBar } = await import('/atlas/ui/unified-nav.js');
+                const unifiedNav = new UnifiedNavBar('unified-nav-container');
+            } catch (error) {
+                console.error('Error loading Unified Nav:', error);
+            }
+        })();
+    </script>
 </body>
 </html>
