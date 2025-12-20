@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>TD1.WORLD — The Architecture of Autonomous Intelligence</title>
+    <link rel="stylesheet" href="/atlas/ui/unified-nav-styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -630,14 +631,8 @@
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
     
-    <nav class="nav">
-        <a href="index.html" class="nav-link" style="color: var(--td1-lilac);">Home</a>
-        <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
-        <a href="/neuroblock" class="nav-link">NeuroBlock</a>
-        <a href="/realm" class="nav-link">Realm</a>
-        <a href="karma-ac.html" class="nav-link">Karma AC</a>
-        <a href="ABOUT.html" class="nav-link">About</a>
-    </nav>
+    <!-- Unified Navigation Bar -->
+    <div id="unified-nav-container"></div>
     
     <!-- Portal Overlay -->
     <div class="portal-overlay" id="portal">
@@ -1052,6 +1047,16 @@
             });
         });
         
+        // Initialize Unified Navigation Bar
+        (async () => {
+            try {
+                const { UnifiedNavBar } = await import('/atlas/ui/unified-nav.js');
+                const unifiedNav = new UnifiedNavBar('unified-nav-container');
+            } catch (error) {
+                console.error('Error loading Unified Nav:', error);
+            }
+        })();
+
         // NeuroBlocks Link - Ensure navigation works
         const neuroblockLinks = document.querySelectorAll('a[href="/neuroblock"]');
         neuroblockLinks.forEach(link => {
@@ -1061,10 +1066,22 @@
         });
         
         // Form Submit
-        document.getElementById('contactForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('Thank you! We\'ll be in touch within 24 hours.');
-        });
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Thank you! We\'ll be in touch within 24 hours.');
+            });
+        }
+    </script>
+    <script type="module">
+        // Initialize Atlas Search
+        try {
+            const { AtlasWebsiteSearch } = await import('/atlas/ui/website-search.js');
+            const atlasSearch = new AtlasWebsiteSearch('atlas-website-search-container');
+        } catch (error) {
+            console.error('Error loading Atlas search:', error);
+        }
     </script>
 </body>
 </html>
