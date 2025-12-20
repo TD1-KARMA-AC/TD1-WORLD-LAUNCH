@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TD1.ATLAS — Cognitive Web Navigation System</title>
+    <link rel="stylesheet" href="ui/atlas-styles.css">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
+    <link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@700,500,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom, #050507, #111115);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Neue Montreal', 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(5, 5, 7, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #A0A0A0;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #C1A2FF;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 48px;
+            background: rgba(193, 162, 255, 0.1);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            color: #C1A2FF;
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, white, #C1A2FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.125rem, 2vw, 1.5rem);
+            color: #A0A0A0;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            line-height: 1.6;
+        }
+
+        .hero-description {
+            font-size: 1rem;
+            color: #A0A0A0;
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            line-height: 1.8;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #C1A2FF, white);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: #A0A0A0;
+            margin-top: 6rem;
+        }
+
+        .footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer a {
+            color: #C1A2FF;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/website/PRODUCTS_INDEX.html" class="nav-link">Products</a>
+        <a href="/atlas" class="nav-link active">Atlas</a>
+        <a href="/website/ABOUT.html" class="nav-link">About</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-badge">TD1.ATLAS</div>
+        <h1 class="hero-title">Cognitive Web Navigation</h1>
+        <p class="hero-subtitle">
+            Navigate the web like a city, not a library.
+        </p>
+        <p class="hero-description">
+            Atlas is a spatial navigation system that orients you inside a remembered web landscape. 
+            No search engines. No ranked results. Just spatial reasoning through a cognitive map.
+        </p>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Directional Input -->
+        <div class="atlas-input-container" style="margin-bottom: 3rem;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <input type="text" id="atlasInput" placeholder="Where do you want to go? (e.g., 'NLP tools', 'computer vision', 'AI agents')" class="atlas-input" style="flex: 1;">
+                <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                <button class="atlas-btn atlas-btn-secondary" onclick="document.getElementById('imageUpload').click()" title="Upload image to navigate">
+                    📷
+                </button>
+            </div>
+            <p class="atlas-input-hint">This is a directional command, not a search. I'll orient you in the cognitive map. You can also upload an image or use voice input.</p>
+        </div>
+
+        <!-- Atlas Navigation Interface -->
+        <div id="atlasContainer" class="atlas-container">
+            <!-- Atlas UI will render here -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 TD1.WORLD. All rights reserved.</p>
+        <p>
+            <a href="/website/PRODUCTS_INDEX.html">View All Products</a> | 
+            <a href="/website/ABOUT.html">About TD1</a>
+        </p>
+    </footer>
+
+    <script type="module">
+        // Import Atlas system
+        import { getAtlas } from './atlas.js';
+        import { AtlasUI } from './ui/atlas-ui.js';
+        import { MultiModalEngine } from './core/multimodal.js';
+
+        // Initialize Atlas
+        const atlas = getAtlas();
+        const atlasUI = new AtlasUI(atlas, 'atlasContainer');
+        const multiModal = new MultiModalEngine();
+        
+        // Make globally available
+        window.atlasUI = atlasUI;
+        window.multiModal = multiModal;
+
+        // Initialize UI
+        atlasUI.init();
+
+        // Handle directional input
+        const atlasInput = document.getElementById('atlasInput');
+        if (atlasInput) {
+            atlasInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    const input = atlasInput.value.trim();
+                    if (input) {
+                        const context = multiModal.getScreenContext();
+                        await atlasUI.handleInput(input, context);
+                        atlasInput.value = '';
+                    }
+                }
+            });
+        }
+
+        // Handle image upload
+        window.handleImageUpload = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const analysis = await multiModal.analyzeImage(file);
+            if (analysis.suggestedTopics.length > 0) {
+                await atlasUI.handleInput(analysis.suggestedTopics[0], { source: 'image', analysis });
+            }
+        };
+    </script>
+</body>
+</html>
+

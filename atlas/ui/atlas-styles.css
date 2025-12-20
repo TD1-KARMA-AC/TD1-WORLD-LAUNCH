@@ -1,0 +1,433 @@
+/**
+ * Atlas UI Styles
+ * 
+ * Spatial navigation interface styling.
+ * Emphasizes location, orientation, and routes over search.
+ */
+
+/* Atlas Container */
+.atlas-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Current Location */
+.atlas-location {
+    background: rgba(193, 162, 255, 0.05);
+    border: 1px solid rgba(193, 162, 255, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+}
+
+.atlas-location-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.atlas-location-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #C1A2FF;
+    font-weight: 600;
+}
+
+.atlas-confidence {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.atlas-confidence.high {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.atlas-confidence.low {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.atlas-topic-name {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #C1A2FF, white);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.atlas-topic-description {
+    color: #A0A0A0;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Sections */
+.atlas-section {
+    margin-bottom: 3rem;
+}
+
+.atlas-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+}
+
+/* Landmarks Grid */
+.atlas-landmarks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.atlas-landmark {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.atlas-landmark:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(193, 162, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.atlas-landmark-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.atlas-landmark-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ffffff;
+    flex: 1;
+}
+
+.atlas-reliability {
+    font-size: 0.75rem;
+    color: #A0A0A0;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.atlas-landmark-summary {
+    color: #A0A0A0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.atlas-landmark-facts {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+.atlas-landmark-facts li {
+    font-size: 0.875rem;
+    color: #C1A2FF;
+    padding: 0.25rem 0;
+    padding-left: 1.25rem;
+    position: relative;
+}
+
+.atlas-landmark-facts li:before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #C1A2FF;
+}
+
+.atlas-landmark-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Topics Grid */
+.atlas-topics {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.atlas-topic {
+    background: rgba(193, 162, 255, 0.05);
+    border: 1px solid rgba(193, 162, 255, 0.2);
+    border-radius: 8px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.atlas-topic:hover {
+    background: rgba(193, 162, 255, 0.1);
+    border-color: rgba(193, 162, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.atlas-topic-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.atlas-topic-description {
+    font-size: 0.875rem;
+    color: #A0A0A0;
+    margin-bottom: 0.75rem;
+}
+
+.atlas-distance {
+    font-size: 0.75rem;
+    color: #C1A2FF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Routes List */
+.atlas-routes {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.atlas-route {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.atlas-route:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(193, 162, 255, 0.3);
+    transform: translateX(4px);
+}
+
+.atlas-route-info {
+    flex: 1;
+}
+
+.atlas-route-destination {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.25rem;
+}
+
+.atlas-route-description {
+    font-size: 0.875rem;
+    color: #A0A0A0;
+}
+
+.atlas-route-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.atlas-route-type {
+    font-size: 0.75rem;
+    color: #C1A2FF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.atlas-route-distance {
+    font-size: 0.75rem;
+    color: #A0A0A0;
+}
+
+/* Buttons */
+.atlas-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.atlas-btn-primary {
+    background: #C1A2FF;
+    color: #050507;
+}
+
+.atlas-btn-primary:hover {
+    background: #D4BAFF;
+    transform: translateY(-1px);
+}
+
+.atlas-btn-secondary {
+    background: rgba(193, 162, 255, 0.1);
+    color: #C1A2FF;
+    border: 1px solid rgba(193, 162, 255, 0.3);
+}
+
+.atlas-btn-secondary:hover {
+    background: rgba(193, 162, 255, 0.2);
+}
+
+/* Messages */
+.atlas-message {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease;
+}
+
+.atlas-message-info {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+.atlas-message-success {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+}
+
+.atlas-message-warning {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* Loading */
+.atlas-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: #A0A0A0;
+}
+
+.atlas-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(193, 162, 255, 0.2);
+    border-top-color: #C1A2FF;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Controls */
+.atlas-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Suggestions */
+.atlas-suggestions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.atlas-suggestion {
+    background: rgba(193, 162, 255, 0.1);
+    border: 1px solid rgba(193, 162, 255, 0.3);
+    border-radius: 8px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.atlas-suggestion:hover {
+    background: rgba(193, 162, 255, 0.15);
+    border-color: rgba(193, 162, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.atlas-suggestion h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.atlas-suggestion p {
+    font-size: 0.875rem;
+    color: #A0A0A0;
+    margin-bottom: 0.75rem;
+}
+
+/* Directional Input */
+.atlas-input-container {
+    margin-bottom: 2rem;
+}
+
+.atlas-input {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.atlas-input:focus {
+    outline: none;
+    border-color: rgba(193, 162, 255, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.atlas-input::placeholder {
+    color: #666;
+}
+
+.atlas-input-hint {
+    font-size: 0.875rem;
+    color: #A0A0A0;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
