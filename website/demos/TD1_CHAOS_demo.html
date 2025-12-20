@@ -540,5 +540,16 @@
         });
 
     </script>
+    <script type="module">
+        // Initialize Unified Navigation Bar
+        (async () => {
+            try {
+                const { UnifiedNavBar } = await import('/atlas/ui/unified-nav.js');
+                const unifiedNav = new UnifiedNavBar('unified-nav-container');
+            } catch (error) {
+                console.error('Error loading Unified Nav:', error);
+            }
+        })();
+    </script>
 </body>
 </html>
