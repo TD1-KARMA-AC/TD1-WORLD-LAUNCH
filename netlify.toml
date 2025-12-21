@@ -79,9 +79,8 @@
   status = 200
 
 # NeuroBlock routing
-# Netlify serves static files FIRST, but we need to handle case sensitivity
-# Redirect lowercase /neuroblock to actual folder /Neuroblock
-# Also handle direct access to /Neuroblock (capital N)
+# Netlify serves static files FIRST, so /Neuroblock/index.html will be served automatically
+# The actual folder is named "Neuroblock" (capital N) - redirect lowercase URLs to match
 [[redirects]]
   from = "/neuroblock"
   to = "/Neuroblock/index.html"
@@ -97,7 +96,7 @@
   to = "/Neuroblock/:splat"
   status = 200
 
-# Handle direct access with capital N (for consistency)
+# Handle direct access with capital N (matches actual folder name)
 [[redirects]]
   from = "/Neuroblock"
   to = "/Neuroblock/index.html"
