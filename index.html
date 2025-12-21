@@ -634,15 +634,8 @@
     <div class="mouse-spotlight" id="spotlight"></div>
     
     <!-- Original Navigation with Atlas Integration -->
-    <nav class="nav" id="mainNav">
-        <a href="index.html" class="nav-link" style="color: var(--td1-lilac);">Home</a>
-        <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
-        <a href="/neuroblock" class="nav-link">NeuroBlock</a>
-        <a href="/realm" class="nav-link">Realm</a>
-        <a href="karma-ac.html" class="nav-link">Karma AC</a>
-        <a href="/atlas" class="nav-link">Atlas</a>
-        <a href="ABOUT.html" class="nav-link">About</a>
-    </nav>
+    <!-- Unified Navigation will be injected here by unified-navigation.js -->
+    <div id="unified-nav-container"></div>
     
     <!-- Portal Overlay -->
     <div class="portal-overlay" id="portal">
@@ -1076,6 +1069,19 @@
         });
     </script>
     
+    <!-- Unified Navigation (must load first) -->
+    <script src="js/unified-navigation.js"></script>
+    <script>
+        // Ensure navigation initializes
+        if (typeof UnifiedNav !== 'undefined') {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
+            } else {
+                UnifiedNav.init();
+            }
+        }
+    </script>
+    
     <!-- Enhanced Features JavaScript -->
     <script src="js/enhanced-features.js"></script>
     <script src="js/ai-chat-widget.js"></script>
@@ -1083,6 +1089,9 @@
     <script src="js/advanced-3d-features.js"></script>
     <script src="js/remaining-features.js"></script>
     <script src="js/backend-features.js"></script>
+    
+    <!-- Shared Features (animations across all pages) -->
+    <script src="js/shared-features.js"></script>
     
     <!-- Service Worker Registration -->
     <script>
