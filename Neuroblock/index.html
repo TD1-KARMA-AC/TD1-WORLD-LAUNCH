@@ -10,17 +10,11 @@
     <link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@700,500,400&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Main Navigation (same on all pages) -->
-    <nav class="nav">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/website/PRODUCTS_INDEX.html" class="nav-link">Products</a>
-        <a href="index.html" class="nav-link active">NeuroBlock</a>
-        <a href="/realm" class="nav-link">Realm</a>
-        <a href="/website/ABOUT.html" class="nav-link">About</a>
-    </nav>
+    <!-- Unified Navigation will be injected here by unified-navigation.js -->
+    <div id="unified-nav-container"></div>
 
-    <!-- Secondary Navigation (only on NeuroBlock pages) -->
-    <nav class="nav-secondary">
+    <!-- Secondary Navigation (only on NeuroBlock pages) - Below unified nav -->
+    <nav class="nav-secondary" style="position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; gap: 1rem; padding: 0.75rem 1.5rem; background: rgba(15, 15, 20, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(193, 162, 255, 0.2); border-radius: 16px;">
         <a href="index.html" class="nav-secondary-link active">Marketplace</a>
         <a href="explore.html" class="nav-secondary-link">Explore</a>
         <a href="submit.html" class="nav-secondary-link">Submit</a>
@@ -28,7 +22,7 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-section">
+    <section class="hero-section" style="padding-top: 180px;">
         <div class="particles-container" id="particles"></div>
         
         <div class="hero-content">
@@ -160,6 +154,67 @@
                 this.style.transform = 'translateY(0)';
             });
         });
+    </script>
+    
+    <!-- Unified Navigation (must load first) -->
+    <script src="../js/unified-navigation.js?v=5"></script>
+    <script>
+        // Aggressive initialization with retry logic
+        (function initUnifiedNav() {
+            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                try {
+                    UnifiedNav.init();
+                    console.log('UnifiedNav initialized successfully');
+                    
+                    // Verify it was created
+                    setTimeout(() => {
+                        const navBar = document.getElementById('unified-nav-bar');
+                        if (!navBar) {
+                            console.warn('Nav bar not found after init, retrying...');
+                            setTimeout(initUnifiedNav, 200);
+                        }
+                    }, 100);
+                } catch (e) {
+                    console.error('Error initializing UnifiedNav:', e);
+                    setTimeout(initUnifiedNav, 200);
+                }
+            } else {
+                console.log('UnifiedNav not found, retrying...');
+                setTimeout(initUnifiedNav, 100);
+            }
+        })();
+        
+        // Also try on DOMContentLoaded and window.load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                    UnifiedNav.init();
+                }
+            });
+        }
+        
+        window.addEventListener('load', () => {
+            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                const navBar = document.getElementById('unified-nav-bar');
+                if (!navBar) {
+                    console.log('Nav bar missing on load, initializing...');
+                    UnifiedNav.init();
+                }
+            }
+        });
+    </script>
+    
+    <!-- Shared Features -->
+    <script src="../js/shared-features.js?v=2"></script>
+    <script>
+        // Initialize shared features
+        if (typeof SharedFeatures !== 'undefined' && SharedFeatures.init) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => SharedFeatures.init());
+            } else {
+                SharedFeatures.init();
+            }
+        }
     </script>
 </body>
 </html>
