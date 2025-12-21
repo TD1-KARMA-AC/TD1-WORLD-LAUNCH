@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>TD1.WORLD — The Architecture of Autonomous Intelligence</title>
-    <link rel="stylesheet" href="/atlas/ui/unified-nav-styles.css">
+    <!-- Enhanced Features CSS -->
+    <link rel="stylesheet" href="css/enhanced-styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -631,8 +632,14 @@
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
     
-    <!-- Unified Navigation Bar -->
-    <div id="unified-nav-container"></div>
+    <nav class="nav">
+        <a href="index.html" class="nav-link" style="color: var(--td1-lilac);">Home</a>
+        <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
+        <a href="/neuroblock" class="nav-link">NeuroBlock</a>
+        <a href="/realm" class="nav-link">Realm</a>
+        <a href="karma-ac.html" class="nav-link">Karma AC</a>
+        <a href="ABOUT.html" class="nav-link">About</a>
+    </nav>
     
     <!-- Portal Overlay -->
     <div class="portal-overlay" id="portal">
@@ -645,52 +652,48 @@
         <div class="hero-badge">TD1.WORLD</div>
         <h1 class="hero-title" id="heroTitle">TD1</h1>
         <div class="hero-tagline" id="heroTagline">The Lego Blocks of AI</div>
-            <p class="hero-description">
-                Crafting minds that think, adapt, and evolve with purpose.<br/>
-                <strong style="color: var(--td1-lilac); font-size: 1.1em;">$2.8M worth of production-grade AGI infrastructure.</strong><br/>
-                Available today. Zero subscriptions. Full ownership.
-            </p>
+        <p class="hero-description">
+            Crafting minds that think, adapt, and evolve with purpose.<br/>
+            <strong style="color: var(--td1-lilac); font-size: 1.1em;">$2.3M worth of production-grade AGI infrastructure.</strong><br/>
+            Available today. Zero subscriptions. Full ownership.
+        </p>
         <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; max-width: 1200px; margin: 3rem auto; padding: 0 2rem;">
             <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
-                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$2.8M</div>
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$2.3M</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Development Cost</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Full ecosystem investment</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Full investment</div>
             </div>
             <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
-                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">750+</div>
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">676</div>
                 <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Developer-Weeks</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">14.4 developer-years</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">13 developer-years</div>
             </div>
             <div class="stat-card" style="padding: 2rem; border-radius: 24px; background: rgba(18, 24, 40, 0.7); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(193, 162, 255, 0.1); transition: all 0.4s; text-align: center;">
-                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$35M</div>
-                <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Ecosystem Valuation</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">TD1.WORLD + Realm + NeuroBlocks + Karma AC</div>
+                <div style="font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--td1-lilac), var(--td1-purple), white); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; margin-bottom: 0.5rem;">$15M</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">IP Valuation</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.25rem; font-style: italic;">Intellectual property</div>
             </div>
         </div>
         <div style="max-width: 900px; margin: 2rem auto; padding: 0 2rem;">
             <p style="font-size: clamp(0.875rem, 2vw, 1rem); color: var(--text-secondary); line-height: 1.8; text-align: center;">
                 <strong style="color: var(--td1-lilac);">Team Time:</strong> 16-18 months with 8-person team | 
-                <strong style="color: var(--td1-lilac);">Code Volume:</strong> 86,000+ lines across TD1.WORLD, Realm, NeuroBlocks & Karma AC | 
-                <strong style="color: var(--td1-lilac);">Total Investment:</strong> $2.8M development cost
+                <strong style="color: var(--td1-lilac);">Code Volume:</strong> 80,800+ lines of production-ready code
             </p>
         </div>
         <div style="max-width: 900px; margin: 2rem auto; padding: 20px 40px; border-radius: 20px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(32px); border: 1px solid rgba(193, 162, 255, 0.3); box-shadow: 0 0 40px rgba(193, 162, 255, 0.2);">
             <p style="font-size: clamp(1rem, 2vw, 1.125rem); color: var(--text-primary); line-height: 1.8; text-align: center; margin: 0;">
-                TD1.WORLD gives you direct access to <strong style="color: var(--td1-lilac);">$2.8M worth of AGI infrastructure</strong> — the same building blocks used inside Karma AC's autonomous intelligence core, plus Realm and NeuroBlocks. You own every component outright. No cloud dependency. No recurring fees.
+                TD1.WORLD gives you direct access to <strong style="color: var(--td1-lilac);">$2.3M worth of AGI infrastructure</strong> — the same building blocks used inside Karma AC's autonomous intelligence core. You own every component outright. No cloud dependency. No recurring fees.
             </p>
         </div>
         <div class="hero-cta">
-            <a href="karma-ac.html" class="magnetic-btn primary" style="text-decoration: none; display: inline-block;">
-                <span>Try Karma AC →</span>
-            </a>
-            <a href="/realm" class="magnetic-btn secondary" style="text-decoration: none; display: inline-block;">
+            <a href="/realm" class="magnetic-btn primary" style="text-decoration: none; display: inline-block;">
                 <span>Enter Realm →</span>
             </a>
-            <a href="/neuroblock" class="magnetic-btn secondary" style="text-decoration: none; display: inline-block;">
-                <span>Explore NeuroBlocks →</span>
-            </a>
             <button class="magnetic-btn secondary" id="exploreBtn">
-                <span>View All Products →</span>
+                <span>Explore Products →</span>
+            </button>
+            <button class="magnetic-btn secondary" id="contactBtn">
+                <span>Begin Integration</span>
             </button>
         </div>
         <div class="scroll-indicator">
@@ -780,9 +783,9 @@
                     <h4>🔮 Real-Time Synthesis</h4>
                     <p>Combines multiple AI models into unified responses with sub-second latency.</p>
                 </div>
-                <a href="karma-ac.html" class="magnetic-btn primary" style="margin-top: 20px; text-decoration: none; display: inline-block;">
-                    <span>Try Karma AC →</span>
-                </a>
+                <button class="magnetic-btn primary" style="margin-top: 20px;">
+                    <span>Request Karma AC Demo</span>
+                </button>
             </div>
         </div>
     </section>
@@ -862,6 +865,15 @@
                     <div class="framework-item" style="padding-left: 40px;">Custom Fine-tuned Models</div>
                 </div>
             </div>
+        </div>
+    </section>
+    
+    <!-- Testimonials Section -->
+    <section class="section" id="testimonialsSection">
+        <div class="section-header">
+            <div class="section-badge">TESTIMONIALS</div>
+            <h2 class="section-title">What Our Customers Say</h2>
+            <p class="section-subtitle">Real feedback from developers and companies using TD1.WORLD products.</p>
         </div>
     </section>
     
@@ -1031,56 +1043,43 @@
             }, 1500);
         });
         
-        // Karma AC Link - Ensure navigation works
-        const karmaLink = document.querySelector('a[href="karma-ac.html"]');
-        if (karmaLink) {
-            karmaLink.addEventListener('click', (e) => {
-                window.location.href = 'karma-ac.html';
-            });
-        }
+        // Contact Button Scroll
+        document.getElementById('contactBtn').addEventListener('click', () => {
+            document.getElementById('contactSection').scrollIntoView({ behavior: 'smooth' });
+        });
         
         // Realm Link - Ensure navigation works
-        const realmLinks = document.querySelectorAll('a[href="/realm"]');
-        realmLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
+        const realmLink = document.querySelector('a[href="/realm"]');
+        if (realmLink) {
+            realmLink.addEventListener('click', (e) => {
+                // Allow default navigation, but ensure it happens
                 window.location.href = '/realm';
             });
-        });
-        
-        // Initialize Unified Navigation Bar
-        (async () => {
-            try {
-                const { UnifiedNavBar } = await import('/atlas/ui/unified-nav.js');
-                const unifiedNav = new UnifiedNavBar('unified-nav-container');
-            } catch (error) {
-                console.error('Error loading Unified Nav:', error);
-            }
-        })();
-
-        // NeuroBlocks Link - Ensure navigation works
-        const neuroblockLinks = document.querySelectorAll('a[href="/neuroblock"]');
-        neuroblockLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                window.location.href = '/neuroblock';
-            });
-        });
+        }
         
         // Form Submit
-        const contactForm = document.getElementById('contactForm');
-        if (contactForm) {
-            contactForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                alert('Thank you! We\'ll be in touch within 24 hours.');
-            });
-        }
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Thank you! We\'ll be in touch within 24 hours.');
+        });
     </script>
-    <script type="module">
-        // Initialize Atlas Search
-        try {
-            const { AtlasWebsiteSearch } = await import('/atlas/ui/website-search.js');
-            const atlasSearch = new AtlasWebsiteSearch('atlas-website-search-container');
-        } catch (error) {
-            console.error('Error loading Atlas search:', error);
+    
+    <!-- Enhanced Features JavaScript -->
+    <script src="js/enhanced-features.js"></script>
+    <script src="js/ai-chat-widget.js"></script>
+    <script src="js/additional-features.js"></script>
+    <script src="js/advanced-3d-features.js"></script>
+    <script src="js/remaining-features.js"></script>
+    <script src="js/backend-features.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
+            });
         }
     </script>
 </body>
