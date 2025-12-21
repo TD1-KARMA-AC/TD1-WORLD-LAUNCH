@@ -1,0 +1,498 @@
+/* TD1.WORLD Enhanced Styles */
+/* All new visual enhancements */
+
+/* ============================================
+   ANIMATIONS & KEYFRAMES
+   ============================================ */
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+@keyframes liquid {
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+}
+
+@keyframes morph {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.1) rotate(5deg); }
+    50% { transform: scale(0.9) rotate(-5deg); }
+    75% { transform: scale(1.05) rotate(3deg); }
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* ============================================
+   ADVANCED HOVER STATES (3D TRANSFORMS)
+   ============================================ */
+
+.feature-card,
+.framework-item,
+.process-step,
+.stat-card {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover,
+.framework-item:hover,
+.process-step:hover {
+    transform: translateY(-8px) rotateX(2deg) rotateY(-2deg);
+    box-shadow: 0 30px 80px rgba(193, 162, 255, 0.3);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 30px 80px rgba(193, 162, 255, 0.4);
+}
+
+/* ============================================
+   LIQUID/MORPHING SHAPES
+   ============================================ */
+
+.liquid-shape {
+    position: relative;
+    overflow: hidden;
+    animation: liquid 8s ease-in-out infinite;
+}
+
+.liquid-shape::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(193, 162, 255, 0.1), transparent);
+    animation: morph 10s ease-in-out infinite;
+}
+
+/* ============================================
+   ADVANCED GRADIENT ANIMATIONS
+   ============================================ */
+
+.animated-gradient {
+    background: linear-gradient(-45deg, #C1A2FF, #B38DFF, #9B7AFF, #8B5AFF);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+}
+
+.shimmer-effect {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 3s infinite;
+}
+
+/* ============================================
+   SKELETON LOADERS
+   ============================================ */
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: 0.5em;
+}
+
+.skeleton-title {
+    height: 2em;
+    width: 60%;
+    margin-bottom: 1em;
+}
+
+.skeleton-image {
+    width: 100%;
+    aspect-ratio: 16/9;
+    margin-bottom: 1em;
+}
+
+/* ============================================
+   PROGRESSIVE IMAGE LOADING
+   ============================================ */
+
+.progressive-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.progressive-image img {
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.progressive-image img[data-src] {
+    opacity: 0;
+    filter: blur(20px);
+}
+
+.progressive-image img.loaded {
+    opacity: 1;
+    filter: blur(0);
+}
+
+.progressive-image::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(193, 162, 255, 0.1);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.progressive-image.loading::before {
+    opacity: 1;
+}
+
+/* ============================================
+   PARALLAX 3D LAYERS
+   ============================================ */
+
+.parallax-layer {
+    position: absolute;
+    will-change: transform;
+}
+
+.parallax-layer-1 {
+    transform: translateZ(0);
+}
+
+.parallax-layer-2 {
+    transform: translateZ(-100px) scale(1.1);
+}
+
+.parallax-layer-3 {
+    transform: translateZ(-200px) scale(1.2);
+}
+
+/* ============================================
+   TESTIMONIALS CAROUSEL
+   ============================================ */
+
+.testimonials-carousel {
+    position: relative;
+    overflow: hidden;
+    padding: 40px 0;
+}
+
+.testimonial-item {
+    position: absolute;
+    width: 100%;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.5s ease;
+}
+
+.testimonial-item.active {
+    opacity: 1;
+    transform: translateX(0);
+    position: relative;
+}
+
+.testimonial-item.prev {
+    transform: translateX(-100%);
+}
+
+.testimonial-content {
+    background: rgba(18, 24, 40, 0.8);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(193, 162, 255, 0.3);
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.testimonial-quote {
+    font-size: 1.25rem;
+    line-height: 1.8;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    font-style: italic;
+}
+
+.testimonial-author {
+    font-size: 1rem;
+    color: var(--td1-lilac);
+    font-weight: 600;
+}
+
+/* ============================================
+   TRUST BADGES & CUSTOMER LOGOS
+   ============================================ */
+
+.trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(18, 24, 40, 0.6);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(193, 162, 255, 0.3);
+    border-radius: 48px;
+    transition: all 0.3s ease;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.trust-badge:hover {
+    border-color: rgba(193, 162, 255, 0.6);
+    box-shadow: 0 0 30px rgba(193, 162, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.customer-logo {
+    filter: grayscale(100%) opacity(0.5);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.customer-logo:hover {
+    filter: grayscale(0%) opacity(1);
+    transform: scale(1.1);
+}
+
+/* ============================================
+   LIVE NOTIFICATIONS
+   ============================================ */
+
+.live-notification {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    background: rgba(18, 24, 40, 0.95);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(193, 162, 255, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: var(--text-primary);
+    font-size: 14px;
+    z-index: 999996;
+    animation: slideInRight 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 300px;
+}
+
+.live-notification::before {
+    content: '🔔';
+    margin-right: 8px;
+}
+
+/* ============================================
+   KEYBOARD NAVIGATION INDICATORS
+   ============================================ */
+
+.td1-keyboard-nav *:focus {
+    outline: 2px solid var(--td1-lilac);
+    outline-offset: 2px;
+}
+
+.td1-keyboard-nav button:focus,
+.td1-keyboard-nav a:focus {
+    box-shadow: 0 0 0 3px rgba(193, 162, 255, 0.3);
+}
+
+/* ============================================
+   HIGH CONTRAST MODE
+   ============================================ */
+
+.td1-high-contrast {
+    --text-primary: #FFFFFF;
+    --text-secondary: #CCCCCC;
+    --bg-dark: #000000;
+    --td1-lilac: #FF00FF;
+}
+
+.td1-high-contrast * {
+    border-color: var(--text-primary) !important;
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   VIDEO BACKGROUNDS
+   ============================================ */
+
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    opacity: 0.15;
+    filter: blur(2px);
+}
+
+.video-background-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 0%, var(--bg-dark) 100%);
+    z-index: 0;
+}
+
+/* ============================================
+   ANIMATED CHARTS/GRAPHS
+   ============================================ */
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: rgba(18, 24, 40, 0.6);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(193, 162, 255, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.chart-bar {
+    background: linear-gradient(180deg, var(--td1-lilac), var(--td1-purple));
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        height: 0;
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   3D NAVIGATION MENU
+   ============================================ */
+
+.nav-3d {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+.nav-3d .nav-link {
+    transform: translateZ(0);
+    transition: transform 0.3s ease;
+}
+
+.nav-3d .nav-link:hover {
+    transform: translateZ(20px) rotateY(5deg);
+}
+
+/* ============================================
+   3D BREADCRUMB
+   ============================================ */
+
+.breadcrumb-3d {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    perspective: 1000px;
+}
+
+.breadcrumb-item {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+}
+
+.breadcrumb-item:hover {
+    transform: translateZ(10px) rotateX(5deg);
+}
+
+.breadcrumb-separator {
+    color: var(--text-secondary);
+    margin: 0 8px;
+}
+
+/* ============================================
+   RESPONSIVE ENHANCEMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+    .testimonial-content {
+        padding: 24px;
+    }
+    
+    .chart-container {
+        height: 200px;
+    }
+    
+    .live-notification {
+        right: 10px;
+        bottom: 80px;
+        max-width: calc(100vw - 40px);
+    }
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+.will-change-transform {
+    will-change: transform;
+}
+
+.will-change-opacity {
+    will-change: opacity;
+}
+
+.gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
