@@ -79,16 +79,33 @@
   status = 200
 
 # NeuroBlock routing
-# Netlify serves static files FIRST, so /neuroblock/index.html and /neuroblock/* will be served automatically
-# These redirects only apply for SPA routing when files don't exist
+# Netlify serves static files FIRST, but we need to handle case sensitivity
+# Redirect lowercase /neuroblock to actual folder /Neuroblock
+# Also handle direct access to /Neuroblock (capital N)
 [[redirects]]
   from = "/neuroblock"
-  to = "/neuroblock/index.html"
+  to = "/Neuroblock/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/neuroblock/"
+  to = "/Neuroblock/index.html"
   status = 200
 
 [[redirects]]
   from = "/neuroblock/*"
-  to = "/neuroblock/index.html"
+  to = "/Neuroblock/:splat"
+  status = 200
+
+# Handle direct access with capital N (for consistency)
+[[redirects]]
+  from = "/Neuroblock"
+  to = "/Neuroblock/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/Neuroblock/"
+  to = "/Neuroblock/index.html"
   status = 200
 
 # Handle SPA routing - redirect root and other paths to index.html
