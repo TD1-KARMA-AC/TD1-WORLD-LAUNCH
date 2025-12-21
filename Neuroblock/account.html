@@ -46,17 +46,10 @@
 </head>
 <body>
     <!-- Unified Navigation will be injected here by unified-navigation.js -->
+    <!-- This will show Home button + Neuroblock tabs + Atlas search -->
     <div id="unified-nav-container"></div>
 
-    <!-- Secondary Navigation (only on NeuroBlock pages) - Below unified nav -->
-    <nav class="nav-secondary" style="position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; gap: 1rem; padding: 0.75rem 1.5rem; background: rgba(15, 15, 20, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(193, 162, 255, 0.2); border-radius: 16px;">
-        <a href="index.html" class="nav-secondary-link">Marketplace</a>
-        <a href="explore.html" class="nav-secondary-link">Explore</a>
-        <a href="submit.html" class="nav-secondary-link">Submit</a>
-        <a href="account.html" class="nav-secondary-link active">Account</a>
-    </nav>
-
-    <main style="padding-top: 180px; padding-bottom: 4rem;">
+    <main style="padding-top: 120px; padding-bottom: 4rem;">
         <div class="account-container">
             <h1 class="section-title" style="margin-bottom: 2rem;">My Account</h1>
 
@@ -221,7 +214,7 @@
     </script>
     
     <!-- Unified Navigation (must load first) -->
-    <script src="../js/unified-navigation.js"></script>
+    <script src="../js/unified-navigation.js?v=8"></script>
     <script>
         // Ensure navigation initializes
         if (typeof UnifiedNav !== 'undefined') {
