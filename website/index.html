@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>TD1.WORLD — The Architecture of Autonomous Intelligence</title>
     <!-- Enhanced Features CSS -->
     <link rel="stylesheet" href="css/enhanced-styles.css">
@@ -633,7 +633,6 @@
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
     
-    <!-- Original Navigation with Atlas Integration -->
     <!-- Unified Navigation will be injected here by unified-navigation.js -->
     <div id="unified-nav-container"></div>
     
@@ -1070,16 +1069,51 @@
     </script>
     
     <!-- Unified Navigation (must load first) -->
-    <script src="js/unified-navigation.js"></script>
+    <script src="js/unified-navigation.js?v=10"></script>
     <script>
-        // Ensure navigation initializes
-        if (typeof UnifiedNav !== 'undefined') {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
+        // Aggressive initialization with retry logic
+        (function initUnifiedNav() {
+            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                try {
+                    UnifiedNav.init();
+                    console.log('UnifiedNav initialized successfully');
+                    
+                    // Verify it was created
+                    setTimeout(() => {
+                        const navBar = document.getElementById('unified-nav-bar');
+                        if (!navBar) {
+                            console.warn('Nav bar not found after init, retrying...');
+                            setTimeout(initUnifiedNav, 200);
+                        }
+                    }, 100);
+                } catch (e) {
+                    console.error('Error initializing UnifiedNav:', e);
+                    setTimeout(initUnifiedNav, 200);
+                }
             } else {
-                UnifiedNav.init();
+                console.log('UnifiedNav not found, retrying...');
+                setTimeout(initUnifiedNav, 100);
             }
+        })();
+        
+        // Also try on DOMContentLoaded and window.load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                    UnifiedNav.init();
+                }
+            });
         }
+        
+        window.addEventListener('load', () => {
+            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                const navBar = document.getElementById('unified-nav-bar');
+                if (!navBar) {
+                    console.log('Nav bar missing on load, initializing...');
+                    UnifiedNav.init();
+                }
+            }
+        });
     </script>
     
     <!-- Enhanced Features JavaScript -->
@@ -1092,6 +1126,16 @@
     
     <!-- Shared Features (animations across all pages) -->
     <script src="js/shared-features.js"></script>
+    <script>
+        // Initialize shared features
+        if (typeof SharedFeatures !== 'undefined' && SharedFeatures.init) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => SharedFeatures.init());
+            } else {
+                SharedFeatures.init();
+            }
+        }
+    </script>
     
     <!-- Service Worker Registration -->
     <script>
