@@ -460,6 +460,64 @@
 }
 
 /* ============================================
+   FIX SPACING AND LAYOUT ISSUES
+   ============================================ */
+
+.section {
+    padding: 80px 2rem !important;
+    margin: 0 !important;
+    gap: 0 !important;
+}
+
+.section-header {
+    margin-bottom: 60px !important;
+}
+
+.process-steps {
+    margin-top: 40px !important;
+    margin-bottom: 40px !important;
+}
+
+.karma-preview,
+.tech-grid {
+    margin-top: 40px !important;
+    margin-bottom: 40px !important;
+}
+
+.contact-form {
+    margin-top: 40px !important;
+    margin-bottom: 40px !important;
+}
+
+/* Fix overlapping elements */
+.stat-card {
+    margin: 0 !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* Fix navigation bar spacing */
+.nav {
+    gap: 16px !important;
+    padding: 10px 20px !important;
+}
+
+.nav-link {
+    padding: 8px 14px !important;
+    margin: 0 !important;
+}
+
+/* Remove massive gaps */
+.hero {
+    padding-bottom: 60px !important;
+}
+
+.hero-stats {
+    margin-top: 2rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* ============================================
    RESPONSIVE ENHANCEMENTS
    ============================================ */
 
@@ -476,6 +534,21 @@
         right: 10px;
         bottom: 80px;
         max-width: calc(100vw - 40px);
+    }
+    
+    .section {
+        padding: 60px 1rem !important;
+    }
+    
+    .nav {
+        padding: 8px 12px !important;
+        gap: 8px !important;
+        font-size: 12px;
+    }
+    
+    .nav-link {
+        padding: 6px 10px !important;
+        font-size: 12px;
     }
 }
 

@@ -41,11 +41,12 @@
         }
         .particle {
             position: absolute;
-            width: 2px;
-            height: 2px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(193, 162, 255, 0.8) 0%, transparent 70%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%; /* SPHERES - like mini cells/worlds */
+            background: radial-gradient(circle at 30% 30%, rgba(193, 162, 255, 1), rgba(193, 162, 255, 0.6), transparent);
             animation: float-particle 12s infinite ease-in-out;
+            box-shadow: 0 0 8px rgba(193, 162, 255, 0.6), inset 0 0 4px rgba(193, 162, 255, 0.3);
         }
         
         /* Mouse Spotlight */
@@ -632,12 +633,14 @@
     <div class="neural-particles" id="particles"></div>
     <div class="mouse-spotlight" id="spotlight"></div>
     
-    <nav class="nav">
+    <!-- Original Navigation with Atlas Integration -->
+    <nav class="nav" id="mainNav">
         <a href="index.html" class="nav-link" style="color: var(--td1-lilac);">Home</a>
         <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
         <a href="/neuroblock" class="nav-link">NeuroBlock</a>
         <a href="/realm" class="nav-link">Realm</a>
         <a href="karma-ac.html" class="nav-link">Karma AC</a>
+        <a href="/atlas" class="nav-link">Atlas</a>
         <a href="ABOUT.html" class="nav-link">About</a>
     </nav>
     
@@ -913,15 +916,24 @@
     </section>
     
     <script>
-        // Neural Particles
+        // Neural Particles - SPHERES (like mini cells/worlds)
         const particles = document.getElementById('particles');
         for (let i = 0; i < 50; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
+            const size = 3 + Math.random() * 5; // Varying sizes like cells
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.borderRadius = '50%'; // SPHERES
             particle.style.left = `${Math.random() * 100}%`;
             particle.style.top = `${Math.random() * 100}%`;
             particle.style.animationDelay = `${Math.random() * 10}s`;
             particle.style.animationDuration = `${10 + Math.random() * 10}s`;
+            // Add inner glow for cell/world effect
+            particle.style.boxShadow = `
+                0 0 ${size * 2}px rgba(193, 162, 255, 0.6),
+                inset 0 0 ${size}px rgba(193, 162, 255, 0.3)
+            `;
             particles.appendChild(particle);
         }
         

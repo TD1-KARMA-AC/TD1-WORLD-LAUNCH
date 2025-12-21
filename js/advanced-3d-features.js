@@ -171,18 +171,20 @@
             const container = document.getElementById('particles');
             if (!container) return;
             
-            // Add more particles that react to mouse
+            // Add more particles that react to mouse - SPHERES (cells)
             for (let i = 0; i < 30; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'advanced-particle';
+                const size = 4 + Math.random() * 6; // Varying sizes
                 particle.style.cssText = `
                     position: absolute;
-                    width: 4px;
-                    height: 4px;
+                    width: ${size}px;
+                    height: ${size}px;
                     border-radius: 50%;
-                    background: radial-gradient(circle, rgba(193, 162, 255, 0.8), transparent);
+                    background: radial-gradient(circle at 30% 30%, rgba(193, 162, 255, 1), rgba(193, 162, 255, 0.6), transparent);
                     pointer-events: none;
                     transition: transform 0.1s ease;
+                    box-shadow: 0 0 ${size * 2}px rgba(193, 162, 255, 0.6), inset 0 0 ${size}px rgba(193, 162, 255, 0.3);
                 `;
                 
                 particle.style.left = Math.random() * 100 + '%';

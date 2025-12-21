@@ -14,30 +14,47 @@
         },
         
         createWidget() {
-            // Chat button
+            // Chat button - K ORB SYMBOL (Karma AC style)
             const button = document.createElement('button');
             button.id = 'td1-chat-button';
-            button.innerHTML = '💬';
+            button.innerHTML = '<span style="font-size: 32px; font-weight: 800; color: #C1A2FF; text-shadow: 0 0 20px rgba(193, 162, 255, 0.8);">K</span>';
             button.title = 'Chat with Karma AC';
             button.style.cssText = `
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
-                width: 60px;
-                height: 60px;
+                width: 70px;
+                height: 70px;
                 border-radius: 50%;
-                background: linear-gradient(135deg, #C1A2FF, #B38DFF);
-                border: none;
-                color: white;
-                font-size: 24px;
+                background: radial-gradient(circle at 30% 30%, rgba(193, 162, 255, 0.2), rgba(18, 24, 40, 0.9));
+                backdrop-filter: blur(20px);
+                border: 2px solid rgba(193, 162, 255, 0.5);
                 cursor: pointer;
                 z-index: 999995;
-                box-shadow: 0 8px 32px rgba(193, 162, 255, 0.4);
+                box-shadow: 
+                    0 0 40px rgba(193, 162, 255, 0.6),
+                    inset 0 0 30px rgba(193, 162, 255, 0.2),
+                    0 8px 32px rgba(0, 0, 0, 0.4);
                 transition: all 0.3s ease;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                animation: pulseGlow 3s ease-in-out infinite;
             `;
+            
+            // Add pulse animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulseGlow {
+                    0%, 100% { 
+                        box-shadow: 0 0 40px rgba(193, 162, 255, 0.6), inset 0 0 30px rgba(193, 162, 255, 0.2), 0 8px 32px rgba(0, 0, 0, 0.4);
+                    }
+                    50% { 
+                        box-shadow: 0 0 60px rgba(193, 162, 255, 0.9), inset 0 0 40px rgba(193, 162, 255, 0.4), 0 12px 48px rgba(0, 0, 0, 0.5);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
             
             button.addEventListener('click', () => this.toggle());
             button.addEventListener('mouseenter', () => {
