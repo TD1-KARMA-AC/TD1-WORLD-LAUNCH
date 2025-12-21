@@ -9,18 +9,27 @@
         
         // Helper to get relative path (same logic as createNav)
         getRelativePath(target) {
-            const currentPath = window.location.pathname;
-            const isRoot = currentPath === '/' || currentPath.endsWith('/index.html') || currentPath.endsWith('index.html');
-            const isWebsite = currentPath.includes('/website/') || currentPath.includes('website/');
-            const isNeuroblock = currentPath.includes('/neuroblock') || currentPath.includes('Neuroblock') || currentPath.includes('neuroblock');
-            const isRealm = currentPath.includes('/realm') || currentPath.includes('realm');
+            // More precise detection - check actual directory structure
+            const currentPath = window.location.pathname.toLowerCase();
+            const pathParts = currentPath.split('/').filter(p => p);
+            
+            // More precise detection - check actual directory structure
+            const isRoot = currentPath === '/' || 
+                          currentPath === '/index.html' || 
+                          (pathParts.length === 1 && pathParts[0] === 'index.html') ||
+                          (pathParts.length === 0);
+            
+            const isWebsite = pathParts.includes('website');
+            const isNeuroblock = pathParts.includes('neuroblock');
+            const isRealm = pathParts.includes('realm');
+            const isAtlas = pathParts.includes('atlas');
             
             if (isNeuroblock) {
                 if (target === 'index.html') return '../index.html';
                 if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
                 if (target === 'ABOUT.html') return '../website/ABOUT.html';
                 if (target === 'karma-ac.html') return '../website/karma-ac.html';
-                if (target === 'neuroblock') return 'index.html';
+                if (target === 'neuroblock') return './index.html'; // Stay on Neuroblock page
                 if (target === 'realm') return '../realm/index.html';
                 if (target === 'atlas') return '../atlas/index.html';
             } else if (isWebsite) {
@@ -52,22 +61,52 @@
         },
         
         init() {
-            this.createNav();
-            this.setupAtlasSearch();
-            this.setActiveLink();
+            console.log('UnifiedNav.init() called');
+            try {
+                this.createNav();
+                this.setupAtlasSearch();
+                this.setActiveLink();
+                console.log('UnifiedNav.init() completed successfully');
+            } catch (e) {
+                console.error('Error in UnifiedNav.init():', e);
+                throw e;
+            }
         },
         
         createNav() {
-            // Remove old nav if exists
-            const oldNav = document.querySelector('.nav, .unified-nav-bar');
-            if (oldNav) oldNav.remove();
+            // Remove ALL old nav elements (but keep nav-secondary for Neuroblock pages)
+            const allNavs = document.querySelectorAll('nav');
+            allNavs.forEach(nav => {
+                // Keep nav-secondary and unified-nav-bar, remove everything else
+                if (!nav.classList.contains('nav-secondary') && !nav.classList.contains('unified-nav-bar')) {
+                    nav.remove();
+                }
+            });
             
-            // Detect current page location to fix paths
-            const currentPath = window.location.pathname;
-            const isRoot = currentPath === '/' || currentPath.endsWith('/index.html') || currentPath.endsWith('index.html');
-            const isWebsite = currentPath.includes('/website/') || currentPath.includes('website/');
-            const isNeuroblock = currentPath.includes('/neuroblock') || currentPath.includes('Neuroblock') || currentPath.includes('neuroblock');
-            const isRealm = currentPath.includes('/realm') || currentPath.includes('realm');
+            // Also remove any old unified-nav-bar that might exist
+            const oldUnifiedNav = document.getElementById('unified-nav-bar');
+            if (oldUnifiedNav && oldUnifiedNav.parentNode) {
+                oldUnifiedNav.remove();
+            }
+            
+            // Remove any nav with class "nav" that's not unified-nav-bar or nav-secondary
+            const oldNavClass = document.querySelectorAll('nav.nav:not(.unified-nav-bar):not(.nav-secondary)');
+            oldNavClass.forEach(nav => nav.remove());
+            
+            // Detect current page location to fix paths - more precise detection
+            const currentPath = window.location.pathname.toLowerCase();
+            const pathParts = currentPath.split('/').filter(p => p);
+            
+            // More precise detection - check actual directory structure
+            const isRoot = currentPath === '/' || 
+                          currentPath === '/index.html' || 
+                          (pathParts.length === 1 && pathParts[0] === 'index.html') ||
+                          (pathParts.length === 0);
+            
+            const isWebsite = pathParts.includes('website');
+            const isNeuroblock = pathParts.includes('neuroblock');
+            const isRealm = pathParts.includes('realm');
+            const isAtlas = pathParts.includes('atlas');
             
             // Calculate correct paths based on current location
             const getPath = (target) => {
@@ -77,7 +116,7 @@
                     if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
                     if (target === 'ABOUT.html') return '../website/ABOUT.html';
                     if (target === 'karma-ac.html') return '../website/karma-ac.html';
-                    if (target === 'neuroblock') return 'index.html';
+                    if (target === 'neuroblock') return './index.html'; // Stay on Neuroblock page
                     if (target === 'realm') return '../realm/index.html';
                     if (target === 'atlas') return '../atlas/index.html';
                 } else if (isWebsite) {
@@ -111,17 +150,26 @@
                 return target;
             };
             
-            // Find or create nav container
+            // Find or create nav container - MUST be first child of body
             let navContainer = document.getElementById('unified-nav-container');
             if (!navContainer) {
                 navContainer = document.createElement('div');
                 navContainer.id = 'unified-nav-container';
-                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
-                document.body.insertBefore(navContainer, document.body.firstChild);
+                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001;';
+                // Insert at the very beginning of body
+                if (document.body.firstChild) {
+                    document.body.insertBefore(navContainer, document.body.firstChild);
+                } else {
+                    document.body.appendChild(navContainer);
+                }
             } else {
-                // Clear existing content
+                // Clear existing content but keep container
                 navContainer.innerHTML = '';
-                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
+                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001;';
+                // Move to first position if not already
+                if (navContainer.parentNode && navContainer !== navContainer.parentNode.firstChild) {
+                    navContainer.parentNode.insertBefore(navContainer, navContainer.parentNode.firstChild);
+                }
             }
             
             // Create nav bar
@@ -475,12 +523,13 @@
         },
         
         searchProducts(query) {
+            // Use getRelativePath for all URLs to ensure correct paths based on current location
             const products = [
-                { title: 'TD1.MEM', description: 'AI Memory-as-a-Service', url: 'PRODUCTS_INDEX.html#td1-mem' },
-                { title: 'TD1.STATE', description: 'Emotional State Engine', url: 'PRODUCTS_INDEX.html#td1-state' },
-                { title: 'TD1.ROUTER', description: 'Multi-Model Router', url: 'PRODUCTS_INDEX.html#td1-router' },
-                { title: 'TD1.GRAPH', description: 'Graph Knowledge Engine', url: 'PRODUCTS_INDEX.html#td1-graph' },
-                { title: 'TD1.MIRROR', description: 'Perspective Transformation', url: 'PRODUCTS_INDEX.html#td1-mirror' },
+                { title: 'TD1.MEM', description: 'AI Memory-as-a-Service', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-mem' },
+                { title: 'TD1.STATE', description: 'Emotional State Engine', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-state' },
+                { title: 'TD1.ROUTER', description: 'Multi-Model Router', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-router' },
+                { title: 'TD1.GRAPH', description: 'Graph Knowledge Engine', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-graph' },
+                { title: 'TD1.MIRROR', description: 'Perspective Transformation', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-mirror' },
                 { title: 'TD1.INTENT', description: 'Intent & Emotion Parser', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-intent' },
                 { title: 'Karma AC', description: 'Autonomous AI Companion', url: this.getRelativePath('karma-ac.html') },
                 { title: 'NeuroBlock', description: 'AI Block Marketplace', url: this.getRelativePath('neuroblock') },
@@ -496,14 +545,50 @@
         }
     };
     
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
-    } else {
-        UnifiedNav.init();
+    // Export first so it's available immediately
+    window.UnifiedNav = UnifiedNav;
+    
+    // Initialize when DOM is ready - with retry logic
+    function initializeNav() {
+        // Wait for body to exist
+        if (!document.body) {
+            setTimeout(initializeNav, 50);
+            return;
+        }
+        
+        // Check if container exists or create it
+        let container = document.getElementById('unified-nav-container');
+        if (!container) {
+            // Create container if it doesn't exist
+            container = document.createElement('div');
+            container.id = 'unified-nav-container';
+            document.body.insertBefore(container, document.body.firstChild);
+        }
+        
+        // Initialize nav
+        try {
+            UnifiedNav.init();
+            console.log('UnifiedNav initialized successfully');
+        } catch (e) {
+            console.error('Error initializing UnifiedNav:', e);
+            setTimeout(initializeNav, 100);
+        }
     }
     
-    // Export
-    window.UnifiedNav = UnifiedNav;
+    // Start initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeNav);
+    } else {
+        // If DOM is already loaded, try immediately
+        setTimeout(initializeNav, 0);
+    }
+    
+    // Also try on window load as backup
+    window.addEventListener('load', () => {
+        if (!document.getElementById('unified-nav-bar')) {
+            console.log('Nav not found on load, retrying...');
+            initializeNav();
+        }
+    });
 })();
 

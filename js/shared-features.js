@@ -90,16 +90,25 @@
         },
         
         addPageTransitions() {
-            // Smooth transitions between pages
-            document.querySelectorAll('a[href^="/"], a[href^="./"], a[href^="../"]').forEach(link => {
+            // Smooth transitions between pages - but don't break navigation
+            document.querySelectorAll('a[href]').forEach(link => {
                 if (link.hasAttribute('data-no-transition')) return;
+                if (link.getAttribute('href').startsWith('#')) return;
+                if (link.getAttribute('href').startsWith('javascript:')) return;
+                if (link.getAttribute('target') === '_blank') return;
                 
                 link.addEventListener('click', (e) => {
                     const href = link.getAttribute('href');
-                    if (href && !href.startsWith('#') && href !== 'javascript:void(0)') {
-                        // Add fade out
-                        document.body.style.transition = 'opacity 0.3s ease';
-                        document.body.style.opacity = '0.7';
+                    // Only add transition for same-domain links
+                    if (href && !href.startsWith('http') && !href.startsWith('mailto:')) {
+                        // Let the link work normally - don't prevent default
+                        // Just add a subtle fade
+                        setTimeout(() => {
+                            if (document.body) {
+                                document.body.style.transition = 'opacity 0.2s ease';
+                                document.body.style.opacity = '0.9';
+                            }
+                        }, 50);
                     }
                 });
             });
