@@ -27,32 +27,54 @@
     </nav>
 
     <main style="padding-top: 140px;">
-        <div class="container">
-            <h1 class="section-title" style="margin-bottom: 2rem;">Explore NeuroBlocks</h1>
-            
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search NeuroBlocks..." class="search-input">
-                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-            </div>
+        <!-- Marketplace Section (Visible on Load) -->
+        <section class="explore-section" id="marketplace-section">
+            <div class="container">
+                <h1 class="section-title" style="margin-bottom: 2rem;">Explore NeuroBlocks</h1>
+                
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search NeuroBlocks..." class="search-input">
+                    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
 
-            <div class="categories">
-                <button class="category-btn active" data-category="all">🧩 All Blocks</button>
-                <button class="category-btn" data-category="nlp">💬 NLP</button>
-                <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
-                <button class="category-btn" data-category="agents">🤖 AI Agents</button>
-                <button class="category-btn" data-category="data">📊 Data Processing</button>
-                <button class="category-btn" data-category="utils">🔧 Utilities</button>
-            </div>
+                <div class="categories">
+                    <button class="category-btn active" data-category="all">🧩 All Blocks</button>
+                    <button class="category-btn" data-category="nlp">💬 NLP</button>
+                    <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
+                    <button class="category-btn" data-category="agents">🤖 AI Agents</button>
+                    <button class="category-btn" data-category="data">📊 Data Processing</button>
+                    <button class="category-btn" data-category="utils">🔧 Utilities</button>
+                </div>
 
-            <div class="blocks-grid" id="blocksGrid">
-                <div class="empty-state">
-                    <p>No NeuroBlocks found yet.</p>
-                    <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                <div class="blocks-grid" id="blocksGrid">
+                    <div class="empty-state">
+                        <p>No NeuroBlocks found yet.</p>
+                        <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- TD1 Products Section (Revealed on Scroll) -->
+        <section class="explore-section" id="td1-products-section" style="padding-top: 4rem; margin-top: 6rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="container">
+                <h2 class="section-title" style="margin-bottom: 1rem;">TD1.WORLD Products</h2>
+                <p style="text-align: center; color: #A0A0A0; margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+                    The complete TD1.WORLD suite. 26 forbidden AGI blocks + 24 proven products.<br/>
+                    <strong style="color: #C1A2FF;">$2.8M of development investment. 86,000+ lines of code.</strong><br/>
+                    One-time purchase. Complete ownership. Premium quality.
+                </p>
+                
+                <!-- TD1 Products will be loaded here via JavaScript -->
+                <div id="td1-products-container" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 4rem 2rem;">
+                        <p style="color: #A0A0A0; margin-bottom: 2rem;">Loading TD1 Products...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <footer class="footer">
@@ -101,6 +123,27 @@
                 this.style.transform = 'translateY(0)';
             });
         });
+
+        // Load TD1 Products when section comes into view
+        const observerOptions = {
+            root: null,
+            rootMargin: '200px',
+            threshold: 0.1
+        };
+
+        const td1Section = document.getElementById('td1-products-section');
+        if (td1Section) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && typeof loadTD1Products === 'function') {
+                        loadTD1Products();
+                        observer.unobserve(entry.target); // Only load once
+                    }
+                });
+            }, observerOptions);
+            
+            observer.observe(td1Section);
+        }
     </script>
 </body>
 </html>
