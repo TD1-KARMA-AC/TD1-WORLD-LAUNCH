@@ -7,6 +7,50 @@
     const UnifiedNav = {
         currentPage: window.location.pathname.split('/').pop() || 'index.html',
         
+        // Helper to get relative path (same logic as createNav)
+        getRelativePath(target) {
+            const currentPath = window.location.pathname;
+            const isRoot = currentPath === '/' || currentPath.endsWith('/index.html') || currentPath.endsWith('index.html');
+            const isWebsite = currentPath.includes('/website/') || currentPath.includes('website/');
+            const isNeuroblock = currentPath.includes('/neuroblock') || currentPath.includes('Neuroblock') || currentPath.includes('neuroblock');
+            const isRealm = currentPath.includes('/realm') || currentPath.includes('realm');
+            
+            if (isNeuroblock) {
+                if (target === 'index.html') return '../index.html';
+                if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                if (target === 'karma-ac.html') return '../website/karma-ac.html';
+                if (target === 'neuroblock') return 'index.html';
+                if (target === 'realm') return '../realm/index.html';
+                if (target === 'atlas') return '../atlas/index.html';
+            } else if (isWebsite) {
+                if (target === 'index.html') return '../index.html';
+                if (target === 'PRODUCTS_INDEX.html') return 'PRODUCTS_INDEX.html';
+                if (target === 'ABOUT.html') return 'ABOUT.html';
+                if (target === 'karma-ac.html') return 'karma-ac.html';
+                if (target === 'neuroblock') return '../Neuroblock/index.html';
+                if (target === 'realm') return '../realm/index.html';
+                if (target === 'atlas') return '../atlas/index.html';
+            } else if (isRealm) {
+                if (target === 'index.html') return '../index.html';
+                if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                if (target === 'karma-ac.html') return '../website/karma-ac.html';
+                if (target === 'neuroblock') return '../Neuroblock/index.html';
+                if (target === 'realm') return 'index.html';
+                if (target === 'atlas') return '../atlas/index.html';
+            } else {
+                if (target === 'index.html') return 'index.html';
+                if (target === 'PRODUCTS_INDEX.html') return 'website/PRODUCTS_INDEX.html';
+                if (target === 'ABOUT.html') return 'website/ABOUT.html';
+                if (target === 'karma-ac.html') return 'website/karma-ac.html';
+                if (target === 'neuroblock') return 'Neuroblock/index.html';
+                if (target === 'realm') return 'realm/index.html';
+                if (target === 'atlas') return 'atlas/index.html';
+            }
+            return target;
+        },
+        
         init() {
             this.createNav();
             this.setupAtlasSearch();
@@ -18,10 +62,67 @@
             const oldNav = document.querySelector('.nav, .unified-nav-bar');
             if (oldNav) oldNav.remove();
             
-            // Create nav container
-            const navContainer = document.createElement('div');
-            navContainer.id = 'unified-nav-container';
-            navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
+            // Detect current page location to fix paths
+            const currentPath = window.location.pathname;
+            const isRoot = currentPath === '/' || currentPath.endsWith('/index.html') || currentPath.endsWith('index.html');
+            const isWebsite = currentPath.includes('/website/') || currentPath.includes('website/');
+            const isNeuroblock = currentPath.includes('/neuroblock') || currentPath.includes('Neuroblock') || currentPath.includes('neuroblock');
+            const isRealm = currentPath.includes('/realm') || currentPath.includes('realm');
+            
+            // Calculate correct paths based on current location
+            const getPath = (target) => {
+                if (isNeuroblock) {
+                    // Inside Neuroblock folder
+                    if (target === 'index.html') return '../index.html';
+                    if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                    if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                    if (target === 'karma-ac.html') return '../website/karma-ac.html';
+                    if (target === 'neuroblock') return 'index.html';
+                    if (target === 'realm') return '../realm/index.html';
+                    if (target === 'atlas') return '../atlas/index.html';
+                } else if (isWebsite) {
+                    // Inside website folder
+                    if (target === 'index.html') return '../index.html';
+                    if (target === 'PRODUCTS_INDEX.html') return 'PRODUCTS_INDEX.html';
+                    if (target === 'ABOUT.html') return 'ABOUT.html';
+                    if (target === 'karma-ac.html') return 'karma-ac.html';
+                    if (target === 'neuroblock') return '../Neuroblock/index.html';
+                    if (target === 'realm') return '../realm/index.html';
+                    if (target === 'atlas') return '../atlas/index.html';
+                } else if (isRealm) {
+                    // Inside realm folder
+                    if (target === 'index.html') return '../index.html';
+                    if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                    if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                    if (target === 'karma-ac.html') return '../website/karma-ac.html';
+                    if (target === 'neuroblock') return '../Neuroblock/index.html';
+                    if (target === 'realm') return 'index.html';
+                    if (target === 'atlas') return '../atlas/index.html';
+                } else {
+                    // Root level
+                    if (target === 'index.html') return 'index.html';
+                    if (target === 'PRODUCTS_INDEX.html') return 'website/PRODUCTS_INDEX.html';
+                    if (target === 'ABOUT.html') return 'website/ABOUT.html';
+                    if (target === 'karma-ac.html') return 'website/karma-ac.html';
+                    if (target === 'neuroblock') return 'Neuroblock/index.html';
+                    if (target === 'realm') return 'realm/index.html';
+                    if (target === 'atlas') return 'atlas/index.html';
+                }
+                return target;
+            };
+            
+            // Find or create nav container
+            let navContainer = document.getElementById('unified-nav-container');
+            if (!navContainer) {
+                navContainer = document.createElement('div');
+                navContainer.id = 'unified-nav-container';
+                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
+                document.body.insertBefore(navContainer, document.body.firstChild);
+            } else {
+                // Clear existing content
+                navContainer.innerHTML = '';
+                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
+            }
             
             // Create nav bar
             const nav = document.createElement('nav');
@@ -31,31 +132,31 @@
             nav.innerHTML = `
                 <!-- Left: Navigation Links -->
                 <div class="unified-nav-links">
-                    <a href="index.html" class="unified-nav-link" data-page="index.html">
+                    <a href="${getPath('index.html')}" class="unified-nav-link" data-page="index.html">
                         <span class="unified-nav-icon">🏠</span>
                         <span class="unified-nav-text">Home</span>
                     </a>
-                    <a href="PRODUCTS_INDEX.html" class="unified-nav-link" data-page="PRODUCTS_INDEX.html">
+                    <a href="${getPath('PRODUCTS_INDEX.html')}" class="unified-nav-link" data-page="PRODUCTS_INDEX.html">
                         <span class="unified-nav-icon">📦</span>
                         <span class="unified-nav-text">Products</span>
                     </a>
-                    <a href="/neuroblock" class="unified-nav-link" data-page="neuroblock">
+                    <a href="${getPath('neuroblock')}" class="unified-nav-link" data-page="neuroblock">
                         <span class="unified-nav-icon">🧩</span>
                         <span class="unified-nav-text">NeuroBlock</span>
                     </a>
-                    <a href="/realm" class="unified-nav-link" data-page="realm">
+                    <a href="${getPath('realm')}" class="unified-nav-link" data-page="realm">
                         <span class="unified-nav-icon">💬</span>
                         <span class="unified-nav-text">Realm</span>
                     </a>
-                    <a href="karma-ac.html" class="unified-nav-link" data-page="karma-ac.html">
+                    <a href="${getPath('karma-ac.html')}" class="unified-nav-link" data-page="karma-ac.html">
                         <span class="unified-nav-icon">⚡</span>
                         <span class="unified-nav-text">Karma AC</span>
                     </a>
-                    <a href="/atlas" class="unified-nav-link" data-page="atlas">
+                    <a href="${getPath('atlas')}" class="unified-nav-link" data-page="atlas">
                         <span class="unified-nav-icon">🗺️</span>
                         <span class="unified-nav-text">Atlas</span>
                     </a>
-                    <a href="ABOUT.html" class="unified-nav-link" data-page="ABOUT.html">
+                    <a href="${getPath('ABOUT.html')}" class="unified-nav-link" data-page="ABOUT.html">
                         <span class="unified-nav-icon">ℹ️</span>
                         <span class="unified-nav-text">About</span>
                     </a>
@@ -89,7 +190,6 @@
             `;
             
             navContainer.appendChild(nav);
-            document.body.insertBefore(navContainer, document.body.firstChild);
             
             // Add styles if not already loaded
             this.injectStyles();
@@ -352,9 +452,9 @@
                     <div style="padding: 20px; text-align: center;">
                         <p style="color: #A0A0A0; margin-bottom: 12px;">No results found for "${query}"</p>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <a href="/karma-ac.html" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">💬 Discuss with Karma AC</a>
-                            <a href="/realm" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">💬 Discuss on Realm</a>
-                            <a href="/neuroblock/submit.html" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">🧩 Submit as NeuroBlock</a>
+                            <a href="${this.getRelativePath('karma-ac.html')}" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">💬 Discuss with Karma AC</a>
+                            <a href="${this.getRelativePath('realm')}" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">💬 Discuss on Realm</a>
+                            <a href="${this.getRelativePath('neuroblock').replace('index.html', '')}submit.html" style="padding: 12px; background: rgba(193, 162, 255, 0.1); border-radius: 8px; color: #C1A2FF; text-decoration: none;">🧩 Submit as NeuroBlock</a>
                         </div>
                     </div>
                 `;
@@ -381,11 +481,11 @@
                 { title: 'TD1.ROUTER', description: 'Multi-Model Router', url: 'PRODUCTS_INDEX.html#td1-router' },
                 { title: 'TD1.GRAPH', description: 'Graph Knowledge Engine', url: 'PRODUCTS_INDEX.html#td1-graph' },
                 { title: 'TD1.MIRROR', description: 'Perspective Transformation', url: 'PRODUCTS_INDEX.html#td1-mirror' },
-                { title: 'TD1.INTENT', description: 'Intent & Emotion Parser', url: 'PRODUCTS_INDEX.html#td1-intent' },
-                { title: 'Karma AC', description: 'Autonomous AI Companion', url: 'karma-ac.html' },
-                { title: 'NeuroBlock', description: 'AI Block Marketplace', url: '/neuroblock' },
-                { title: 'Realm', description: 'Community Discussion', url: '/realm' },
-                { title: 'Atlas', description: 'Spatial Navigation', url: '/atlas' }
+                { title: 'TD1.INTENT', description: 'Intent & Emotion Parser', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-intent' },
+                { title: 'Karma AC', description: 'Autonomous AI Companion', url: this.getRelativePath('karma-ac.html') },
+                { title: 'NeuroBlock', description: 'AI Block Marketplace', url: this.getRelativePath('neuroblock') },
+                { title: 'Realm', description: 'Community Discussion', url: this.getRelativePath('realm') },
+                { title: 'Atlas', description: 'Spatial Navigation', url: this.getRelativePath('atlas') }
             ];
             
             const q = query.toLowerCase();
