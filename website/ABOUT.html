@@ -1041,12 +1041,18 @@
             observer.observe(section);
         });
     </script>
+    <!-- Unified Navigation with Atlas (Standalone) -->
+    <script src="/js/unified-navigation.js"></script>
+    <script src="/js/shared-features.js"></script>
+    
     <script type="module">
-        // Initialize Unified Navigation Bar
+        // Legacy module import - kept for compatibility
         (async () => {
             try {
-                const { UnifiedNavBar } = await import('/atlas/ui/unified-nav.js');
-                const unifiedNav = new UnifiedNavBar('unified-nav-container');
+                // Unified nav is now loaded via unified-navigation.js
+                if (window.UnifiedNav) {
+                    console.log('Unified navigation loaded');
+                }
             } catch (error) {
                 console.error('Error loading Unified Nav:', error);
             }
