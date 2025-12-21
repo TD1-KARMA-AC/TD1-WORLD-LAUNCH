@@ -671,16 +671,9 @@
     </style>
 </head>
 <body>
-    <div class="neural-particles" id="particles"></div>
-    <div class="mouse-spotlight" id="spotlight"></div>
-
-    <nav class="nav glass">
-        <a href="index.html" class="nav-link">Home</a>
-        <a href="/realm" class="nav-link">Realm</a>
-        <a href="karma-ac.html" class="nav-link">Karma AC</a>
-        <a href="PRODUCTS_INDEX.html" class="nav-link">Products</a>
-        <a href="ABOUT.html" class="nav-link" style="color: var(--td1-lilac);">About</a>
-    </nav>
+    <!-- Unified Navigation will be injected here by unified-navigation.js -->
+    <div id="unified-nav-container"></div>
+    <!-- Particles and spotlight injected by shared-features.js -->
 
     <!-- Hero Section -->
     <section class="hero">
@@ -1042,21 +1035,31 @@
         });
     </script>
     <!-- Unified Navigation with Atlas (Standalone) -->
-    <script src="/js/unified-navigation.js"></script>
+    <script src="/js/unified-navigation.js?v=10"></script>
     <script src="/js/shared-features.js"></script>
     
-    <script type="module">
-        // Legacy module import - kept for compatibility
-        (async () => {
-            try {
-                // Unified nav is now loaded via unified-navigation.js
-                if (window.UnifiedNav) {
-                    console.log('Unified navigation loaded');
-                }
-            } catch (error) {
-                console.error('Error loading Unified Nav:', error);
+    <!-- Unified Navigation with Atlas (Standalone) -->
+    <script src="/js/unified-navigation.js?v=10"></script>
+    <script>
+        // Ensure navigation initializes
+        if (typeof UnifiedNav !== 'undefined') {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
+            } else {
+                UnifiedNav.init();
             }
-        })();
+        }
+    </script>
+    <script src="/js/shared-features.js"></script>
+    <script>
+        // Initialize shared features
+        if (typeof SharedFeatures !== 'undefined' && SharedFeatures.init) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => SharedFeatures.init());
+            } else {
+                SharedFeatures.init();
+            }
+        }
     </script>
 </body>
 </html>

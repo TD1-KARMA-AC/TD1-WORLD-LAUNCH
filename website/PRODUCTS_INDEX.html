@@ -2968,21 +2968,31 @@
     </div>
     
     <!-- Unified Navigation with Atlas (Standalone) -->
-    <script src="/js/unified-navigation.js"></script>
+    <script src="/js/unified-navigation.js?v=10"></script>
     <script src="/js/shared-features.js"></script>
     
-    <script type="module">
-        // Legacy module import - kept for compatibility
-        (async () => {
-            try {
-                // Unified nav is now loaded via unified-navigation.js
-                if (window.UnifiedNav) {
-                    console.log('Unified navigation loaded');
-                }
-            } catch (error) {
-                console.error('Error loading Unified Nav:', error);
+    <!-- Unified Navigation with Atlas (Standalone) -->
+    <script src="/js/unified-navigation.js?v=10"></script>
+    <script>
+        // Ensure navigation initializes
+        if (typeof UnifiedNav !== 'undefined') {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
+            } else {
+                UnifiedNav.init();
             }
-        })();
+        }
+    </script>
+    <script src="/js/shared-features.js"></script>
+    <script>
+        // Initialize shared features
+        if (typeof SharedFeatures !== 'undefined' && SharedFeatures.init) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => SharedFeatures.init());
+            } else {
+                SharedFeatures.init();
+            }
+        }
     </script>
 </body>
 </html>
