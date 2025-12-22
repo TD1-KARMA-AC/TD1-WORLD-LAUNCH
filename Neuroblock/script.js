@@ -21,25 +21,31 @@ function initTabs() {
     // This function is kept for backwards compatibility but does nothing
 }
 
-// Category filtering
+// Category filtering and marketplace controls
 document.addEventListener('DOMContentLoaded', function() {
     createParticles();
-    initTabs(); // No longer needed but kept for compatibility
+    initTabs();
+    
+    // Initialize marketplace stats
+    updateMarketplaceStats();
+    
+    // Load featured/trending sections
+    loadFeaturedSections();
     
     const categoryButtons = document.querySelectorAll('.category-btn');
     const blocksGrid = document.getElementById('blocksGrid');
     
     categoryButtons.forEach(btn => {
         btn.addEventListener('click', function() {
-            // Remove active class from all buttons
             categoryButtons.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked button
             this.classList.add('active');
             
             const category = this.dataset.category;
             const searchInput = document.getElementById('searchInput');
             const searchQuery = searchInput ? searchInput.value : '';
-            filterBlocks(category, searchQuery);
+            const sortSelect = document.getElementById('sortSelect');
+            const sortBy = sortSelect ? sortSelect.value : 'popularity';
+            filterBlocks(category, searchQuery, sortBy);
         });
     });
     
@@ -49,9 +55,57 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.addEventListener('input', function() {
             const query = this.value;
             const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
-            filterBlocks(activeCategory, query);
+            const sortSelect = document.getElementById('sortSelect');
+            const sortBy = sortSelect ? sortSelect.value : 'popularity';
+            filterBlocks(activeCategory, query, sortBy);
         });
     }
+    
+    // Sort functionality
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
+            const searchInput = document.getElementById('searchInput');
+            const searchQuery = searchInput ? searchInput.value : '';
+            filterBlocks(activeCategory, searchQuery, this.value);
+        });
+    }
+    
+    // Advanced filters toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const advancedFilters = document.getElementById('advancedFilters');
+    if (filterToggle && advancedFilters) {
+        filterToggle.addEventListener('click', function() {
+            this.classList.toggle('active');
+            advancedFilters.classList.toggle('active');
+        });
+    }
+    
+    // Advanced filter inputs
+    const minPriceInput = document.getElementById('minPrice');
+    const maxPriceInput = document.getElementById('maxPrice');
+    const minRatingInput = document.getElementById('minRating');
+    const licenseSelect = document.getElementById('licenseFilter');
+    
+    [minPriceInput, maxPriceInput, minRatingInput, licenseSelect].forEach(input => {
+        if (input) {
+            input.addEventListener('change', function() {
+                const filters = {
+                    minPrice: minPriceInput ? parseFloat(minPriceInput.value) || 0 : 0,
+                    maxPrice: maxPriceInput ? parseFloat(maxPriceInput.value) || 1000 : 1000,
+                    minRating: minRatingInput ? parseFloat(minRatingInput.value) || 0 : 0,
+                    license: licenseSelect ? licenseSelect.value : 'all'
+                };
+                const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
+                const searchInput = document.getElementById('searchInput');
+                const searchQuery = searchInput ? searchInput.value : '';
+                const sortSelect = document.getElementById('sortSelect');
+                const sortBy = sortSelect ? sortSelect.value : 'popularity';
+                filterBlocks(activeCategory, searchQuery, sortBy, filters);
+            });
+        }
+    });
     
     // Lazy load TD1 Products when section comes into view (if not already loaded)
     const td1Section = document.getElementById('td1-products-section');
@@ -81,33 +135,103 @@ function getStoredBlocks() {
     if (stored) {
         return JSON.parse(stored);
     }
-    // Initialize with sample blocks
+    // Initialize with sample blocks (BeatStars-level quality)
     const sampleBlocks = [
         {
             id: 1,
             name: 'NLP Sentiment Analyzer',
             creator: 'AI Developer',
-            description: 'Advanced sentiment analysis block for processing text data with high accuracy.',
+            description: 'Advanced sentiment analysis block for processing text data with high accuracy. Perfect for social media monitoring and customer feedback analysis.',
             price: 29.99,
             category: 'nlp',
             rating: 4.5,
-            downloads: 120,
+            downloads: 1247,
             version: '1.0.0',
             license: 'MIT',
-            tags: ['nlp', 'sentiment', 'analysis']
+            tags: ['nlp', 'sentiment', 'analysis', 'text-processing'],
+            createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: true,
+            trending: true
         },
         {
             id: 2,
-            name: 'Image Classifier',
+            name: 'Image Classifier Pro',
             creator: 'Vision Pro',
-            description: 'State-of-the-art image classification using deep learning models.',
+            description: 'State-of-the-art image classification using deep learning models. Supports 1000+ categories with 95% accuracy.',
             price: 49.99,
             category: 'vision',
             rating: 4.8,
-            downloads: 89,
+            downloads: 892,
             version: '1.2.0',
             license: 'Apache-2.0',
-            tags: ['vision', 'classification', 'deep-learning']
+            tags: ['vision', 'classification', 'deep-learning', 'cnn'],
+            createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: true,
+            trending: false
+        },
+        {
+            id: 3,
+            name: 'AI Agent Framework',
+            creator: 'Agent Labs',
+            description: 'Complete framework for building autonomous AI agents with memory, planning, and tool usage capabilities.',
+            price: 79.99,
+            category: 'agents',
+            rating: 4.7,
+            downloads: 456,
+            version: '2.1.0',
+            license: 'Proprietary',
+            tags: ['agents', 'autonomous', 'framework', 'memory'],
+            createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: false,
+            trending: true
+        },
+        {
+            id: 4,
+            name: 'Data Pipeline Builder',
+            creator: 'DataFlow Inc',
+            description: 'Visual pipeline builder for ETL processes. Drag-and-drop interface with 50+ connectors.',
+            price: 39.99,
+            category: 'data',
+            rating: 4.6,
+            downloads: 678,
+            version: '1.5.0',
+            license: 'MIT',
+            tags: ['data', 'etl', 'pipeline', 'processing'],
+            createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: false,
+            trending: false
+        },
+        {
+            id: 5,
+            name: 'Code Generator Utility',
+            creator: 'DevTools',
+            description: 'Generate boilerplate code for multiple languages. Supports Python, JavaScript, TypeScript, and more.',
+            price: 19.99,
+            category: 'utils',
+            rating: 4.4,
+            downloads: 1234,
+            version: '1.0.0',
+            license: 'MIT',
+            tags: ['utils', 'code-generation', 'productivity'],
+            createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: false,
+            trending: false
+        },
+        {
+            id: 6,
+            name: 'Real-time Chat Translator',
+            creator: 'Lingua AI',
+            description: 'Translate conversations in real-time across 50+ languages with context preservation.',
+            price: 34.99,
+            category: 'nlp',
+            rating: 4.9,
+            downloads: 2103,
+            version: '2.0.0',
+            license: 'Apache-2.0',
+            tags: ['nlp', 'translation', 'real-time', 'chat'],
+            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            featured: true,
+            trending: true
         }
     ];
     saveBlocks(sampleBlocks);
@@ -133,22 +257,38 @@ function addBlock(block) {
     return newBlock;
 }
 
-// Filter blocks by category and search query
-function filterBlocks(category, searchQuery) {
+// Filter and sort blocks
+let currentFilters = {
+    category: 'all',
+    searchQuery: '',
+    sortBy: 'popularity',
+    minPrice: 0,
+    maxPrice: 1000,
+    minRating: 0,
+    license: 'all'
+};
+
+function filterBlocks(category, searchQuery, sortBy = 'popularity', filters = {}) {
     const grid = document.getElementById('blocksGrid');
     if (!grid) return;
     
     const allBlocks = getStoredBlocks();
     let filtered = [...allBlocks];
     
+    // Update current filters
+    currentFilters.category = category || currentFilters.category;
+    currentFilters.searchQuery = searchQuery || currentFilters.searchQuery;
+    currentFilters.sortBy = sortBy || currentFilters.sortBy;
+    Object.assign(currentFilters, filters);
+    
     // Filter by category
-    if (category && category !== 'all') {
-        filtered = filtered.filter(block => block.category === category);
+    if (currentFilters.category && currentFilters.category !== 'all') {
+        filtered = filtered.filter(block => block.category === currentFilters.category);
     }
     
     // Filter by search query
-    if (searchQuery && searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
+    if (currentFilters.searchQuery && currentFilters.searchQuery.trim() !== '') {
+        const query = currentFilters.searchQuery.toLowerCase();
         filtered = filtered.filter(block => 
             block.name.toLowerCase().includes(query) ||
             block.description.toLowerCase().includes(query) ||
@@ -156,6 +296,30 @@ function filterBlocks(category, searchQuery) {
             (block.tags && block.tags.some(tag => tag.toLowerCase().includes(query)))
         );
     }
+    
+    // Filter by price range
+    if (currentFilters.minPrice !== undefined) {
+        filtered = filtered.filter(block => block.price >= currentFilters.minPrice);
+    }
+    if (currentFilters.maxPrice !== undefined) {
+        filtered = filtered.filter(block => block.price <= currentFilters.maxPrice);
+    }
+    
+    // Filter by rating
+    if (currentFilters.minRating !== undefined) {
+        filtered = filtered.filter(block => (block.rating || 0) >= currentFilters.minRating);
+    }
+    
+    // Filter by license
+    if (currentFilters.license && currentFilters.license !== 'all') {
+        filtered = filtered.filter(block => block.license === currentFilters.license);
+    }
+    
+    // Sort blocks
+    filtered = sortBlocks(filtered, currentFilters.sortBy);
+    
+    // Update results count
+    updateResultsCount(filtered.length);
     
     // Render filtered blocks
     if (filtered.length === 0) {
@@ -168,20 +332,102 @@ function filterBlocks(category, searchQuery) {
         return;
     }
     
-    grid.innerHTML = filtered.map(block => `
+    grid.innerHTML = filtered.map(block => renderBlockCard(block)).join('');
+}
+
+function sortBlocks(blocks, sortBy) {
+    const sorted = [...blocks];
+    
+    switch(sortBy) {
+        case 'price-low':
+            return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+        case 'price-high':
+            return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+        case 'rating':
+            return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        case 'newest':
+            return sorted.sort((a, b) => {
+                const dateA = new Date(a.createdAt || 0);
+                const dateB = new Date(b.createdAt || 0);
+                return dateB - dateA;
+            });
+        case 'oldest':
+            return sorted.sort((a, b) => {
+                const dateA = new Date(a.createdAt || 0);
+                const dateB = new Date(b.createdAt || 0);
+                return dateA - dateB;
+            });
+        case 'downloads':
+            return sorted.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+        case 'popularity':
+        default:
+            // Combined score: rating * downloads / days since creation
+            return sorted.sort((a, b) => {
+                const scoreA = calculatePopularityScore(a);
+                const scoreB = calculatePopularityScore(b);
+                return scoreB - scoreA;
+            });
+    }
+}
+
+function calculatePopularityScore(block) {
+    const daysSinceCreation = Math.max(1, Math.floor((Date.now() - new Date(block.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24)));
+    const rating = block.rating || 0;
+    const downloads = block.downloads || 0;
+    return (rating * downloads) / daysSinceCreation;
+}
+
+function renderBlockCard(block) {
+    const categoryIcons = {
+        'nlp': '💬',
+        'vision': '👁️',
+        'agents': '🤖',
+        'data': '📊',
+        'utils': '🔧'
+    };
+    
+    const icon = categoryIcons[block.category] || '🧩';
+    const ratingStars = '⭐'.repeat(Math.floor(block.rating || 0));
+    
+    return `
         <a href="product.html?id=${block.id}" class="block-card">
-            <h3>${block.name}</h3>
-            <p class="block-creator">by ${block.creator}</p>
-            <p class="block-description">${block.description}</p>
-            <div class="block-footer">
-                <div>
-                    <span>⭐ ${block.rating || 0}</span>
-                    <span style="margin-left: 1rem;">⬇️ ${block.downloads || 0}</span>
+            <div class="block-card-preview">
+                <div class="block-card-preview-icon">${icon}</div>
+                ${block.featured ? '<div class="block-card-preview-badge">⭐ Featured</div>' : ''}
+                ${block.trending ? '<div class="block-card-preview-badge" style="top: 48px;">🔥 Trending</div>' : ''}
+            </div>
+            <div class="block-card-content">
+                <h3>${block.name}</h3>
+                <p class="block-creator">
+                    <span class="block-creator-avatar"></span>
+                    by ${block.creator}
+                </p>
+                <p class="block-description">${block.description}</p>
+                <div class="block-card-stats">
+                    <span class="block-rating">${ratingStars} ${block.rating || 0}</span>
+                    <span>⬇️ ${formatNumber(block.downloads || 0)}</span>
                 </div>
-                <div class="block-price">$${block.price || 0}</div>
+                <div class="block-footer">
+                    <div style="font-size: 0.75rem; color: #6b7280;">${block.license || 'Proprietary'}</div>
+                    <div class="block-price">$${block.price || 0}</div>
+                </div>
             </div>
         </a>
-    `).join('');
+    `;
+}
+
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
+}
+
+function updateResultsCount(count) {
+    const countElement = document.getElementById('resultsCount');
+    if (countElement) {
+        countElement.textContent = `${count} result${count !== 1 ? 's' : ''}`;
+    }
 }
 
 // Load blocks (with filtering support)
@@ -193,8 +439,59 @@ function loadBlocks() {
     const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
     const searchInput = document.getElementById('searchInput');
     const searchQuery = searchInput ? searchInput.value : '';
+    const sortSelect = document.getElementById('sortSelect');
+    const sortBy = sortSelect ? sortSelect.value : 'popularity';
     
-    filterBlocks(activeCategory, searchQuery);
+    filterBlocks(activeCategory, searchQuery, sortBy);
+}
+
+// Update marketplace statistics
+function updateMarketplaceStats() {
+    const blocks = getStoredBlocks();
+    const totalBlocks = blocks.length;
+    const totalDownloads = blocks.reduce((sum, b) => sum + (b.downloads || 0), 0);
+    const avgRating = blocks.reduce((sum, b) => sum + (b.rating || 0), 0) / totalBlocks || 0;
+    const totalCreators = new Set(blocks.map(b => b.creator)).size;
+    
+    const statsContainer = document.getElementById('marketplaceStats');
+    if (statsContainer) {
+        statsContainer.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${totalBlocks}</div>
+                <div class="stat-label">Total Blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${formatNumber(totalDownloads)}</div>
+                <div class="stat-label">Total Downloads</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${avgRating.toFixed(1)}</div>
+                <div class="stat-label">Avg Rating</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalCreators}</div>
+                <div class="stat-label">Creators</div>
+            </div>
+        `;
+    }
+}
+
+// Load featured and trending sections
+function loadFeaturedSections() {
+    const blocks = getStoredBlocks();
+    const featured = blocks.filter(b => b.featured).slice(0, 6);
+    const trending = blocks.filter(b => b.trending).slice(0, 6);
+    
+    const featuredContainer = document.getElementById('featuredBlocks');
+    const trendingContainer = document.getElementById('trendingBlocks');
+    
+    if (featuredContainer && featured.length > 0) {
+        featuredContainer.innerHTML = featured.map(block => renderBlockCard(block)).join('');
+    }
+    
+    if (trendingContainer && trending.length > 0) {
+        trendingContainer.innerHTML = trending.map(block => renderBlockCard(block)).join('');
+    }
 }
 
 // Get block by ID

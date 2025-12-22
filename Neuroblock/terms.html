@@ -45,9 +45,8 @@
     </style>
 </head>
 <body>
-    <!-- Unified Navigation will be injected here by unified-navigation.js -->
-    <!-- This will show Home button + Neuroblock tabs + Atlas search -->
-    <div id="unified-nav-container"></div>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <div id="neuroblock-nav-container"></div>
 
     <main style="padding-top: 120px; padding-bottom: 4rem;">
         <div class="terms-container">
@@ -194,18 +193,8 @@
         });
     </script>
     
-    <!-- Unified Navigation (must load first) -->
-    <script src="../js/unified-navigation.js?v=10"></script>
-    <script>
-        // Ensure navigation initializes
-        if (typeof UnifiedNav !== 'undefined') {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
-            } else {
-                UnifiedNav.init();
-            }
-        }
-    </script>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <script src="neuroblock-nav.js"></script>
     
     <!-- Shared Features -->
     <script src="../js/shared-features.js"></script>

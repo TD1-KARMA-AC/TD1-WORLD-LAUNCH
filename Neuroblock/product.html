@@ -27,6 +27,7 @@
             font-size: 1.25rem;
             color: #9ca3af;
             margin-bottom: 2rem;
+            line-height: 1.7;
         }
         .product-sidebar {
             position: sticky;
@@ -62,17 +63,82 @@
         .product-info span:last-child {
             color: #EAEAEA;
         }
+        .product-preview {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .preview-demo {
+            width: 100%;
+            min-height: 300px;
+            background: linear-gradient(135deg, rgba(193, 162, 255, 0.2), rgba(155, 92, 246, 0.2));
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .preview-demo::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(193, 162, 255, 0.3), transparent 70%);
+        }
+        .preview-icon {
+            font-size: 5rem;
+            opacity: 0.6;
+            position: relative;
+            z-index: 1;
+        }
+        .preview-button {
+            padding: 0.75rem 2rem;
+            background: rgba(193, 162, 255, 0.2);
+            border: 1px solid rgba(193, 162, 255, 0.4);
+            border-radius: 0.75rem;
+            color: #C1A2FF;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+        .preview-button:hover {
+            background: rgba(193, 162, 255, 0.3);
+            border-color: rgba(193, 162, 255, 0.6);
+            transform: translateY(-2px);
+        }
+        .product-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .product-tag {
+            padding: 0.5rem 1rem;
+            background: rgba(193, 162, 255, 0.1);
+            border: 1px solid rgba(193, 162, 255, 0.3);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: #C1A2FF;
+        }
         @media (max-width: 968px) {
             .product-container {
                 grid-template-columns: 1fr;
+            }
+            .product-sidebar {
+                position: static;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Unified Navigation will be injected here by unified-navigation.js -->
-    <!-- This will show Home button + Neuroblock tabs + Atlas search -->
-    <div id="unified-nav-container"></div>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <div id="neuroblock-nav-container"></div>
 
     <main style="padding-top: 120px; padding-bottom: 4rem;">
         <div class="product-container">
@@ -82,10 +148,24 @@
                     Advanced sentiment analysis block for processing text data with high accuracy. 
                     Perfect for social media monitoring, customer feedback analysis, and content moderation.
                 </p>
+                
+                <div class="product-tags" id="productTags"></div>
+
+                <!-- Product Preview/Demo -->
+                <div class="product-preview">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; text-align: left;">Preview</h2>
+                    <div class="preview-demo" id="previewDemo">
+                        <div class="preview-icon" id="previewIcon">🧩</div>
+                    </div>
+                    <button class="preview-button" onclick="runPreview()">▶️ Try Demo</button>
+                    <p style="font-size: 0.875rem; color: #9ca3af; margin-top: 1rem;">
+                        Experience this NeuroBlock in action. No purchase required.
+                    </p>
+                </div>
 
                 <div style="background: rgba(255, 255, 255, 0.05); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
                     <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Features</h2>
-                    <ul style="list-style: none; line-height: 2;">
+                    <ul style="list-style: none; line-height: 2;" id="featuresList">
                         <li>✓ Real-time sentiment analysis</li>
                         <li>✓ Multi-language support</li>
                         <li>✓ Custom model training</li>
@@ -95,7 +175,7 @@
 
                 <div style="background: rgba(255, 255, 255, 0.05); padding: 2rem; border-radius: 1rem;">
                     <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Documentation</h2>
-                    <pre style="background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; color: #d1d5db;"><code>// Example usage
+                    <pre style="background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; color: #d1d5db;"><code id="codeExample">// Example usage
 const analyzer = new SentimentAnalyzer();
 const result = analyzer.analyze("I love this product!");
 console.log(result.sentiment); // "positive"</code></pre>
@@ -201,19 +281,44 @@ console.log(result.sentiment); // "positive"</code></pre>
                 return;
             }
             
+            // Store block globally for preview
+            window.currentProduct = block;
+            
             // Update product content
             const productMain = document.querySelector('.product-main');
             const productSidebar = document.querySelector('.product-sidebar');
+            
+            const categoryIcons = {
+                'nlp': '💬',
+                'vision': '👁️',
+                'agents': '🤖',
+                'data': '📊',
+                'utils': '🔧'
+            };
             
             if (productMain) {
                 productMain.querySelector('h1').textContent = block.name;
                 productMain.querySelector('.product-description').textContent = block.description;
                 
+                // Update preview icon
+                const previewIcon = document.getElementById('previewIcon');
+                if (previewIcon) {
+                    previewIcon.textContent = categoryIcons[block.category] || '🧩';
+                }
+                
+                // Update tags
+                const tagsContainer = document.getElementById('productTags');
+                if (tagsContainer && block.tags) {
+                    tagsContainer.innerHTML = block.tags.map(tag => 
+                        `<span class="product-tag">${tag}</span>`
+                    ).join('');
+                }
+                
                 // Update features section
-                const featuresList = productMain.querySelector('ul');
+                const featuresList = document.getElementById('featuresList');
                 if (featuresList && block.tags) {
                     featuresList.innerHTML = block.tags.map(tag => 
-                        `<li>✓ ${tag.charAt(0).toUpperCase() + tag.slice(1)}</li>`
+                        `<li>✓ ${tag.charAt(0).toUpperCase() + tag.slice(1).replace(/-/g, ' ')}</li>`
                     ).join('');
                 }
             }
@@ -222,7 +327,7 @@ console.log(result.sentiment); // "positive"</code></pre>
                 productSidebar.querySelector('.price').textContent = `$${block.price || 0}`;
                 productSidebar.querySelector('.product-info:nth-of-type(1) span:last-child').textContent = block.creator;
                 productSidebar.querySelector('.product-info:nth-of-type(2) span:last-child').textContent = block.version || '1.0.0';
-                productSidebar.querySelector('.product-info:nth-of-type(3) span:last-child').textContent = block.downloads || 0;
+                productSidebar.querySelector('.product-info:nth-of-type(3) span:last-child').textContent = formatNumber(block.downloads || 0);
                 productSidebar.querySelector('.product-info:nth-of-type(4) span:last-child').textContent = `⭐ ${block.rating || 0}`;
                 
                 const buyButton = productSidebar.querySelector('.btn');
@@ -243,6 +348,41 @@ console.log(result.sentiment); // "positive"</code></pre>
             }
         }
         
+        function formatNumber(num) {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'k';
+            }
+            return num.toString();
+        }
+        
+        function runPreview() {
+            const demo = document.getElementById('previewDemo');
+            const button = document.querySelector('.preview-button');
+            
+            if (!window.currentProduct) return;
+            
+            // Simulate demo execution
+            button.textContent = '⏸️ Running...';
+            button.disabled = true;
+            
+            demo.innerHTML = `
+                <div style="padding: 2rem; text-align: left; color: #EAEAEA; position: relative; z-index: 1;">
+                    <div style="font-family: monospace; font-size: 0.9rem; line-height: 1.8;">
+                        <div style="color: #10b981;">✓ Initializing ${window.currentProduct.name}...</div>
+                        <div style="color: #10b981;">✓ Loading model...</div>
+                        <div style="color: #10b981;">✓ Ready for input</div>
+                        <div style="margin-top: 1rem; color: #C1A2FF;">Input: "This is amazing!"</div>
+                        <div style="color: #10b981;">Output: Positive sentiment (0.92 confidence)</div>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                button.textContent = '▶️ Try Demo Again';
+                button.disabled = false;
+            }, 3000);
+        }
+        
         // Load product on page load
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', loadProduct);
@@ -261,18 +401,8 @@ console.log(result.sentiment); // "positive"</code></pre>
         });
     </script>
     
-    <!-- Unified Navigation (must load first) -->
-    <script src="../js/unified-navigation.js?v=10"></script>
-    <script>
-        // Ensure navigation initializes
-        if (typeof UnifiedNav !== 'undefined') {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => UnifiedNav.init());
-            } else {
-                UnifiedNav.init();
-            }
-        }
-    </script>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <script src="neuroblock-nav.js"></script>
     
     <!-- Shared Features -->
     <script src="../js/shared-features.js"></script>

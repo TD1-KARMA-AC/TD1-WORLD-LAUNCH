@@ -10,9 +10,8 @@
     <link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@700,500,400&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Unified Navigation will be injected here by unified-navigation.js -->
-    <!-- This will show Home button + Neuroblock tabs + Atlas search -->
-    <div id="unified-nav-container"></div>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <div id="neuroblock-nav-container"></div>
 
     <!-- Hero Section -->
     <section class="hero-section" style="padding-top: 120px;">
@@ -52,31 +51,107 @@
 
             <!-- Marketplace Tab Content -->
             <div class="tab-content active" id="marketplace-tab">
-                <h2 class="section-title">Explore NeuroBlocks</h2>
+                <!-- Marketplace Stats -->
+                <div class="marketplace-stats" id="marketplaceStats"></div>
                 
-                <!-- Search Bar -->
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Search NeuroBlocks..." class="search-input">
-                    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
+                <!-- Featured Section -->
+                <div class="featured-section">
+                    <div class="featured-header">
+                        <h2>⭐ Featured Blocks</h2>
+                        <a href="explore.html" class="view-all-link">View All →</a>
+                    </div>
+                    <div class="featured-grid" id="featuredBlocks"></div>
                 </div>
-
-                <!-- Categories -->
-                <div class="categories">
-                    <button class="category-btn active" data-category="all">🧩 All Blocks</button>
-                    <button class="category-btn" data-category="nlp">💬 NLP</button>
-                    <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
-                    <button class="category-btn" data-category="agents">🤖 AI Agents</button>
-                    <button class="category-btn" data-category="data">📊 Data Processing</button>
-                    <button class="category-btn" data-category="utils">🔧 Utilities</button>
+                
+                <!-- Trending Section -->
+                <div class="featured-section">
+                    <div class="featured-header">
+                        <h2>🔥 Trending Now</h2>
+                        <a href="explore.html" class="view-all-link">View All →</a>
+                    </div>
+                    <div class="featured-grid" id="trendingBlocks"></div>
                 </div>
+                
+                <!-- All Blocks Section -->
+                <div class="featured-section" style="margin-top: 4rem;">
+                    <div class="featured-header">
+                        <h2>All NeuroBlocks</h2>
+                    </div>
+                    
+                    <!-- Search Bar -->
+                    <div class="search-container">
+                        <div class="search-wrapper">
+                            <input type="text" id="searchInput" placeholder="Search NeuroBlocks..." class="search-input">
+                            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <span class="search-results-count" id="resultsCount"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Marketplace Controls -->
+                    <div class="marketplace-controls">
+                        <div class="sort-filter-group">
+                            <select id="sortSelect" class="sort-select">
+                                <option value="popularity">Sort by: Popularity</option>
+                                <option value="price-low">Sort by: Price (Low to High)</option>
+                                <option value="price-high">Sort by: Price (High to Low)</option>
+                                <option value="rating">Sort by: Rating</option>
+                                <option value="newest">Sort by: Newest</option>
+                                <option value="oldest">Sort by: Oldest</option>
+                                <option value="downloads">Sort by: Downloads</option>
+                            </select>
+                            <button id="filterToggle" class="filter-toggle">
+                                <span>🔍</span>
+                                <span>Filters</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Filters -->
+                    <div class="advanced-filters" id="advancedFilters">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>Price Range</label>
+                                <div class="price-range">
+                                    <input type="number" id="minPrice" placeholder="Min" min="0" step="0.01">
+                                    <span style="color: #9ca3af;">to</span>
+                                    <input type="number" id="maxPrice" placeholder="Max" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="filter-group">
+                                <label>Minimum Rating</label>
+                                <input type="number" id="minRating" placeholder="0" min="0" max="5" step="0.1">
+                            </div>
+                            <div class="filter-group">
+                                <label>License</label>
+                                <select id="licenseFilter">
+                                    <option value="all">All Licenses</option>
+                                    <option value="MIT">MIT</option>
+                                    <option value="Apache-2.0">Apache-2.0</option>
+                                    <option value="BSD-3-Clause">BSD-3-Clause</option>
+                                    <option value="Proprietary">Proprietary</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- Blocks Grid -->
-                <div class="blocks-grid" id="blocksGrid">
-                    <div class="empty-state">
-                        <p>No NeuroBlocks found yet.</p>
-                        <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                    <!-- Categories -->
+                    <div class="categories">
+                        <button class="category-btn active" data-category="all">🧩 All Blocks</button>
+                        <button class="category-btn" data-category="nlp">💬 NLP</button>
+                        <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
+                        <button class="category-btn" data-category="agents">🤖 AI Agents</button>
+                        <button class="category-btn" data-category="data">📊 Data Processing</button>
+                        <button class="category-btn" data-category="utils">🔧 Utilities</button>
+                    </div>
+
+                    <!-- Blocks Grid -->
+                    <div class="blocks-grid" id="blocksGrid">
+                        <div class="empty-state">
+                            <p>No NeuroBlocks found yet.</p>
+                            <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -137,65 +212,9 @@
     </footer>
 
     <script src="script.js"></script>
-    <script>
-        // Smooth navigation animations (matching main site)
-        document.querySelectorAll('.nav-link, .nav-secondary-link').forEach(link => {
-            link.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
-            });
-            link.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
-    </script>
     
-    <!-- Unified Navigation (must load first) -->
-    <script src="../js/unified-navigation.js?v=10"></script>
-    <script>
-        // Aggressive initialization with retry logic
-        (function initUnifiedNav() {
-            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
-                try {
-                    UnifiedNav.init();
-                    console.log('UnifiedNav initialized successfully');
-                    
-                    // Verify it was created
-                    setTimeout(() => {
-                        const navBar = document.getElementById('unified-nav-bar');
-                        if (!navBar) {
-                            console.warn('Nav bar not found after init, retrying...');
-                            setTimeout(initUnifiedNav, 200);
-                        }
-                    }, 100);
-                } catch (e) {
-                    console.error('Error initializing UnifiedNav:', e);
-                    setTimeout(initUnifiedNav, 200);
-                }
-            } else {
-                console.log('UnifiedNav not found, retrying...');
-                setTimeout(initUnifiedNav, 100);
-            }
-        })();
-        
-        // Also try on DOMContentLoaded and window.load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
-                    UnifiedNav.init();
-                }
-            });
-        }
-        
-        window.addEventListener('load', () => {
-            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
-                const navBar = document.getElementById('unified-nav-bar');
-                if (!navBar) {
-                    console.log('Nav bar missing on load, initializing...');
-                    UnifiedNav.init();
-                }
-            }
-        });
-    </script>
+    <!-- Premium NeuroBlock Navigation with Atlas Search -->
+    <script src="neuroblock-nav.js"></script>
     
     <!-- Shared Features -->
     <script src="../js/shared-features.js?v=2"></script>
