@@ -1,5 +1,6 @@
 // TD1.WORLD Unified Navigation with Atlas Integration
 // Works on ALL pages - consistent navigation everywhere
+// Version: 12 - Full premium nav bar on all pages including Neuroblock
 
 (function() {
     'use strict';
@@ -13,12 +14,15 @@
             const currentPath = window.location.pathname;
             const currentPathLower = currentPath.toLowerCase();
             const pathParts = currentPathLower.split('/').filter(p => p);
+            const currentPageName = pathParts[pathParts.length - 1] || '';
             
             // More precise detection - check actual directory structure
+            // Root is: /, /index.html, or empty pathParts
             const isRoot = currentPathLower === '/' || 
                           currentPathLower === '/index.html' || 
-                          (pathParts.length === 1 && pathParts[0] === 'index.html') ||
-                          (pathParts.length === 0);
+                          (pathParts.length === 1 && (pathParts[0] === 'index.html' || pathParts[0] === '')) ||
+                          (pathParts.length === 0) ||
+                          (!pathParts.includes('website') && !pathParts.includes('neuroblock') && !pathParts.includes('realm') && !pathParts.includes('atlas') && !pathParts.includes('karma-ac') && currentPageName !== 'products_index.html' && currentPageName !== 'about.html');
             
             const isWebsite = pathParts.includes('website');
             const isNeuroblock = pathParts.includes('neuroblock'); // Case-insensitive check
@@ -49,12 +53,25 @@
                 if (target === 'neuroblock') return '../Neuroblock/index.html';
                 if (target === 'realm') return 'index.html';
                 if (target === 'atlas') return '../atlas/index.html';
+            } else if (isAtlas) {
+                if (target === 'index.html') return '../index.html';
+                if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                if (target === 'karma-ac.html') return '../karma-ac.html';
+                if (target === 'neuroblock') return '../Neuroblock/index.html';
+                if (target === 'realm') return '../realm/index.html';
+                if (target === 'atlas') return 'index.html';
             } else {
-                if (target === 'index.html') return 'index.html';
+                // Root level - ALWAYS return root paths
+                if (target === 'index.html') return '/index.html'; // Use absolute path to ensure root
                 if (target === 'PRODUCTS_INDEX.html') return 'website/PRODUCTS_INDEX.html';
                 if (target === 'ABOUT.html') return 'website/ABOUT.html';
                 if (target === 'karma-ac.html') return 'karma-ac.html';
-                if (target === 'neuroblock') return 'Neuroblock/index.html';
+                if (target === 'neuroblock') {
+                    // Try both cases for compatibility
+                    const neuroblockPath = 'Neuroblock/index.html';
+                    return neuroblockPath;
+                }
                 if (target === 'realm') return 'realm/index.html';
                 if (target === 'atlas') return 'atlas/index.html';
             }
@@ -103,12 +120,15 @@
             const currentPath = window.location.pathname;
             const currentPathLower = currentPath.toLowerCase();
             const pathParts = currentPathLower.split('/').filter(p => p);
+            const currentPageName = pathParts[pathParts.length - 1] || '';
             
             // More precise detection - check actual directory structure
+            // Root is: /, /index.html, or empty pathParts
             const isRoot = currentPathLower === '/' || 
                           currentPathLower === '/index.html' || 
-                          (pathParts.length === 1 && pathParts[0] === 'index.html') ||
-                          (pathParts.length === 0);
+                          (pathParts.length === 1 && (pathParts[0] === 'index.html' || pathParts[0] === '')) ||
+                          (pathParts.length === 0) ||
+                          (!pathParts.includes('website') && !pathParts.includes('neuroblock') && !pathParts.includes('realm') && !pathParts.includes('atlas') && !pathParts.includes('karma-ac') && currentPageName !== 'products_index.html' && currentPageName !== 'about.html');
             
             const isWebsite = pathParts.includes('website');
             const isNeuroblock = pathParts.includes('neuroblock'); // Case-insensitive check
@@ -144,16 +164,25 @@
                     if (target === 'neuroblock') return '../Neuroblock/index.html';
                     if (target === 'realm') return 'index.html';
                     if (target === 'atlas') return '../atlas/index.html';
+                } else if (isAtlas) {
+                    // Inside atlas folder
+                    if (target === 'index.html') return '../index.html';
+                    if (target === 'PRODUCTS_INDEX.html') return '../website/PRODUCTS_INDEX.html';
+                    if (target === 'ABOUT.html') return '../website/ABOUT.html';
+                    if (target === 'karma-ac.html') return '../karma-ac.html';
+                    if (target === 'neuroblock') return '../Neuroblock/index.html';
+                    if (target === 'realm') return '../realm/index.html';
+                    if (target === 'atlas') return 'index.html';
                 } else {
-                    // Root level
-                    if (target === 'index.html') return 'index.html';
+                    // Root level - ALWAYS return root paths
+                    if (target === 'index.html') return '/index.html'; // Use absolute path to ensure root
                     if (target === 'PRODUCTS_INDEX.html') return 'website/PRODUCTS_INDEX.html';
                     if (target === 'ABOUT.html') return 'website/ABOUT.html';
                     if (target === 'karma-ac.html') return 'karma-ac.html';
                     if (target === 'neuroblock') {
-                        // Try both cases for compatibility
-                        const neuroblockPath = 'Neuroblock/index.html';
-                        return neuroblockPath;
+                        // Use the correct path - check if Neuroblock folder exists (capital N)
+                        // If not found, try lowercase neuroblock
+                        return 'Neuroblock/index.html';
                     }
                     if (target === 'realm') return 'realm/index.html';
                     if (target === 'atlas') return 'atlas/index.html';
@@ -188,62 +217,13 @@
             nav.className = 'unified-nav-bar';
             nav.id = 'unified-nav-bar';
             
-            // Check if we're on a Neuroblock page - show simplified nav
-            const isNeuroblockPage = isNeuroblock;
+            // Always show full premium navigation bar on all pages
             const currentPageName = window.location.pathname.split('/').pop() || 'index.html';
             
-            console.log('Creating nav - isNeuroblockPage:', isNeuroblockPage, 'currentPageName:', currentPageName);
+            console.log('Creating nav - isNeuroblock:', isNeuroblock, 'currentPageName:', currentPageName);
             
-            if (isNeuroblockPage) {
-                // Simplified nav for Neuroblock pages: Home + Neuroblock tabs + Atlas search
-                nav.innerHTML = `
-                    <!-- Left: Home Button -->
-                    <div class="unified-nav-links">
-                        <a href="${getPath('index.html')}" class="unified-nav-link" data-page="index.html">
-                            <span class="unified-nav-icon">🏠</span>
-                            <span class="unified-nav-text">Home</span>
-                        </a>
-                    </div>
-
-                    <!-- Center: Neuroblock Tabs -->
-                    <div class="unified-nav-links" style="flex: 1; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                        <a href="index.html" class="unified-nav-link ${currentPageName === 'index.html' ? 'active' : ''}" data-page="neuroblock-index">
-                            <span class="unified-nav-text">Marketplace</span>
-                        </a>
-                        <a href="explore.html" class="unified-nav-link ${currentPageName === 'explore.html' ? 'active' : ''}" data-page="neuroblock-explore">
-                            <span class="unified-nav-text">Explore</span>
-                        </a>
-                        <a href="submit.html" class="unified-nav-link ${currentPageName === 'submit.html' ? 'active' : ''}" data-page="neuroblock-submit">
-                            <span class="unified-nav-text">Submit</span>
-                        </a>
-                        <a href="account.html" class="unified-nav-link ${currentPageName === 'account.html' ? 'active' : ''}" data-page="neuroblock-account">
-                            <span class="unified-nav-text">Account</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Right: Atlas Search (smaller) -->
-                    <div class="unified-nav-search" style="min-width: 200px; flex: 0 0 auto; max-width: 100%;">
-                        <div class="unified-search-bar" style="width: 100%;">
-                            <input 
-                                type="text" 
-                                id="unified-search-input" 
-                                placeholder="Search blocks..." 
-                                class="unified-search-input"
-                                autocomplete="off"
-                            >
-                            <button class="unified-search-btn" id="unified-search-btn" aria-label="Search">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <path d="m21 21-4.35-4.35"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="unified-search-results" class="unified-search-results"></div>
-                    </div>
-                `;
-            } else {
-                // Full nav for other pages
-                nav.innerHTML = `
+            // Full premium nav for all pages (including Neuroblock)
+            nav.innerHTML = `
                     <!-- Left: Navigation Links -->
                     <div class="unified-nav-links">
                         <a href="${getPath('index.html')}" class="unified-nav-link" data-page="index.html">
@@ -576,6 +556,8 @@
             const links = document.querySelectorAll('.unified-nav-link');
             const currentPath = window.location.pathname.toLowerCase();
             const currentPageName = currentPath.split('/').pop() || 'index.html';
+            const pathParts = currentPath.split('/').filter(p => p);
+            const isNeuroblock = pathParts.includes('neuroblock');
             
             links.forEach(link => {
                 const page = link.getAttribute('data-page');
@@ -583,6 +565,12 @@
                 
                 // Remove active class first
                 link.classList.remove('active');
+                
+                // Special handling for Neuroblock link
+                if (page === 'neuroblock' && isNeuroblock) {
+                    link.classList.add('active');
+                    return;
+                }
                 
                 // Check if this link matches current page
                 if (page && (currentPath.includes(page.toLowerCase()) || currentPageName.includes(page.toLowerCase()))) {
@@ -687,7 +675,7 @@
                 { title: 'TD1.MIRROR', description: 'Perspective Transformation', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-mirror' },
                 { title: 'TD1.INTENT', description: 'Intent & Emotion Parser', url: this.getRelativePath('PRODUCTS_INDEX.html') + '#td1-intent' },
                 { title: 'Karma AC', description: 'Autonomous AI Companion', url: this.getRelativePath('karma-ac.html') },
-                { title: 'NeuroBlock', description: 'AI Block Marketplace', url: this.getRelativePath('neuroblock') },
+                { title: 'NeuroBlock', description: 'AI Block Marketplace', url: this.getRelativePath('neuroblock') || 'Neuroblock/index.html' },
                 { title: 'Realm', description: 'Community Discussion', url: this.getRelativePath('realm') },
                 { title: 'Atlas', description: 'Spatial Navigation', url: this.getRelativePath('atlas') }
             ];
