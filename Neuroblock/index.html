@@ -32,21 +32,6 @@
             
             <p class="hero-subtitle">Build. Buy. Sell. Evolve.</p>
             
-            <div class="hero-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; max-width: 1000px; margin: 3rem auto 0; padding: 0 2rem;">
-                <div class="stat-card" style="padding: 1.5rem; border-radius: 16px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(193, 162, 255, 0.2); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #C1A2FF, #B38DFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">50+</div>
-                    <div style="font-size: 0.875rem; color: #A0A0A0; text-transform: uppercase; letter-spacing: 1px;">Working Blocks</div>
-                </div>
-                <div class="stat-card" style="padding: 1.5rem; border-radius: 16px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(193, 162, 255, 0.2); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #C1A2FF, #B38DFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">86,000+</div>
-                    <div style="font-size: 0.875rem; color: #A0A0A0; text-transform: uppercase; letter-spacing: 1px;">Lines of Code</div>
-                </div>
-                <div class="stat-card" style="padding: 1.5rem; border-radius: 16px; background: rgba(18, 24, 40, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(193, 162, 255, 0.2); text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #C1A2FF, #B38DFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">$2.8M</div>
-                    <div style="font-size: 0.875rem; color: #A0A0A0; text-transform: uppercase; letter-spacing: 1px;">Code Value</div>
-                </div>
-            </div>
-            
             <div class="hero-buttons">
                 <a href="explore.html" class="btn btn-primary">Explore Blocks</a>
                 <a href="submit.html" class="btn btn-secondary">Submit Your Block</a>
@@ -54,10 +39,20 @@
         </div>
     </section>
 
-    <!-- Marketplace Section -->
+    <!-- Tab Navigation (Marketplace / TD1 Products) -->
     <section class="explore-section" style="padding-top: 2rem;">
         <div class="container">
-            <!-- Marketplace Content -->
+            <!-- Tab Buttons -->
+            <div class="tab-navigation" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;">
+                <button class="tab-btn active" data-tab="marketplace" style="padding: 12px 32px; border-radius: 12px; background: rgba(193, 162, 255, 0.2); border: 1px solid rgba(193, 162, 255, 0.4); color: #C1A2FF; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                    🧩 Marketplace
+                </button>
+                <button class="tab-btn" data-tab="td1-products" style="padding: 12px 32px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #EAEAEA; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                    ⚡ TD1 Products
+                </button>
+            </div>
+
+            <!-- Marketplace Tab Content -->
             <div class="tab-content active" id="marketplace-tab">
                 <!-- Marketplace Stats -->
                 <div class="marketplace-stats" id="marketplaceStats"></div>
@@ -99,26 +94,12 @@
                     
                     <!-- Marketplace Controls -->
                     <div class="marketplace-controls">
-                        <div class="view-toggle-group">
-                            <button id="gridViewBtn" class="view-toggle-btn active" data-view="grid" title="Grid View">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                                </svg>
-                            </button>
-                            <button id="listViewBtn" class="view-toggle-btn" data-view="list" title="List View">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                                </svg>
-                            </button>
-                        </div>
                         <div class="sort-filter-group">
                             <select id="sortSelect" class="sort-select">
                                 <option value="popularity">Sort by: Popularity</option>
                                 <option value="price-low">Sort by: Price (Low to High)</option>
                                 <option value="price-high">Sort by: Price (High to Low)</option>
                                 <option value="rating">Sort by: Rating</option>
-                                <option value="best-quality">Sort by: Best Quality</option>
-                                <option value="highest-rated">Sort by: Highest Rated</option>
                                 <option value="newest">Sort by: Newest</option>
                                 <option value="oldest">Sort by: Oldest</option>
                                 <option value="downloads">Sort by: Downloads</option>
@@ -160,30 +141,12 @@
 
                     <!-- Categories -->
                     <div class="categories">
-                        <div class="category-section">
-                            <h3 class="category-section-title">By Type</h3>
-                            <div class="category-buttons">
-                                <button class="category-btn active" data-category="all">🧩 All Blocks</button>
-                                <button class="category-btn" data-category="nlp">💬 NLP</button>
-                                <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
-                                <button class="category-btn" data-category="agents">🤖 AI Agents</button>
-                                <button class="category-btn" data-category="data">📊 Data Processing</button>
-                                <button class="category-btn" data-category="utils">🔧 Utilities</button>
-                            </div>
-                        </div>
-                        <div class="category-section">
-                            <h3 class="category-section-title">By Industry</h3>
-                            <div class="category-buttons">
-                                <button class="category-btn" data-industry="business">💼 Business</button>
-                                <button class="category-btn" data-industry="education">🎓 Education</button>
-                                <button class="category-btn" data-industry="health">🏥 Health</button>
-                                <button class="category-btn" data-industry="finance">💰 Finance</button>
-                                <button class="category-btn" data-industry="technology">⚡ Technology</button>
-                                <button class="category-btn" data-industry="research">🔬 Research</button>
-                                <button class="category-btn" data-industry="legal">⚖️ Legal</button>
-                                <button class="category-btn" data-industry="government">🏛️ Government</button>
-                            </div>
-                        </div>
+                        <button class="category-btn active" data-category="all">🧩 All Blocks</button>
+                        <button class="category-btn" data-category="nlp">💬 NLP</button>
+                        <button class="category-btn" data-category="vision">👁️ Computer Vision</button>
+                        <button class="category-btn" data-category="agents">🤖 AI Agents</button>
+                        <button class="category-btn" data-category="data">📊 Data Processing</button>
+                        <button class="category-btn" data-category="utils">🔧 Utilities</button>
                     </div>
 
                     <!-- Blocks Grid -->
@@ -192,6 +155,23 @@
                             <p>No NeuroBlocks found yet.</p>
                             <a href="submit.html" class="btn btn-primary">Submit Your First Block</a>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TD1 Products Tab Content -->
+            <div class="tab-content" id="td1-products-tab" style="display: none;">
+                <h2 class="section-title">TD1.WORLD Products</h2>
+                <p style="text-align: center; color: #A0A0A0; margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+                    The complete TD1.WORLD suite. 26 forbidden AGI blocks + 24 proven products.<br/>
+                    <strong style="color: #C1A2FF;">$2.8M of development investment. 86,000+ lines of code.</strong><br/>
+                    One-time purchase. Complete ownership. Premium quality.
+                </p>
+                
+                <!-- TD1 Products will be loaded here via JavaScript -->
+                <div id="td1-products-container" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 4rem 2rem;">
+                        <p style="color: #A0A0A0; margin-bottom: 2rem;">Loading TD1 Products...</p>
                     </div>
                 </div>
             </div>
@@ -273,50 +253,11 @@
             
             <!-- Demo Tab -->
             <div id="tab-demo" class="modal-tab-content">
-                <!-- Demo Mode Selector -->
-                <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
-                    <button class="demo-mode-btn active" data-mode="media" onclick="switchDemoMode('media')">📸 Screenshots & Videos</button>
-                    <button class="demo-mode-btn" data-mode="files" onclick="switchDemoMode('files')">📁 Code & Files</button>
-                    <button class="demo-mode-btn" data-mode="live" onclick="switchDemoMode('live')">🚀 Live Demo</button>
-                </div>
-                
-                <!-- Media Gallery (Screenshots/Videos) -->
-                <div id="demo-media" class="demo-mode-panel active">
-                    <div class="modal-section">
-                        <div class="modal-section-title">📸 Visual Preview</div>
-                        <div id="screenshotGallery" class="screenshot-gallery"></div>
-                        <div id="videoPlayer" class="video-player-container"></div>
-                    </div>
-                </div>
-                
-                <!-- File Browser (GitHub-style) -->
-                <div id="demo-files" class="demo-mode-panel">
-                    <div class="modal-section">
-                        <div class="modal-section-title">📁 Code & Files</div>
-                        <div id="fileBrowser" class="file-browser">
-                            <div class="file-browser-header">
-                                <input type="text" id="fileSearch" placeholder="🔍 Search files..." class="file-search">
-                                <button class="file-view-toggle" onclick="toggleFileView()">
-                                    <span id="viewIcon">📋</span> <span id="viewText">List</span>
-                                </button>
-                            </div>
-                            <div id="fileTree" class="file-tree"></div>
-                            <div id="fileContent" class="file-content"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Live Demo -->
-                <div id="demo-live" class="demo-mode-panel">
-                    <div class="modal-section">
-                        <div class="modal-section-title">🚀 Live Interactive Demo</div>
-                        <div id="liveDemoContainer" class="live-demo-container">
-                            <div style="padding: 60px 20px; text-align: center; color: #A0A0A0;">
-                                <p style="font-size: 18px; margin-bottom: 16px;">Interactive demo coming soon</p>
-                                <p style="font-size: 14px; opacity: 0.8; margin-bottom: 24px;">Experience the product in fullscreen mode with all features available</p>
-                                <button class="btn btn-primary" id="openLiveDemoBtn" onclick="openLiveDemo()">Open Fullscreen Demo</button>
-                            </div>
-                        </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">🚀 Live Interactive Demo</div>
+                    <div style="padding: 60px 20px; text-align: center; color: #A0A0A0;">
+                        <p style="font-size: 18px; margin-bottom: 16px;">Click "🚀 Live Demo" tab to open the fullscreen interactive demo</p>
+                        <p style="font-size: 14px; opacity: 0.8;">Experience the product in fullscreen mode with all features available</p>
                     </div>
                 </div>
             </div>
@@ -341,25 +282,22 @@
         </div>
     </div>
 
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
+    <!-- TD1 Products Data - All 50 Products -->
+    <script src="td1-products-data.js"></script>
+    <script src="td1-product-details.js"></script>
+    
     <!-- Supabase Configuration (optional - only if Supabase is set up) -->
     <script src="supabase-config.js"></script>
     
     <!-- TD1 Products Data - All 50 Products -->
     <script src="td1-products-data.js"></script>
     <script src="td1-product-details.js"></script>
-    <script src="supabase-service.js"></script>
     
-    <script>
-        // Verify TD1_PRODUCTS loaded
-        window.addEventListener('load', function() {
-            console.log('Page loaded. TD1_PRODUCTS available:', typeof TD1_PRODUCTS !== 'undefined');
-            if (typeof TD1_PRODUCTS !== 'undefined') {
-                console.log('TD1_PRODUCTS count:', TD1_PRODUCTS.length);
-            } else {
-                console.error('TD1_PRODUCTS not found! Check if td1-products-data.js loaded correctly.');
-            }
-        });
-    </script>
+    <!-- Supabase Service (transparent - works with or without Supabase) -->
+    <script src="supabase-service.js"></script>
     
     <script src="script.js"></script>
     
@@ -380,3 +318,4 @@
     </script>
 </body>
 </html>
+

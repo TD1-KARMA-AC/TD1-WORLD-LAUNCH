@@ -21,19 +21,7 @@ const TD1_PRODUCTS = [
         tier: 'INFRASTRUCTURE',
         benefits: ['Semantic search & recall', 'Emotional weighting system', 'Auto-summarization', 'PostgreSQL + pgvector'],
         stripePriceId: 'price_1SVtGmGyR5AWuIFNqg8D3Xpf',
-        demoUrl: '../website/PRODUCTS_INDEX.html#td1-mem',
-        screenshots: [
-            { url: 'https://via.placeholder.com/800x450/7C3AED/FFFFFF?text=TD1.MEM+Dashboard', caption: 'Memory Dashboard' },
-            { url: 'https://via.placeholder.com/800x450/7C3AED/FFFFFF?text=Semantic+Search', caption: 'Semantic Search Interface' }
-        ],
-        videos: [],
-        files: [
-            { name: 'README.md', type: 'file', size: 2048 },
-            { name: 'src/', type: 'folder' },
-            { name: 'src/memory.py', type: 'file', size: 15360 },
-            { name: 'src/vector_search.py', type: 'file', size: 8192 },
-            { name: 'requirements.txt', type: 'file', size: 512 }
-        ]
+        demoUrl: '../website/PRODUCTS_INDEX.html#td1-mem'
     },
     {
         id: 'td1-graph',
