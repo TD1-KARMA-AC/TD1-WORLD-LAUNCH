@@ -323,9 +323,30 @@ h1, h2, h3, h4 {
 /* Categories */
 .categories {
     display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.category-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.category-section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.category-buttons {
+    display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    margin-bottom: 3rem;
 }
 
 .category-btn {
@@ -356,6 +377,39 @@ h1, h2, h3, h4 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
+}
+
+.blocks-grid.list-view {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.blocks-grid.list-view .block-card {
+    display: flex;
+    flex-direction: row;
+    max-width: 100%;
+    padding: 1.5rem;
+}
+
+.blocks-grid.list-view .block-card .block-image {
+    width: 200px;
+    height: 150px;
+    min-width: 200px;
+    margin-right: 1.5rem;
+    margin-bottom: 0;
+    border-radius: 0.75rem;
+}
+
+.blocks-grid.list-view .block-card .block-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.blocks-grid.list-view .block-card .block-footer {
+    margin-top: auto;
+    padding-top: 1rem;
 }
 
 .block-card {
@@ -511,6 +565,39 @@ h1, h2, h3, h4 {
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
+}
+
+.view-toggle-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.25rem;
+}
+
+.view-toggle-btn {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.view-toggle-btn:hover {
+    background: rgba(193, 162, 255, 0.1);
+    color: #C1A2FF;
+}
+
+.view-toggle-btn.active {
+    background: rgba(193, 162, 255, 0.2);
+    color: #C1A2FF;
 }
 
 .sort-filter-group {
