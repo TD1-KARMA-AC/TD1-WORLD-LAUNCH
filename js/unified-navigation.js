@@ -1,6 +1,6 @@
 // TD1.WORLD Unified Navigation with Atlas Integration
 // Works on ALL pages - consistent navigation everywhere
-// Version: 12 - Full premium nav bar on all pages including Neuroblock
+// Version: 16 - Galaxy Fold Z7 optimized, fully interconnected
 
 (function() {
     'use strict';
@@ -195,27 +195,45 @@
             if (!navContainer) {
                 navContainer = document.createElement('div');
                 navContainer.id = 'unified-nav-container';
-                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; width: 100%; max-width: 1200px; padding: 0 20px; box-sizing: border-box;';
                 // Insert at the very beginning of body
-                if (document.body.firstChild) {
-                    document.body.insertBefore(navContainer, document.body.firstChild);
+                if (document.body) {
+                    if (document.body.firstChild) {
+                        document.body.insertBefore(navContainer, document.body.firstChild);
+                    } else {
+                        document.body.appendChild(navContainer);
+                    }
                 } else {
-                    document.body.appendChild(navContainer);
+                    console.error('document.body not available');
+                    return;
                 }
             } else {
                 // Clear existing content but keep container
                 navContainer.innerHTML = '';
-                navContainer.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; width: 100%; max-width: 1200px; padding: 0 20px; box-sizing: border-box;';
                 // Move to first position if not already
                 if (navContainer.parentNode && navContainer !== navContainer.parentNode.firstChild) {
                     navContainer.parentNode.insertBefore(navContainer, navContainer.parentNode.firstChild);
                 }
             }
             
+            // Always set container styles - ensure it's at the very top
+            navContainer.style.cssText = 'position: fixed !important; top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1001 !important; width: 100% !important; max-width: 1200px !important; padding: 0 20px !important; box-sizing: border-box !important; pointer-events: none !important;';
+            
+            // Calculate actual nav height and set body padding dynamically
+            setTimeout(() => {
+                const navBar = document.getElementById('unified-nav-bar');
+                if (navBar) {
+                    const navHeight = navBar.offsetHeight;
+                    const totalHeight = navHeight + 30; // 10px top + 20px margin
+                    document.body.style.paddingTop = totalHeight + 'px';
+                    console.log('Nav height:', navHeight, 'Body padding set to:', totalHeight);
+                }
+            }, 300);
+            
             // Create nav bar
             const nav = document.createElement('nav');
             nav.className = 'unified-nav-bar';
             nav.id = 'unified-nav-bar';
+            nav.style.pointerEvents = 'auto'; // Enable pointer events on nav bar
             
             // Always show full premium navigation bar on all pages
             const currentPageName = window.location.pathname.split('/').pop() || 'index.html';
@@ -285,8 +303,34 @@
             
             navContainer.appendChild(nav);
             
+            // Force visibility - multiple methods
+            nav.style.display = 'flex';
+            nav.style.visibility = 'visible';
+            nav.style.opacity = '1';
+            nav.style.position = 'relative';
+            navContainer.style.display = 'block';
+            navContainer.style.visibility = 'visible';
+            navContainer.style.opacity = '1';
+            
             // Add styles if not already loaded
             this.injectStyles();
+            
+            // Log for debugging
+            console.log('✅ Navigation bar created and appended');
+            console.log('Container:', navContainer);
+            console.log('Nav bar:', nav);
+            
+            // Final visibility check
+            setTimeout(() => {
+                const computed = window.getComputedStyle(nav);
+                console.log('Nav display:', computed.display);
+                console.log('Nav visibility:', computed.visibility);
+                console.log('Nav opacity:', computed.opacity);
+                if (computed.display === 'none' || computed.visibility === 'hidden' || computed.opacity === '0') {
+                    console.warn('⚠️ Navigation may not be visible!');
+                    nav.style.cssText += 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
+                }
+            }, 100);
             
             // Remove ALL old nav elements (including secondary nav) - now integrated into unified nav
             const oldSecondaryNav = document.querySelector('nav.nav-secondary');
@@ -315,19 +359,91 @@
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    background: linear-gradient(135deg, rgba(15, 15, 20, 0.85), rgba(10, 10, 15, 0.9));
+                    background: linear-gradient(135deg, rgba(15, 15, 20, 0.95), rgba(10, 10, 15, 0.95));
                     backdrop-filter: blur(50px) saturate(200%);
                     border: 1px solid rgba(193, 162, 255, 0.3);
                     border-radius: 32px;
-                    padding: 10px 20px;
+                    padding: 8px 20px; /* Reduced padding to make it smaller */
                     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(193, 162, 255, 0.2);
                     transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
                     min-width: 600px;
                     max-width: 1200px;
                     width: fit-content;
+                    pointer-events: auto;
+                    position: relative;
+                    z-index: 1002;
+                    margin: 0 auto; /* Center the nav bar */
+                    height: auto;
+                    max-height: 60px; /* Limit height */
                 }
                 
-                @media (max-width: 768px) {
+                /* Mobile and Fold Devices */
+                @media (max-width: 480px) {
+                    #unified-nav-container {
+                        padding: 0 8px !important;
+                        top: 8px !important;
+                    }
+                    
+                    .unified-nav-bar {
+                        min-width: auto !important;
+                        max-width: 100% !important;
+                        width: 100% !important;
+                        padding: 6px 8px !important;
+                        gap: 6px !important;
+                        flex-direction: column !important;
+                        border-radius: 16px !important;
+                    }
+                    
+                    .unified-nav-links {
+                        width: 100% !important;
+                        display: grid !important;
+                        grid-template-columns: repeat(3, 1fr) !important;
+                        gap: 4px !important;
+                        margin-bottom: 6px !important;
+                    }
+                    
+                    .unified-nav-link {
+                        padding: 8px 6px !important;
+                        font-size: 10px !important;
+                        justify-content: center !important;
+                        text-align: center !important;
+                    }
+                    
+                    .unified-nav-icon {
+                        display: block !important;
+                        font-size: 14px !important;
+                    }
+                    
+                    .unified-nav-text {
+                        display: none !important;
+                    }
+                    
+                    .unified-nav-search {
+                        width: 100% !important;
+                        order: 2 !important;
+                        margin: 6px 0 !important;
+                    }
+                    
+                    .unified-search-bar {
+                        width: 100% !important;
+                        padding: 6px 12px !important;
+                    }
+                    
+                    .unified-search-input {
+                        font-size: 11px !important;
+                        padding: 0 8px !important;
+                    }
+                    
+                    .unified-nav-status {
+                        order: 3 !important;
+                        width: 100% !important;
+                        justify-content: center !important;
+                        padding: 6px 12px !important;
+                        font-size: 10px !important;
+                    }
+                }
+                
+                @media (min-width: 481px) and (max-width: 768px) {
                     #unified-nav-container {
                         padding: 0 10px !important;
                         top: 10px !important;
@@ -379,6 +495,157 @@
                     .unified-search-input {
                         font-size: 12px !important;
                         padding: 6px 10px !important;
+                    }
+                }
+                
+                /* Galaxy Fold Z7 and similar foldables - Folded state (280px) */
+                @media (max-width: 280px) {
+                    #unified-nav-container {
+                        top: 5px !important;
+                        padding: 0 4px !important;
+                    }
+                    
+                    .unified-nav-bar {
+                        padding: 4px 6px !important;
+                        gap: 4px !important;
+                        border-radius: 12px !important;
+                    }
+                    
+                    .unified-nav-links {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        gap: 3px !important;
+                    }
+                    
+                    .unified-nav-link {
+                        font-size: 8px !important;
+                        padding: 4px 3px !important;
+                        min-height: 28px !important;
+                    }
+                    
+                    .unified-nav-icon {
+                        font-size: 12px !important;
+                        display: block !important;
+                    }
+                    
+                    .unified-nav-text {
+                        display: none !important;
+                    }
+                    
+                    .unified-nav-search {
+                        width: 100% !important;
+                        margin: 4px 0 !important;
+                    }
+                    
+                    .unified-search-bar {
+                        padding: 4px 8px !important;
+                    }
+                    
+                    .unified-search-input {
+                        font-size: 10px !important;
+                        padding: 0 6px !important;
+                    }
+                    
+                    .unified-nav-status {
+                        padding: 4px 8px !important;
+                        font-size: 9px !important;
+                    }
+                }
+                
+                /* Galaxy Fold Z7 - Unfolded state (512px) */
+                @media (min-width: 281px) and (max-width: 512px) {
+                    #unified-nav-container {
+                        top: 10px !important;
+                        padding: 0 8px !important;
+                    }
+                    
+                    .unified-nav-bar {
+                        padding: 6px 10px !important;
+                        gap: 6px !important;
+                        border-radius: 16px !important;
+                    }
+                    
+                    .unified-nav-links {
+                        grid-template-columns: repeat(3, 1fr) !important;
+                        gap: 4px !important;
+                    }
+                    
+                    .unified-nav-link {
+                        font-size: 9px !important;
+                        padding: 6px 5px !important;
+                    }
+                    
+                    .unified-nav-icon {
+                        font-size: 13px !important;
+                        display: block !important;
+                    }
+                    
+                    .unified-nav-text {
+                        display: none !important;
+                    }
+                }
+                
+                /* Fold devices (narrow screens) */
+                @media (min-width: 513px) and (max-width: 360px) {
+                    .unified-nav-links {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                    }
+                    
+                    .unified-nav-link {
+                        font-size: 9px !important;
+                        padding: 6px 4px !important;
+                    }
+                }
+                
+                /* Landscape fold devices */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    #unified-nav-container {
+                        top: 5px !important;
+                    }
+                    
+                    .unified-nav-bar {
+                        padding: 6px 10px !important;
+                        gap: 6px !important;
+                        flex-direction: row !important;
+                    }
+                    
+                    .unified-nav-links {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        flex-wrap: wrap !important;
+                    }
+                    
+                    .unified-nav-link {
+                        padding: 4px 8px !important;
+                        font-size: 10px !important;
+                    }
+                }
+                
+                /* Galaxy Fold Z7 Landscape - Folded */
+                @media (max-width: 653px) and (max-height: 280px) and (orientation: landscape) {
+                    #unified-nav-container {
+                        top: 3px !important;
+                        padding: 0 4px !important;
+                    }
+                    
+                    .unified-nav-bar {
+                        padding: 3px 6px !important;
+                        gap: 3px !important;
+                    }
+                    
+                    .unified-nav-links {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        flex-wrap: nowrap !important;
+                        gap: 2px !important;
+                    }
+                    
+                    .unified-nav-link {
+                        padding: 3px 4px !important;
+                        font-size: 8px !important;
+                    }
+                    
+                    .unified-nav-search {
+                        display: none !important;
                     }
                 }
                 
@@ -532,7 +799,7 @@
                     background: rgba(193, 162, 255, 0.1);
                 }
                 
-                @media (max-width: 968px) {
+                @media (min-width: 769px) and (max-width: 968px) {
                     .unified-nav-bar {
                         min-width: auto;
                         max-width: calc(100vw - 40px);
@@ -546,6 +813,61 @@
                     
                     .unified-nav-search {
                         min-width: 150px;
+                    }
+                }
+                
+                /* Ensure navigation is always visible and doesn't overlap */
+                #unified-nav-container {
+                    position: fixed !important;
+                    top: 20px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    z-index: 1001 !important;
+                    width: 100% !important;
+                    max-width: 1200px !important;
+                    padding: 0 20px !important;
+                    box-sizing: border-box !important;
+                    pointer-events: none !important;
+                }
+                
+                /* Add body padding to prevent overlap - AGGRESSIVE */
+                body {
+                    padding-top: 120px !important;
+                    margin-top: 0 !important;
+                }
+                
+                /* Ensure first element has margin */
+                body > *:first-child:not(#unified-nav-container) {
+                    margin-top: 0 !important;
+                }
+                
+                /* Hero section spacing */
+                .hero {
+                    margin-top: 0 !important;
+                    padding-top: 2rem !important;
+                }
+                
+                /* Section spacing */
+                .section {
+                    margin-top: 0 !important;
+                    padding-top: 160px !important;
+                }
+                
+                @media (max-width: 768px) {
+                    body {
+                        padding-top: 100px !important;
+                    }
+                    .section {
+                        padding-top: 140px !important;
+                    }
+                }
+                
+                @media (max-width: 480px) {
+                    body {
+                        padding-top: 90px !important;
+                    }
+                    .section {
+                        padding-top: 120px !important;
                     }
                 }
             `;
@@ -691,47 +1013,71 @@
     // Export first so it's available immediately
     window.UnifiedNav = UnifiedNav;
     
-    // Initialize when DOM is ready - with retry logic
-    function initializeNav() {
-        // Wait for body to exist
+    // Aggressive initialization - ensures navigation ALWAYS shows
+    function forceInitNav() {
+        // Wait for body
         if (!document.body) {
-            setTimeout(initializeNav, 50);
+            setTimeout(forceInitNav, 10);
             return;
         }
         
-        // Check if container exists or create it
+        // Get or create container
         let container = document.getElementById('unified-nav-container');
         if (!container) {
-            // Create container if it doesn't exist
             container = document.createElement('div');
             container.id = 'unified-nav-container';
-            document.body.insertBefore(container, document.body.firstChild);
+            container.style.cssText = 'position: fixed !important; top: 20px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1001 !important; width: 100% !important; max-width: 1200px !important; padding: 0 20px !important; box-sizing: border-box !important; pointer-events: none !important;';
+            if (document.body.firstChild) {
+                document.body.insertBefore(container, document.body.firstChild);
+            } else {
+                document.body.appendChild(container);
+            }
         }
         
-        // Initialize nav
+        // Initialize
         try {
-            UnifiedNav.init();
-            console.log('UnifiedNav initialized successfully');
+            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+                UnifiedNav.init();
+                
+                // Verify it exists
+                setTimeout(() => {
+                    const nav = document.getElementById('unified-nav-bar');
+                    if (!nav) {
+                        console.warn('Nav bar not created, retrying...');
+                        setTimeout(forceInitNav, 50);
+                    } else {
+                        console.log('✅ Navigation bar is visible and ready');
+                        // Make absolutely sure it's visible
+                        nav.style.display = 'flex';
+                        nav.style.visibility = 'visible';
+                        nav.style.opacity = '1';
+                    }
+                }, 50);
+            } else {
+                setTimeout(forceInitNav, 50);
+            }
         } catch (e) {
-            console.error('Error initializing UnifiedNav:', e);
-            setTimeout(initializeNav, 100);
+            console.error('Error in forceInitNav:', e);
+            setTimeout(forceInitNav, 100);
         }
     }
     
-    // Start initialization
+    // Multiple initialization triggers
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeNav);
+        document.addEventListener('DOMContentLoaded', forceInitNav);
     } else {
-        // If DOM is already loaded, try immediately
-        setTimeout(initializeNav, 0);
+        forceInitNav();
     }
     
-    // Also try on window load as backup
     window.addEventListener('load', () => {
-        if (!document.getElementById('unified-nav-bar')) {
-            console.log('Nav not found on load, retrying...');
-            initializeNav();
+        const nav = document.getElementById('unified-nav-bar');
+        if (!nav) {
+            console.log('Nav missing on load, forcing init...');
+            forceInitNav();
         }
     });
+    
+    // Also try immediately
+    setTimeout(forceInitNav, 0);
 })();
 
