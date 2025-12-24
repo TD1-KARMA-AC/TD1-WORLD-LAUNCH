@@ -8,6 +8,18 @@
     <link rel="stylesheet" href="css/enhanced-styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Force body padding for navigation - must override reset */
+        html {
+            scroll-padding-top: 120px;
+        }
+        
+        /* Override any conflicting styles */
+        html, body {
+            margin: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
         :root {
             --td1-lilac: #C1A2FF;
             --td1-purple: #B38DFF;
@@ -23,6 +35,8 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            padding-top: 120px !important; /* Space for fixed navigation - force with !important */
+            margin-top: 0 !important;
         }
         
         /* Neural Particles */
@@ -61,15 +75,17 @@
         
         /* Hero Section */
         .hero {
-            min-height: 100vh;
+            min-height: calc(100vh - 120px); /* Account for navigation */
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Start from top instead of center */
             text-align: center;
-            padding: 6rem 2rem;
+            padding: 4rem 2rem 6rem 2rem; /* Top padding reduced since body has padding */
+            padding-top: 2rem !important; /* Minimal top padding */
             position: relative;
             z-index: 10;
+            margin-top: 0 !important;
         }
         .hero-badge {
             display: inline-block;
@@ -241,8 +257,10 @@
         .section {
             min-height: 100vh;
             padding: 120px 2rem;
+            padding-top: 160px !important; /* Extra padding for navigation - force with !important */
             position: relative;
             z-index: 10;
+            margin-top: 0 !important;
         }
         .section-header {
             text-align: center;
@@ -574,6 +592,14 @@
         }
         
         @media (max-width: 768px) {
+            body {
+                padding-top: 90px !important;
+            }
+            
+            .hero {
+                padding-top: 7rem !important;
+            }
+            
             .nav {
                 padding: 10px 16px;
                 gap: 12px;
@@ -603,6 +629,14 @@
         }
         
         @media (max-width: 480px) {
+            body {
+                padding-top: 80px !important;
+            }
+            
+            .hero {
+                padding-top: 6rem !important;
+            }
+            
             .nav {
                 padding: 6px 12px;
                 font-size: 11px;
@@ -626,6 +660,69 @@
             .hero-tagline {
                 padding: 15px 25px;
             }
+            
+            /* Unified Navigation Mobile Styles */
+            #unified-nav-container {
+                top: 8px !important;
+                padding: 0 8px !important;
+            }
+        }
+        
+        /* Ensure unified navigation is always visible and doesn't overlap */
+        #unified-nav-container {
+            position: fixed !important;
+            top: 10px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 1001 !important;
+            width: 100% !important;
+            max-width: 1200px !important;
+            padding: 0 20px !important;
+            box-sizing: border-box !important;
+            pointer-events: none !important;
+            height: auto !important;
+        }
+        
+        #unified-nav-bar {
+            max-height: 60px !important;
+            overflow: visible !important;
+        }
+        
+        /* Galaxy Fold Z7 - Folded (280px portrait) */
+        @media (max-width: 280px) {
+            #unified-nav-container {
+                top: 5px !important;
+                padding: 0 4px !important;
+            }
+        }
+        
+        /* Galaxy Fold Z7 - Unfolded (512px portrait) */
+        @media (min-width: 281px) and (max-width: 512px) {
+            #unified-nav-container {
+                top: 10px !important;
+                padding: 0 8px !important;
+            }
+        }
+        
+        /* Galaxy Fold Z7 - Landscape Folded (653px x 280px) */
+        @media (max-width: 653px) and (max-height: 280px) and (orientation: landscape) {
+            #unified-nav-container {
+                top: 3px !important;
+                padding: 0 4px !important;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            #unified-nav-container {
+                top: 5px !important;
+                padding: 0 5px !important;
+            }
+        }
+        
+        @media (max-height: 500px) and (orientation: landscape) {
+            #unified-nav-container {
+                top: 5px !important;
+            }
         }
     </style>
 </head>
@@ -634,7 +731,7 @@
     <div class="mouse-spotlight" id="spotlight"></div>
     
     <!-- Unified Navigation will be injected here by unified-navigation.js -->
-    <div id="unified-nav-container"></div>
+    <div id="unified-nav-container" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1001; width: 100%; max-width: 1200px; padding: 0 20px; box-sizing: border-box; pointer-events: none;"></div>
     
     <!-- Portal Overlay -->
     <div class="portal-overlay" id="portal">
@@ -1068,52 +1165,130 @@
         });
     </script>
     
-    <!-- Unified Navigation (must load first) -->
-    <script src="js/unified-navigation.js?v=10"></script>
+    <!-- Unified Navigation - Standalone, interconnected across all pages -->
+    <script src="js/unified-navigation.js?v=16"></script>
     <script>
-        // Aggressive initialization with retry logic
-        (function initUnifiedNav() {
-            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
-                try {
-                    UnifiedNav.init();
-                    console.log('UnifiedNav initialized successfully');
-                    
-                    // Verify it was created
-                    setTimeout(() => {
-                        const navBar = document.getElementById('unified-nav-bar');
-                        if (!navBar) {
-                            console.warn('Nav bar not found after init, retrying...');
-                            setTimeout(initUnifiedNav, 200);
-                        }
-                    }, 100);
-                } catch (e) {
-                    console.error('Error initializing UnifiedNav:', e);
-                    setTimeout(initUnifiedNav, 200);
-                }
-            } else {
-                console.log('UnifiedNav not found, retrying...');
-                setTimeout(initUnifiedNav, 100);
-            }
-        })();
-        
-        // Also try on DOMContentLoaded and window.load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
-                    UnifiedNav.init();
-                }
-            });
-        }
-        
-        window.addEventListener('load', () => {
-            if (typeof UnifiedNav !== 'undefined' && UnifiedNav.init) {
+        // This page's navigation initialization - ensures interconnection
+        (function() {
+            'use strict';
+            
+            // Force body padding to prevent overlap - calculate dynamically
+            function forceBodyPadding() {
+                const body = document.body;
                 const navBar = document.getElementById('unified-nav-bar');
-                if (!navBar) {
-                    console.log('Nav bar missing on load, initializing...');
-                    UnifiedNav.init();
+                
+                if (body && navBar) {
+                    const navHeight = navBar.offsetHeight || 60;
+                    const topOffset = 10; // nav container top
+                    const totalPadding = navHeight + topOffset + 20; // extra margin
+                    body.style.paddingTop = totalPadding + 'px';
+                    body.style.marginTop = '0';
+                    console.log('✅ Body padding forced to:', totalPadding, 'px (nav height:', navHeight, ')');
+                } else if (body) {
+                    // Fallback if nav not ready
+                    body.style.paddingTop = '100px';
+                    body.style.marginTop = '0';
+                    console.log('✅ Body padding forced (fallback)');
                 }
             }
-        });
+            
+            // Force section spacing
+            function forceSectionSpacing() {
+                const sections = document.querySelectorAll('.section');
+                const navBar = document.getElementById('unified-nav-bar');
+                const navHeight = navBar ? navBar.offsetHeight || 60 : 60;
+                const sectionPadding = navHeight + 100; // nav height + extra space
+                
+                sections.forEach(section => {
+                    section.style.paddingTop = sectionPadding + 'px';
+                    section.style.marginTop = '0';
+                });
+                console.log('✅ Section spacing forced:', sections.length, 'sections, padding:', sectionPadding);
+            }
+            
+            // Force hero spacing
+            function forceHeroSpacing() {
+                const hero = document.querySelector('.hero');
+                if (hero) {
+                    hero.style.marginTop = '0';
+                    hero.style.paddingTop = '2rem';
+                    console.log('✅ Hero spacing forced');
+                }
+            }
+            
+            // Wait for script to load
+            function ensureNav() {
+                if (typeof UnifiedNav === 'undefined') {
+                    setTimeout(ensureNav, 50);
+                    return;
+                }
+                
+                // Force initialization for this page
+                if (UnifiedNav && UnifiedNav.init) {
+                    try {
+                        UnifiedNav.init();
+                        console.log('✅ Page navigation initialized');
+                        
+                        // Force spacing after nav is created - multiple attempts
+                        setTimeout(() => {
+                            forceBodyPadding();
+                            forceSectionSpacing();
+                            forceHeroSpacing();
+                        }, 200);
+                        
+                        setTimeout(() => {
+                            forceBodyPadding();
+                            forceSectionSpacing();
+                            forceHeroSpacing();
+                        }, 500);
+                        
+                        setTimeout(() => {
+                            forceBodyPadding();
+                            forceSectionSpacing();
+                            forceHeroSpacing();
+                        }, 1000);
+                    } catch (e) {
+                        console.error('Navigation init error:', e);
+                        setTimeout(ensureNav, 100);
+                    }
+                }
+            }
+            
+            // Force spacing immediately
+            forceBodyPadding();
+            forceSectionSpacing();
+            
+            // Multiple triggers with repeated spacing enforcement
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    ensureNav();
+                    forceBodyPadding();
+                    forceSectionSpacing();
+                    forceHeroSpacing();
+                });
+            } else {
+                ensureNav();
+                forceBodyPadding();
+                forceSectionSpacing();
+                forceHeroSpacing();
+            }
+            
+            window.addEventListener('load', () => {
+                ensureNav();
+                forceBodyPadding();
+                forceSectionSpacing();
+                forceHeroSpacing();
+            });
+            
+            // Repeated enforcement
+            [100, 300, 500, 1000, 2000].forEach(delay => {
+                setTimeout(() => {
+                    forceBodyPadding();
+                    forceSectionSpacing();
+                    forceHeroSpacing();
+                }, delay);
+            });
+        })();
     </script>
     
     <!-- Enhanced Features JavaScript -->
