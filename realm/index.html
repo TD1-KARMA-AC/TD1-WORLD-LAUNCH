@@ -10,7 +10,40 @@
   <link rel="stylesheet" crossorigin href="/realm/assets/index-_ABa4RrR.css">
 </head>
 <body>
-  <div id="root"></div>
+  <!-- Unified TD1.WORLD Navigation - Interconnected -->
+  <div id="unified-nav-container" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1001; width: 100%; max-width: 1200px; padding: 0 20px; box-sizing: border-box; pointer-events: none;"></div>
+  
+  <div id="root"></div>
+  
+  <!-- Unified TD1.WORLD Navigation Script -->
+  <script src="../js/unified-navigation.js?v=16"></script>
+  <script>
+    (function() {
+      'use strict';
+      function ensureNav() {
+        if (typeof UnifiedNav === 'undefined') {
+          setTimeout(ensureNav, 50);
+          return;
+        }
+        if (UnifiedNav && UnifiedNav.init) {
+          try {
+            UnifiedNav.init();
+            console.log('✅ Realm page navigation initialized');
+          } catch (e) {
+            console.error('Navigation init error:', e);
+            setTimeout(ensureNav, 100);
+          }
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureNav);
+      } else {
+        ensureNav();
+      }
+      window.addEventListener('load', ensureNav);
+      setTimeout(ensureNav, 100);
+    })();
+  </script>
 </body>
 </html>
 
