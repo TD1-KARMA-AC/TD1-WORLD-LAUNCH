@@ -1,134 +1,51 @@
-# TD1 World Launch Page
+# TD1.WORLD
 
-A beautiful, modern launch page for TD1 World with countdown timer.
+A living 3D world of intelligence. Visitors land on a planet they can spin, zoom and fly around. Every landmass is an idea:
 
-## Launch Details
+| Place | What it is |
+| --- | --- |
+| **The Origins** (amber) | The past: a short history of AI, marked by glowing monoliths |
+| **Memory** (violet) | The foundations: memory, retrieval, graphs and infrastructure |
+| **Intelligence** (cyan) | The present: reasoning and agents, with crystal peaks for unsolved problems |
+| **Creation** (coral) | The workshop: developer tools |
+| **The Future** (aurora green) | The projection: near, mid and far horizons |
+| **Ocean of Data** | The flowing sea between every continent |
+| **Uncharted Isles** | Small pale islands: ideas nobody has had yet |
+| **Realm** (moon) | Connected world, served from `/realm/` |
+| **Karma AC** (satellite) | Links out to Karma AC's own site |
 
-- **Domain**: www.td1.world
-- **Launch Date**: November 22, 2025 at 11:22 AM
-- **Countdown Timer**: Automatically displays time remaining until launch
+The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data.
 
-## Features
+## How it's built
 
-- ⏱️ Real-time countdown timer
-- 📧 Email notification signup (stores in browser localStorage)
-- ✨ Animated starry background
-- 📱 Fully responsive design
-- 🎨 Modern gradient design with glassmorphism effects
+Plain static files, no build step. Netlify serves the repo root.
 
-## Files
-
-- `index.html` - Main HTML structure
-- `styles.css` - Styling and animations
-- `script.js` - Countdown timer and form handling logic
-
-## Deployment
-
-### Option 1: Netlify (Recommended - Free)
-
-1. Push this repository to GitHub
-2. Go to [Netlify](https://www.netlify.com/)
-3. Click "New site from Git"
-4. Connect your GitHub repository
-5. Build settings:
-   - Build command: (leave empty)
-   - Publish directory: `.`
-6. Click "Deploy site"
-7. Go to Site settings → Domain management → Add custom domain
-8. Add `www.td1.world` and follow DNS configuration instructions
-
-### Option 2: Vercel
-
-1. Push this repository to GitHub
-2. Go to [Vercel](https://vercel.com/)
-3. Click "Import Project"
-4. Select your GitHub repository
-5. Build settings:
-   - Framework Preset: Other
-   - Output Directory: `.`
-6. Click "Deploy"
-7. Go to Project Settings → Domains
-8. Add `www.td1.world` and configure DNS
-
-### Option 3: GitHub Pages
-
-1. Push this repository to GitHub
-2. Go to repository Settings → Pages
-3. Source: Deploy from a branch
-4. Branch: `main` / `master`
-5. Folder: `/ (root)`
-6. Save
-7. For custom domain, add `CNAME` file with content: `www.td1.world`
-8. Configure DNS: Add CNAME record pointing to `username.github.io`
-
-### Option 4: Traditional Web Hosting
-
-1. Upload all files (`index.html`, `styles.css`, `script.js`) to your web hosting root directory
-2. Point your domain `www.td1.world` to your hosting server via DNS
-
-## DNS Configuration
-
-To connect `www.td1.world` to your hosting provider, you'll need to add DNS records:
-
-### For Netlify/Vercel:
-- **Type**: CNAME
-- **Name**: www or www.td1.world
-- **Value**: Provided by hosting platform (e.g., `your-site.netlify.app`)
-
-### For GitHub Pages:
-- **Type**: CNAME
-- **Name**: www or www.td1.world  
-- **Value**: `username.github.io`
-
-### For Traditional Hosting:
-- **Type**: A
-- **Name**: www or www.td1.world
-- **Value**: Your server IP address
-
-## Customization
-
-### Change Launch Date/Time
-
-Edit `script.js` line 2:
-```javascript
-const launchDate = new Date('2025-11-22T11:22:00').getTime();
+```
+index.html            the world (page shell)
+world/app.js          the 3D engine (three.js)
+world/data.js         all the words: continents, history, peaks, projections, links
+world/products.js     the 50 products (generated from Neuroblock/td1-products-data.js)
+world/style.css       interface styling
+world/vendor/         three.js r160, self-hosted
+realm/                Realm (compiled app, kept as a connector)
+Neuroblock/           NeuroBlock marketplace (Supabase)
+website/              product demo pages + Stripe checkout pages (parked, still served)
+netlify/functions/    Stripe checkout and email functions
+_parked/legacy-home/  the old home page, Atlas and shared scripts (kept, not served)
+docs/archive/         old setup and fix notes (kept, not served)
 ```
 
-### Modify Colors
+## Changing things
 
-Edit CSS variables in `styles.css`:
-```css
-:root {
-    --primary-color: #6366f1;
-    --secondary-color: #8b5cf6;
-    --accent-color: #ec4899;
-}
+- **Words, history, peaks, projections:** edit `world/data.js`.
+- **Karma AC link:** set `KARMA_AC_URL` at the top of `world/data.js`.
+- **Move or add a continent:** each region in `REGIONS` has a `lat`, `lon` and `radius`.
+- **Products:** regenerate `world/products.js` from the NeuroBlock catalogue, or edit it directly.
+
+## Run locally
+
+```
+python3 -m http.server 8000
 ```
 
-### Email Notifications
-
-Currently, emails are stored in browser localStorage. To integrate with an email service:
-
-1. Set up an API endpoint (e.g., using Netlify Functions, Vercel Serverless Functions, or your own backend)
-2. Update the form submission handler in `script.js` to send a POST request to your endpoint
-
-Example with Fetch API:
-```javascript
-fetch('/api/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email })
-});
-```
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile browsers
-
-## License
-
-© 2025 TD1 World. All rights reserved.
+Then open http://localhost:8000.

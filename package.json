@@ -1,32 +1,11 @@
 {
   "name": "td1-world",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "TD1.World — Elite AI engineering company flagship domain",
+  "description": "TD1.WORLD: a living 3D world of intelligence. Static site; these dependencies are for the Netlify functions only.",
   "author": "TD1",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
   "dependencies": {
-    "next": "^14.2.33",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "framer-motion": "^10.16.16",
-    "stripe": "^14.21.0",
-    "nodemailer": "^6.9.8"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.33",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.4.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "nodemailer": "^6.9.8",
+    "stripe": "^14.21.0"
   }
 }

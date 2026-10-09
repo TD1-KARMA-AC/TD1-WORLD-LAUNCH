@@ -1,137 +1,79 @@
-# Netlify configuration for TD1 World Launch Page (Static HTML)
+# TD1.WORLD — static site, no build step.
 [build]
   publish = "."
   command = ""
 
-[build.environment]
-  NODE_VERSION = "18"
-
 [functions]
   directory = "netlify/functions"
 
-# Force HTTPS and www redirects
-# All traffic should go to https://www.td1.world
-
-# Redirect http://td1.world to https://www.td1.world
-[[redirects]]
-  from = "http://td1.world/*"
-  to = "https://www.td1.world/:splat"
-  status = 301
-  force = true
-
-# Redirect https://td1.world to https://www.td1.world
+# One canonical address: https://www.td1.world
 [[redirects]]
   from = "https://td1.world/*"
   to = "https://www.td1.world/:splat"
   status = 301
   force = true
 
-# Redirect http://www.td1.world to https://www.td1.world
 [[redirects]]
-  from = "http://www.td1.world/*"
+  from = "http://td1.world/*"
   to = "https://www.td1.world/:splat"
   status = 301
   force = true
 
-# Note: Netlify Functions at /.netlify/functions/* are handled automatically BEFORE redirects
-# IMPORTANT: Netlify processes redirects in order - specific rules must come BEFORE catch-all
-# Netlify serves static files FIRST, but we need explicit rules to prevent catch-all from intercepting
-
-# IMPORTANT: Netlify serves static files FIRST before processing ANY redirects
-# However, explicit redirect rules can help ensure files are found
-# These rules come BEFORE the catch-all to ensure they're processed first
-
-# CRITICAL: Netlify processes redirects in order - specific rules MUST come before catch-all
-# The catch-all /* will match everything, so we need explicit rules for /website/* paths
-
-# Serve demo files directly (must come BEFORE catch-all)
+# Parked code and archived notes are kept in the repo but never served.
 [[redirects]]
-  from = "/website/demos/*"
-  to = "/website/demos/:splat"
-  status = 200
-  force = false
+  from = "/_parked/*"
+  to = "/404"
+  status = 404
+  force = true
 
-# Serve website HTML files directly (must come BEFORE catch-all)
 [[redirects]]
-  from = "/website/*.html"
-  to = "/website/:splat.html"
-  status = 200
-  force = false
+  from = "/docs/*"
+  to = "/404"
+  status = 404
+  force = true
 
-# Serve website assets directly (must come BEFORE catch-all)
+# Old pages people may have bookmarked
 [[redirects]]
-  from = "/website/assets/*"
-  to = "/website/assets/:splat"
-  status = 200
-  force = false
+  from = "/karma-ac*"
+  to = "/"
+  status = 301
 
-# Realm SPA routing
-# Netlify serves static files FIRST, so /realm/index.html and /realm/assets/* will be served automatically
-# These redirects only apply for SPA routing when files don't exist
 [[redirects]]
-  from = "/realm"
-  to = "/realm/index.html"
-  status = 200
+  from = "/ABOUT.html"
+  to = "/"
+  status = 301
 
+[[redirects]]
+  from = "/PRODUCTS_INDEX.html"
+  to = "/website/PRODUCTS_INDEX.html"
+  status = 301
+
+[[redirects]]
+  from = "/neuroblock/*"
+  to = "/Neuroblock/:splat"
+  status = 301
+
+# Realm is a single-page app
 [[redirects]]
   from = "/realm/*"
   to = "/realm/index.html"
   status = 200
 
-# NeuroBlock routing
-# Netlify serves static files FIRST, so /Neuroblock/index.html will be served automatically
-# The actual folder is named "Neuroblock" (capital N) - redirect lowercase URLs to match
-[[redirects]]
-  from = "/neuroblock"
-  to = "/Neuroblock/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/neuroblock/"
-  to = "/Neuroblock/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/neuroblock/*"
-  to = "/Neuroblock/:splat"
-  status = 200
-
-# Handle direct access with capital N (matches actual folder name)
-[[redirects]]
-  from = "/Neuroblock"
-  to = "/Neuroblock/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/Neuroblock/"
-  to = "/Neuroblock/index.html"
-  status = 200
-
-# Handle SPA routing - redirect root and other paths to index.html
-# This catch-all comes LAST and will only match if:
-# 1. No static file exists at that path
-# 2. The path doesn't match any of the /website/* rules above
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Security Headers - Fix "Not Secure" Warning
 [[headers]]
   for = "/*"
   [headers.values]
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "SAMEORIGIN"
-    X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
-    Content-Security-Policy = "default-src 'self' https: data:; script-src 'self' 'unsafe-inline' https: https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; frame-src 'self' https://www.td1.world https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https: https://*.netlify.app https://*.netlify.com https://www.td1.world https://api.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; upgrade-insecure-requests; block-all-mixed-content"
 
-# Allow demo files to be embedded in iframes (override X-Frame-Options for demos)
 [[headers]]
-  for = "/website/demos/*"
+  for = "/world/vendor/*"
   [headers.values]
-    X-Frame-Options = "SAMEORIGIN"
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https: data:; script-src 'self' 'unsafe-inline' https: https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https:; frame-src 'self' https://www.td1.world https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self' https://www.td1.world; connect-src 'self' https: https://api.stripe.com;"
+    Cache-Control = "public, max-age=31536000, immutable"
 
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
