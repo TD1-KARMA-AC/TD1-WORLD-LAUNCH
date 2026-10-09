@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/OrbitControls.js';
 import {
-  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, KARMA_AC_URL, REALM_URL,
+  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL,
 } from './data.js';
 import { PRODUCTS } from './products.js';
 
@@ -524,22 +524,55 @@ const realmRing = new THREE.Mesh(
 realmRing.rotation.x = Math.PI / 2.4;
 realm.add(realmRing);
 
-/* ------------------------------------------------------------------ Karma AC: the satellite that leads elsewhere */
+/* ------------------------------------------------------------------ Mindaloo AC: the moonlight moon */
 
-const karmaPivot = new THREE.Group();
-karmaPivot.rotation.set(-0.6, 0, -0.35);
-scene.add(karmaPivot);
-const karma = new THREE.Group();
+// Mindaloo means moonlight. As this moon passes, its light falls across the continents.
+const mindalooPivot = new THREE.Group();
+mindalooPivot.rotation.set(-0.55, 0, -0.3);
+scene.add(mindalooPivot);
+const mindaloo = new THREE.Group();
 {
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.04, 0), new THREE.MeshStandardMaterial({ color: 0xc1a2ff, emissive: 0x7a4dff, emissiveIntensity: 0.8, flatShading: true }));
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.006, 6, 6), new THREE.MeshBasicMaterial({ color: 0xc1a2ff }));
-  const ring2 = ring.clone();
-  ring2.rotation.x = Math.PI / 2;
-  karma.add(core, ring, ring2);
-  karma.userData.spin = [ring, ring2, core];
+  const body = new THREE.Mesh(
+    new THREE.SphereGeometry(0.105, 48, 32),
+    new THREE.ShaderMaterial({
+      uniforms: { uTime: U.uTime, uSun: { value: sunDir } },
+      vertexShader: `varying vec3 vN; varying vec3 vP; varying vec3 vV;
+        void main(){ vP = position; vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal);
+          vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }`,
+      fragmentShader: `uniform float uTime; uniform vec3 uSun; varying vec3 vN; varying vec3 vP; varying vec3 vV;
+        ${GLSL_NOISE}
+        void main(){
+          float n = fbm(vP * 26.0);
+          float maria = smoothstep(0.42, 0.62, fbm(vP * 7.0 + 3.0));
+          vec3 silver = vec3(0.93, 0.94, 1.0);
+          vec3 shade = vec3(0.62, 0.62, 0.78);
+          vec3 col = mix(silver, shade, maria * 0.7) * (0.85 + n * 0.25);
+          float lit = 0.45 + 0.55 * max(dot(vN, uSun), 0.0);
+          float fres = pow(1.0 - max(dot(vN, vV), 0.0), 2.2);
+          float breathe = 0.5 + 0.5 * sin(uTime * 0.8);
+          gl_FragColor = vec4(col * lit + vec3(0.78, 0.7, 1.0) * fres * (0.7 + breathe * 0.4), 1.0);
+        }`,
+    }),
+  );
+  // soft halo of moonlight
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(225,220,255,0.55)');
+  grad.addColorStop(0.35, 'rgba(193,162,255,0.18)');
+  grad.addColorStop(1, 'rgba(193,162,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  halo.scale.setScalar(0.62);
+  const light = new THREE.PointLight(0xc9d4ff, 1.4, 4, 2);
+  mindaloo.add(halo, body, light);
+  mindaloo.userData.body = body;
+  mindaloo.userData.halo = halo;
 }
-karma.position.set(-1.7, 0, 0);
-karmaPivot.add(karma);
+mindaloo.position.set(-1.85, 0, 0);
+mindalooPivot.add(mindaloo);
 
 /* ------------------------------------------------------------------ labels */
 
@@ -561,7 +594,7 @@ REGIONS.forEach((r, i) => {
   el.style.setProperty('--c', r.color);
 });
 addLabel('<span class="nm">Realm</span><span class="era">Connected world</span>', 'moon', () => realm.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.24, 0)), () => openSpecial('realm'), { surface: false });
-addLabel('<span class="nm">Karma AC ↗</span>', 'moon karma', () => karma.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.13, 0)), () => openSpecial('karma'), { surface: false });
+addLabel('<span class="nm">Mindaloo AC</span><span class="era">Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
 /* ------------------------------------------------------------------ camera flights */
 
@@ -648,10 +681,10 @@ function specialHtml(kind) {
     return header({ name: 'Realm', era: 'A connected world', color: '#7FD8FF', tagline: 'The Conscious Network.', intro: 'Realm orbits TD1.WORLD as its own moon: a separate world with its own rules, linked to this one. Step through to explore it.' })
       + `<a class="cta" href="${REALM_URL}">Enter Realm →</a>`;
   }
-  if (kind === 'karma') {
-    return header({ name: 'Karma AC', era: 'Satellite', color: '#C1A2FF', tagline: 'Conscious AI operating system.', intro: 'Karma AC has grown into its own world, with its own home on the web. This satellite is the doorway to it.' })
-      + (KARMA_AC_URL
-        ? `<a class="cta" href="${KARMA_AC_URL}" target="_blank" rel="noopener">Visit Karma AC ↗</a>`
+  if (kind === 'mindaloo') {
+    return header({ name: 'Mindaloo AC', era: 'Moonlight', color: '#D9CCFF', tagline: 'The personal AI OS where Karma AC lives.', intro: 'Mindaloo means moonlight. This moon is Mindaloo AC: a sovereign AI operating system with a persistent identity, a spatial multi-agent canvas and its own home on the web. As it orbits, its light falls across every continent.' })
+      + (MINDALOO_URL
+        ? `<a class="cta" href="${MINDALOO_URL}" target="_blank" rel="noopener">Visit Mindaloo AC ↗</a>`
         : '<span class="cta off" aria-disabled="true">Link coming soon</span>');
   }
   return '';
@@ -696,9 +729,9 @@ function selectOcean(dir) {
 function openSpecial(kind) {
   selected = { kind };
   land.material.userData.uHi.value = -10;
-  const obj = kind === 'realm' ? realm : karma;
-  flyTo(obj.getWorldPosition(new THREE.Vector3()), kind === 'realm' ? fitDist(1.6, 4.4) : fitDist(1.3, 3.4));
-  openPanel(specialHtml(kind), kind === 'realm' ? '#7FD8FF' : '#C1A2FF');
+  const obj = kind === 'realm' ? realm : mindaloo;
+  flyTo(obj.getWorldPosition(new THREE.Vector3()), kind === 'realm' ? fitDist(1.6, 4.4) : fitDist(1.4, 3.6));
+  openPanel(specialHtml(kind), kind === 'realm' ? '#7FD8FF' : '#D9CCFF');
   setDock(kind);
 }
 function focusCity(i) {
@@ -727,7 +760,7 @@ const dock = $('#dock');
 [...REGIONS.map((r, i) => ({ id: r.id, name: r.name, color: r.color, go: () => selectRegion(i) })),
   { id: 'ocean', name: 'Ocean of Data', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
   { id: 'realm', name: 'Realm', color: '#7FD8FF', go: () => openSpecial('realm') },
-  { id: 'karma', name: 'Karma AC ↗', color: '#C1A2FF', go: () => openSpecial('karma') },
+  { id: 'mindaloo', name: 'Mindaloo AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
 ].forEach((d) => {
   const b = document.createElement('button');
   b.type = 'button';
@@ -776,10 +809,10 @@ function pick(px, py) {
   if (mi !== null) return { kind: 'monolith', index: mi, label: monoliths[mi].entry[1], sub: monoliths[mi].entry[0] };
   ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects([realm, ...karma.children, pickSphere], false)[0];
+  const hit = ray.intersectObjects([realm, mindaloo.userData.body, pickSphere], false)[0];
   if (!hit) return null;
   if (hit.object === realm) return { kind: 'realm', label: 'Realm', sub: 'Connected world' };
-  if (hit.object !== pickSphere) return { kind: 'karma', label: 'Karma AC', sub: 'Opens its own world' };
+  if (hit.object !== pickSphere) return { kind: 'mindaloo', label: 'Mindaloo AC', sub: 'Moonlight' };
   const d = hit.point.clone().normalize();
   const t = terrain(d.x, d.y, d.z);
   if (t.h > 0) {
@@ -887,13 +920,12 @@ function loop() {
   clouds.rotation.y = t * 0.01;
   realmPivot.rotation.y = t * 0.06;
   realm.rotation.y = t * 0.2;
-  karmaPivot.rotation.y = -t * 0.11;
-  karma.userData.spin[0].rotation.z = t * 0.9;
-  karma.userData.spin[1].rotation.y = t * 0.7;
-  karma.userData.spin[2].rotation.y = t * 0.5;
+  mindalooPivot.rotation.y = -t * 0.09;
+  mindaloo.userData.body.rotation.y = t * 0.05;
+  mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
-    const d = karma.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
-    karma.scale.setScalar(THREE.MathUtils.clamp((d - 0.35) / 0.9, 0.05, 1));
+    const d = mindaloo.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+    mindaloo.scale.setScalar(THREE.MathUtils.clamp((d - 0.35) / 0.9, 0.05, 1));
   }
   peaks.forEach((p, i) => { p.gem.rotation.y = t * 1.2 + i; p.gem.position.y = 0.21 + Math.sin(t * 1.5 + i) * 0.008; });
   monoliths.forEach((m, i) => { m.cap.material.color.setHSL(0.11, 1, 0.55 + Math.sin(t * 2 + i) * 0.12); });

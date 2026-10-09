@@ -97,7 +97,8 @@ body.ready #world { opacity: 1; }
 .label:hover .nm { text-decoration: underline; text-decoration-color: var(--c, var(--lilac)); text-underline-offset: 4px; }
 .label.moon .nm { font-size: 12px; color: #bfe9ff; }
 .label.moon .era { color: #7fd8ff; font-size: 9px; }
-.label.karma .nm { color: #d9c8ff; }
+.label.mindaloo .nm { color: #e6dcff; }
+.label.mindaloo .era { color: #c1a2ff; }
 body.panel-open .label { font-size: 0.9em; }
 
 /* ---------------------------------------------------------------- tooltip */

@@ -12,7 +12,7 @@ A living 3D world of intelligence. Visitors land on a planet they can spin, zoom
 | **Ocean of Data** | The flowing sea between every continent |
 | **Uncharted Isles** | Small pale islands: ideas nobody has had yet |
 | **Realm** (moon) | Connected world, served from `/realm/` |
-| **Karma AC** (satellite) | Links out to Karma AC's own site |
+| **Mindaloo AC** (moon) | Moonlight: links to www.mindaloo.ac, where Karma AC lives |
 
 The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data.
 
@@ -38,7 +38,7 @@ docs/archive/         old setup and fix notes (kept, not served)
 ## Changing things
 
 - **Words, history, peaks, projections:** edit `world/data.js`.
-- **Karma AC link:** set `KARMA_AC_URL` at the top of `world/data.js`.
+- **Mindaloo AC link:** set `MINDALOO_URL` at the top of `world/data.js`.
 - **Move or add a continent:** each region in `REGIONS` has a `lat`, `lon` and `radius`.
 - **Products:** regenerate `world/products.js` from the NeuroBlock catalogue, or edit it directly.
 

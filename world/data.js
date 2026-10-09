@@ -1,9 +1,9 @@
 // TD1.WORLD — world content.
 // Everything the planet shows lives here, so the world can grow without touching the engine.
 
-// Karma AC now runs on Mindaloo AC (its own GitHub / Netlify / Supabase).
-// While this is empty the satellite still appears, but its button says "link coming soon".
-export const KARMA_AC_URL = 'https://www.mindaloo.ac';
+// Mindaloo AC (moonlight) is the moon where Karma AC lives. It has its own GitHub / Netlify / Supabase.
+// While this is empty the moon still appears, but its button says "link coming soon".
+export const MINDALOO_URL = 'https://www.mindaloo.ac';
 
 // Realm is a connected world of its own, served from /realm/.
 export const REALM_URL = '/realm/';
