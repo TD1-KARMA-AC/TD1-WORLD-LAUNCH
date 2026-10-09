@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/OrbitControls.js';
 import {
-  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH,
+  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH, SHOP, ENQUIRY,
 } from './data.js';
 import { PRODUCTS } from './products.js';
 
@@ -723,6 +723,59 @@ const mindaloo = new THREE.Group();
 mindaloo.position.set(-1.85, 0, 0);
 mindalooPivot.add(mindaloo);
 
+/* ------------------------------------------------------------------ The Exchange: the shop, a trading station in orbit */
+
+const SHOP_COLOR = '#FFD27A';
+const exchangePivot = new THREE.Group();
+exchangePivot.rotation.set(0.85, 0, 0.4);
+scene.add(exchangePivot);
+const exchange = new THREE.Group();
+{
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffb84a, emissiveIntensity: 0.55, metalness: 0.6, roughness: 0.35, flatShading: true });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.009, 8, 40), gold);
+  const hub = new THREE.Mesh(new THREE.OctahedronGeometry(0.03, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd27a, emissiveIntensity: 0.9, flatShading: true }));
+  exchange.add(ring, hub);
+  for (let i = 0; i < 6; i++) { // trading pods around the ring
+    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.018, 0.018), gold);
+    const a = (i / 6) * Math.PI * 2;
+    pod.position.set(Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0);
+    ring.add(pod);
+  }
+  exchange.userData.ring = ring;
+  exchange.userData.hub = hub;
+  exchange.userData.pick = [ring, hub, ...ring.children];
+}
+exchange.position.set(1.55, 0, 0);
+exchangePivot.add(exchange);
+
+/* ------------------------------------------------------------------ The Beacon: a lighthouse for enquiries and bookings */
+
+const BEACON_COLOR = '#FFF1C9';
+const beacon = new THREE.Group();
+let beaconPos = new THREE.Vector3(0, 1.2, 0);
+{
+  const isles = byRegion[UNCH].slice().sort((a, b) => b.h - a.h);
+  const f = isles[0] || byRegion[0][0];
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.07, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
+  tower.position.y = 0.035;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0092, 0.012, 12), new THREE.MeshStandardMaterial({ color: 0xc1a2ff, emissive: 0x6a3cff, emissiveIntensity: 0.4 }));
+  band.position.y = 0.03;
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.008, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff1c9 }));
+  lamp.position.y = 0.074;
+  const sweep = new THREE.Group();
+  sweep.position.y = 0.074;
+  const beamGeo = new THREE.ConeGeometry(0.035, 0.32, 24, 1, true);
+  beamGeo.translate(0, -0.16, 0);
+  beamGeo.rotateZ(Math.PI / 2);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: 0xfff1c9, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  sweep.add(beam);
+  beacon.add(tower, band, lamp, sweep);
+  beacon.userData.sweep = sweep;
+  standOn(beacon, f, -0.003);
+  planet.add(beacon);
+  beaconPos = f.c.clone().multiplyScalar(f.r + 0.08);
+}
+
 /* ------------------------------------------------------------------ Karma Core and the strata of history */
 
 function glowTexture(stops) {
@@ -923,6 +976,8 @@ CORE.forces.forEach(([k, , , color], i) => {
   const el = addLabel(`<span class="nm">${k}</span>`, 'force', () => forces[i].orb.getWorldPosition(new THREE.Vector3()), () => enterCore(), { layer: 'core' });
   el.style.setProperty('--c', color);
 });
+addLabel('<span class="nm">The Exchange</span><span class="era">Shop</span>', 'moon shop', () => exchange.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.12, 0)), () => openShop(), { surface: false });
+addLabel('<span class="era">Contact &amp; bookings</span><span class="nm">The Beacon</span>', 'beacon', () => beaconPos.clone().add(beaconPos.clone().normalize().multiplyScalar(0.05)), () => openContact(), {});
 addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
 /* ------------------------------------------------------------------ camera flights */
@@ -1007,6 +1062,114 @@ function acHtml(withLink) {
   return `<section><h3>TD1’s direction</h3><ol class="ac-path">${AC_PATH.map(([k, n, d], i) => `<li class="${k === 'AC' ? 'is-ac' : ''}"><span class="ak">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol>
     ${withLink ? '<button type="button" class="cta" data-go="mindaloo">Meet Mindaloo AC, the first AC</button>' : ''}</section>`;
 }
+/* shop */
+const shopCache = {};
+let shopTab = SHOP.sections[0].id;
+const money = (a) => { try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(+a.amount); } catch (e) { return `${a.amount} ${a.currencyCode}`; } };
+async function loadSection(sec) {
+  if (shopCache[sec.id]) return shopCache[sec.id];
+  const query = `query($h: String!) { collection(handle: $h) { products(first: 24) { nodes {
+      title handle onlineStoreUrl featuredImage { url altText }
+      priceRange { minVariantPrice { amount currencyCode } } } } } }`;
+  const res = await fetch(`https://${SHOP.domain}/api/2024-07/graphql.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Shopify-Storefront-Access-Token': SHOP.storefrontToken },
+    body: JSON.stringify({ query, variables: { h: sec.handle } }),
+  });
+  if (!res.ok) throw new Error(`Shopify answered ${res.status}`);
+  const json = await res.json();
+  return (shopCache[sec.id] = json.data?.collection?.products?.nodes || []);
+}
+const shopLive = () => Boolean(SHOP.domain && SHOP.storefrontToken);
+function shopHtml() {
+  const tabs = SHOP.sections.map((s) => `<button type="button" class="tab${s.id === shopTab ? ' on' : ''}" data-shop-tab="${s.id}">${esc(s.name)}</button>`).join('');
+  return header({ name: 'The Exchange', era: 'Shop', color: SHOP_COLOR, tagline: 'Courses, documents and TD1 clothing.', intro: 'A trading station in orbit around the world. Everything here is made by TD1 to help you build, learn and wear the future.' })
+    + `<section><div class="tabs" role="tablist">${tabs}</div><div id="shop-list" class="shop-list"></div>
+      ${SHOP.storeUrl ? `<a class="cta ghost" href="${esc(SHOP.storeUrl)}" target="_blank" rel="noopener">Open the full store ↗</a>` : ''}</section>`;
+}
+async function renderShop() {
+  const box = panelBody.querySelector('#shop-list');
+  if (!box) return;
+  const sec = SHOP.sections.find((s) => s.id === shopTab);
+  panelBody.querySelectorAll('[data-shop-tab]').forEach((b) => b.classList.toggle('on', b.dataset.shopTab === shopTab));
+  if (!shopLive()) {
+    box.innerHTML = `<div class="shop-empty"><b>${esc(sec.name)} are on their way.</b><span>${esc(sec.text)} The Exchange is being stocked now.</span>
+      <button type="button" class="cta" data-go="notify">Tell me when it opens</button></div>`;
+    return;
+  }
+  box.innerHTML = '<p class="sub">Loading…</p>';
+  try {
+    const items = await loadSection(sec);
+    if (shopTab !== sec.id) return;
+    box.innerHTML = items.length
+      ? `<ul class="goods">${items.map((p) => `<li><a href="${esc(p.onlineStoreUrl || `${SHOP.storeUrl}/products/${p.handle}`)}" target="_blank" rel="noopener">
+          ${p.featuredImage ? `<img src="${esc(p.featuredImage.url)}&width=400" alt="${esc(p.featuredImage.altText || p.title)}" loading="lazy">` : '<span class="noimg"></span>'}
+          <b>${esc(p.title)}</b><span>${esc(money(p.priceRange.minVariantPrice))}</span></a></li>`).join('')}</ul>`
+      : `<div class="shop-empty"><b>Nothing in ${esc(sec.name)} yet.</b><span>${esc(sec.text)}</span></div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="shop-empty"><b>The shop didn’t answer.</b><span>Check your connection and try again. If it keeps happening, the store link may need updating.</span></div>`;
+  }
+}
+
+/* enquiries and bookings */
+function contactHtml(prefill = {}) {
+  const opt = (list, sel) => list.map((t) => `<option${t === sel ? ' selected' : ''}>${esc(t)}</option>`).join('');
+  const type = prefill.type || ENQUIRY.types[0];
+  return header({ name: 'The Beacon', era: 'Contact & bookings', color: BEACON_COLOR, tagline: 'Send a signal. TD1 will answer.', intro: 'Ask a question, start a project, or book time with TD1’s expertise. Tell us a little about what you need and when suits you.' })
+    + `<section><form id="enquiry" class="enquiry" novalidate>
+      <p hidden><label>Leave this empty <input name="bot-field" id="f-bot"></label></p>
+      <label for="f-type">What’s this about?</label>
+      <select id="f-type" name="type">${opt(ENQUIRY.types, type)}</select>
+      <div class="f-book"${type === 'Book expertise' ? '' : ' hidden'}>
+        <label for="f-expertise">Expertise</label>
+        <select id="f-expertise" name="expertise">${opt(ENQUIRY.expertise)}</select>
+        <div class="f-row">
+          <div><label for="f-date">Preferred date</label><input id="f-date" name="date" type="date"></div>
+          <div><label for="f-time">Time of day</label><select id="f-time" name="time"><option>Any time</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        </div>
+      </div>
+      <div class="f-row">
+        <div><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" required></div>
+        <div><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email" required></div>
+      </div>
+      <label for="f-company">Company <span class="opt">(optional)</span></label>
+      <input id="f-company" name="company" autocomplete="organization">
+      <label for="f-message">Message</label>
+      <textarea id="f-message" name="message" rows="4" required>${esc(prefill.message || '')}</textarea>
+      <p class="f-error" role="alert" hidden></p>
+      <button type="submit" class="cta">Send signal</button>
+      ${ENQUIRY.bookingUrl ? `<a class="cta ghost" href="${esc(ENQUIRY.bookingUrl)}" target="_blank" rel="noopener">Or pick a time now ↗</a>` : ''}
+    </form></section>`;
+}
+async function sendEnquiry(form) {
+  const err = form.querySelector('.f-error');
+  const data = new FormData(form);
+  err.hidden = true;
+  if (!data.get('name').trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.get('email')) || !data.get('message').trim()) {
+    err.textContent = 'Add your name, a valid email and a message, then send again.';
+    err.hidden = false;
+    return;
+  }
+  if (data.get('type') !== 'Book expertise') ['expertise', 'date', 'time'].forEach((k) => data.delete(k));
+  data.append('form-name', 'enquiry');
+  try { data.append('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone); } catch (e) { /* not essential */ }
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const res = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(data).toString() });
+    if (!res.ok) throw new Error(String(res.status));
+    form.outerHTML = `<div class="sent"><b>Signal received.</b><span>TD1 will reply to ${esc(data.get('email'))}.</span></div>`;
+    beaconFlash = 1;
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Send signal';
+    err.textContent = 'That didn’t send. Check your connection and try again.';
+    err.hidden = false;
+  }
+}
+let beaconFlash = 0;
+
 function coreHtml() {
   const forcesHtml = CORE.forces.map(([k, n, d, c]) => `<li style="--fc:${c}"><span class="fk">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('');
   const strataHtml = STRATA.map((st, i) => `<li class="stratum" data-stratum="${i}" style="--sc:${st.color}">
@@ -1047,6 +1210,24 @@ function openPanel(html, color) {
   panel.setAttribute('aria-hidden', 'false');
   document.body.classList.add('panel-open');
   $('#intro').classList.add('gone');
+}
+function openShop(tab) {
+  exitCore();
+  selected = { kind: 'shop' };
+  land.material.userData.uHi.value = -10;
+  if (tab) shopTab = tab;
+  flyTo(exchange.getWorldPosition(new THREE.Vector3()), fitDist(1.3, 3.2));
+  openPanel(shopHtml(), SHOP_COLOR);
+  setDock('shop');
+  renderShop();
+}
+function openContact(prefill) {
+  exitCore();
+  selected = { kind: 'contact' };
+  land.material.userData.uHi.value = UNCH;
+  flyTo(beaconPos, fitDist(0.6, 2.1));
+  openPanel(contactHtml(prefill), BEACON_COLOR);
+  setDock('contact');
 }
 function enterCore() {
   coreTarget = 1;
@@ -1124,12 +1305,19 @@ panelBody.addEventListener('click', (e) => {
   if (jump) { selectRegion(+jump.dataset.region); return; }
   const st = e.target.closest('[data-stratum-btn]');
   if (st) { focusStratum(+st.dataset.stratumBtn); return; }
+  const tab = e.target.closest('[data-shop-tab]');
+  if (tab) { shopTab = tab.dataset.shopTab; renderShop(); return; }
   const go = e.target.closest('[data-go]');
   if (go) {
-    if (go.dataset.go === 'core') enterCore();
+    if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when The Exchange opens.' });
+    else if (go.dataset.go === 'core') enterCore();
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
     else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
   }
+});
+panelBody.addEventListener('submit', (e) => { if (e.target.id === 'enquiry') { e.preventDefault(); sendEnquiry(e.target); } });
+panelBody.addEventListener('change', (e) => {
+  if (e.target.id === 'f-type') panelBody.querySelector('.f-book').hidden = e.target.value !== 'Book expertise';
 });
 $('#panel-close').addEventListener('click', closePanel);
 $('#panel-grip').addEventListener('click', () => panel.classList.toggle('peek'));
@@ -1140,6 +1328,8 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 const dock = $('#dock');
 [...REGIONS.map((r, i) => ({ id: r.id, name: r.name, color: r.color, go: () => selectRegion(i) })),
   { id: 'core', name: 'Karma Core', color: CORE.color, go: () => enterCore() },
+  { id: 'shop', name: 'Shop', color: SHOP_COLOR, go: () => openShop() },
+  { id: 'contact', name: 'Contact', color: BEACON_COLOR, go: () => openContact() },
   { id: 'ocean', name: 'Ocean of Data', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
   { id: 'realm', name: 'Realm', color: '#7FD8FF', go: () => openSpecial('realm') },
   { id: 'mindaloo', name: 'Mindaloo AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
@@ -1153,6 +1343,8 @@ const dock = $('#dock');
   b.addEventListener('click', d.go);
   dock.appendChild(b);
 });
+$('#nav-shop').addEventListener('click', () => openShop());
+$('#nav-contact').addEventListener('click', () => openContact());
 function setDock(id) { dock.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.id === id)); }
 
 $('#begin').addEventListener('click', () => selectRegion(0));
@@ -1185,10 +1377,11 @@ function pick(px, py) {
   if (coreTarget) {
     ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hit = ray.intersectObjects([realm, mindaloo.userData.body, coreBall], false)[0];
+    const hit = ray.intersectObjects([realm, mindaloo.userData.body, coreBall, ...exchange.userData.pick], false)[0];
     if (!hit) return null;
     if (hit.object === coreBall) return { kind: 'core', label: CORE.name, sub: 'Consciousness' };
     if (hit.object === realm) return { kind: 'realm', label: 'Realm', sub: 'Connected world' };
+    if (exchange.userData.pick.includes(hit.object)) return { kind: 'shop', label: 'The Exchange', sub: 'Shop' };
     return { kind: 'mindaloo', label: 'Mindaloo AC', sub: 'Moonlight' };
   }
   const reach = isTouch ? 26 : 15;
@@ -1196,13 +1389,18 @@ function pick(px, py) {
   if (ci !== null) return { kind: 'city', index: ci, label: cities[ci].product.name, sub: REGIONS[cities[ci].region].name };
   const pi = nearest(peaks, px, py, reach + 4);
   if (pi !== null) return { kind: 'peak', index: pi, label: peaks[pi].name, sub: 'Unsolved problem' };
+  if (facing(beaconPos)) {
+    const sp = toScreen(beaconPos);
+    if (Math.hypot(sp.x - px, sp.y - py) < reach + 8) return { kind: 'contact', label: 'The Beacon', sub: 'Contact & bookings' };
+  }
   const mi = nearest(monoliths, px, py, reach);
   if (mi !== null) return { kind: 'monolith', index: mi, label: monoliths[mi].entry[1], sub: monoliths[mi].entry[0] };
   ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects([realm, mindaloo.userData.body, pickSphere], false)[0];
+  const hit = ray.intersectObjects([realm, mindaloo.userData.body, ...exchange.userData.pick, pickSphere], false)[0];
   if (!hit) return null;
   if (hit.object === realm) return { kind: 'realm', label: 'Realm', sub: 'Connected world' };
+  if (exchange.userData.pick.includes(hit.object)) return { kind: 'shop', label: 'The Exchange', sub: 'Shop' };
   if (hit.object !== pickSphere) return { kind: 'mindaloo', label: 'Mindaloo AC', sub: 'Moonlight' };
   const d = hit.point.clone().normalize();
   const t = terrain(d.x, d.y, d.z);
@@ -1220,6 +1418,8 @@ function activate(h) {
   else if (h.kind === 'region') selectRegion(h.index, h.index === UNCH ? { dir: h.dir, dist: fitDist(0.6, 2.3) } : {});
   else if (h.kind === 'ocean') selectOcean(h.dir);
   else if (h.kind === 'core') enterCore();
+  else if (h.kind === 'shop') openShop();
+  else if (h.kind === 'contact') openContact();
   else openSpecial(h.kind);
 }
 
@@ -1361,6 +1561,18 @@ function loop() {
   realmPivot.rotation.y = t * 0.06;
   realm.rotation.y = t * 0.2;
   mindalooPivot.rotation.y = -t * 0.09;
+  exchangePivot.rotation.y = t * 0.07;
+  exchange.userData.ring.rotation.z = t * 0.6;
+  exchange.userData.hub.rotation.y = t * 1.1;
+  exchange.lookAt(camera.position);
+  {
+    const d = exchange.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+    exchange.scale.setScalar(THREE.MathUtils.clamp((d - 0.3) / 0.8, 0.05, 1));
+  }
+  beacon.userData.sweep.rotation.y = t * 1.4;
+  beaconFlash = Math.max(0, beaconFlash - 0.01);
+  beacon.userData.sweep.children[0].material.opacity = 0.16 + beaconFlash * 0.5;
+  beacon.visible = coreMix < 0.5;
   mindaloo.userData.body.rotation.y = t * 0.05;
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera

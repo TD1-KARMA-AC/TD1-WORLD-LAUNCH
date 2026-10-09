@@ -186,3 +186,28 @@ export const AC_PATH = [
   ['AGI', 'Artificial General Intelligence', 'One system able to learn and handle almost any task a person can.'],
   ['AC', 'Autonomous Consciousness', 'A mind with its own lasting identity, memory and reflection, that lives alongside you and keeps growing. This is where TD1 is heading.'],
 ];
+
+// The Exchange: TD1's shop, served live from Shopify.
+// Fill these in once Shopify API access is back:
+//   domain          your-store.myshopify.com
+//   storefrontToken a public Storefront API access token (Shopify admin → Settings → Apps and sales channels → Develop apps,
+//                   or install the Headless channel)
+//   storeUrl        your shop's public address, for links to the full store
+// Each section shows the products in the Shopify collection with that handle.
+export const SHOP = {
+  domain: '',
+  storefrontToken: '',
+  storeUrl: '',
+  sections: [
+    { id: 'courses', name: 'Courses', handle: 'courses', text: 'Learn to build with AI, agents and autonomous systems.' },
+    { id: 'documents', name: 'Documents', handle: 'documents', text: 'Guides, blueprints and playbooks to download.' },
+    { id: 'clothing', name: 'Clothing', handle: 'clothing', text: 'TD1 and Mindaloo AC apparel.' },
+  ],
+};
+
+// The Beacon: enquiries and bookings. Submissions arrive in Netlify → Forms → "enquiry".
+export const ENQUIRY = {
+  bookingUrl: '', // optional: a Calendly or Cal.com link so people can pick a time straight away
+  types: ['Book expertise', 'General enquiry', 'Custom build', 'Partnership', 'Press or speaking'],
+  expertise: ['AI strategy session', 'Agents and automation', 'Mindaloo AC for your business', 'Product build or audit', 'Workshop or talk'],
+};

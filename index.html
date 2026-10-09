@@ -25,7 +25,7 @@
 
   <header class="top">
     <a class="brand" href="/" aria-label="TD1.WORLD home"><span class="orb"></span>TD1<span>.WORLD</span></a>
-    <nav><a href="/Neuroblock/">Marketplace</a></nav>
+    <nav><button type="button" id="nav-shop">Shop</button><button type="button" id="nav-contact">Contact</button><a href="/Neuroblock/" class="nav-market">Marketplace</a></nav>
   </header>
 
   <div id="intro">
@@ -42,6 +42,12 @@
   </aside>
 
   <nav id="dock" aria-label="Fly to"></nav>
+
+  <!-- Netlify reads this at deploy time so it can accept enquiries sent from The Beacon. -->
+  <form name="enquiry" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input name="bot-field"><input name="type"><input name="expertise"><input name="date"><input name="time">
+    <input name="name"><input name="email"><input name="company"><input name="timezone"><textarea name="message"></textarea>
+  </form>
 
   <div id="fallback"></div>
   <noscript><div class="noscript">TD1.WORLD is a 3D world and needs JavaScript. <a href="/Neuroblock/">Visit the marketplace</a> or <a href="/realm/">enter Realm</a>.</div></noscript>
