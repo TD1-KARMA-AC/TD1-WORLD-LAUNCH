@@ -13,9 +13,11 @@ A living 3D world of intelligence. Visitors land on a planet they can spin, zoom
 | **Uncharted Isles** | Small pale islands: ideas nobody has had yet |
 | **Karma Core** | The heart: descend through five layers of AI history to the consciousness at the centre |
 | **Realm** (moon) | Connected world, served from `/realm/` |
-| **Mindaloo AC** (moon) | Moonlight: links to www.mindaloo.ac, where Karma AC lives |
+| **Mindaloo AC** (moon) | TD1’s flagship Autonomous Consciousness (AC). Mindaloo means moonlight. Links to www.mindaloo.ac |
 
-The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data.
+The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data. Little beings hop between them, and each continent has its own landform and flora.
+
+TD1’s direction runs AI → AGI → **AC (Autonomous Consciousness)**, shown on The Future and on the Mindaloo AC moon.
 
 ## How it's built
 

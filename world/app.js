@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/OrbitControls.js';
 import {
-  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA,
+  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH,
 } from './data.js';
 import { PRODUCTS } from './products.js';
 
@@ -100,7 +100,7 @@ const latLon = (lat, lon) => new THREE.Vector3(
 
 REGIONS.forEach((r) => { r.dir = latLon(r.lat, r.lon); r.col = new THREE.Color(r.color); });
 
-// h > 0 is land. region is a REGIONS index, UNCH for islands, -1 for open ocean.
+// h > 0 is land. region is a REGIONS index, UNCH for islands, -1 for open ocean. near is the closest continent.
 function terrain(x, y, z) {
   const warp = fbm(x * 2 + 3.1, y * 2 + 1.7, z * 2 + 5.3, 3) * 16;
   let best = -1, bw = -9;
@@ -116,59 +116,99 @@ function terrain(x, y, z) {
   if (h <= 0 && bw < -0.3) {
     const isl = fbm(x * 5 + 40, y * 5 + 40, z * 5 + 40, 4);
     if (isl > 0.3) { h = (isl - 0.3) * 1.3; region = UNCH; }
+    else if (isl > 0.26) { h = (isl - 0.3) * 1.3; } // shallows around the isles
   }
-  return { h, region };
+  return { h, region, near: best };
 }
-function elevation(x, y, z, h) {
-  if (h <= 0) return Math.max(-0.03, h * 0.1);
-  const ridge = 1 - Math.abs(fbm(x * 7 + 2, y * 7 + 9, z * 7 + 4, 3) * 1.6);
-  return 0.005 + h * 0.045 + Math.pow(Math.max(0, ridge), 4) * Math.min(h, 0.8) * 0.07;
+const sstep = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+// Each continent has its own landform.
+function elevation(x, y, z, h, region) {
+  if (h <= 0) return -0.01 + 0.0125 * sstep(h, -0.05, -0.032); // lagoon shelf, just above the sea near shore
+  const hh = Math.min(h, 0.9);
+  const soft = fbm(x * 9 + 1, y * 9 + 5, z * 9 + 2, 3);
+  switch (region) {
+    case 0: { // The Origins: terraced mesas of old stone
+      const k = hh * 7;
+      return 0.006 + ((Math.floor(k) + sstep(k - Math.floor(k), 0.72, 1)) / 7) * 0.095 + soft * 0.004;
+    }
+    case 1: return 0.006 + hh * 0.06 + soft * 0.016; // Memory: soft rolling hills
+    case 2: { // Intelligence: sharp ridgelines
+      const ridge = 1 - Math.abs(fbm(x * 7 + 2, y * 7 + 9, z * 7 + 4, 3) * 1.6);
+      return 0.006 + hh * 0.04 + Math.pow(Math.max(0, ridge), 5) * hh * 0.15;
+    }
+    case 3: return 0.006 + hh * 0.05 + (0.5 + 0.5 * Math.sin(x * 47 + z * 41 + soft * 7)) * hh * 0.022; // Creation: rippled dunes
+    case 4: return 0.006 + sstep(hh, 0.08, 0.32) * 0.07 + sstep(hh, 0.45, 0.6) * 0.03 + soft * 0.008; // The Future: stepped plateaus
+    default: return 0.004 + hh * 0.03 + soft * 0.004; // Uncharted Isles
+  }
 }
 
 const planet = new THREE.Group();
 scene.add(planet);
 
-const landFaces = []; // per kept face: { c: centroid (unit), r: radius, region, h }
+const landFaces = []; // per land face: { c: centroid (unit), r: radius, region, h }
 const byRegion = Array.from({ length: REGIONS.length + 1 }, () => []);
 
 function buildLand() {
-  const detail = isSmall() || isTouch ? 52 : 80;
+  const detail = isSmall() || isTouch ? 64 : 96;
   const ico = new THREE.IcosahedronGeometry(1, detail);
   const src = ico.attributes.position;
   const cache = new Map();
+  const pos = [], col = [], reg = [], index = [];
+  const c = new THREE.Color();
+  const uncharted = new THREE.Color(UNCHARTED.color);
+  const deepSea = new THREE.Color('#0b1b52'), lagoon = new THREE.Color('#4fd4e6'), sand = new THREE.Color('#f3e6cf');
+  const peakTints = REGIONS.map((r) => r.col.clone().lerp(new THREE.Color(1, 1, 1), 0.7));
+  const altTints = REGIONS.map((r) => r.col.clone().offsetHSL(-0.07, 0.08, -0.16)); // second biome colour per continent
+  function colorOf(v) {
+    const base = v.region === UNCH ? uncharted : REGIONS[v.near].col;
+    if (v.h <= 0) { // glowing lagoon fading out to the deep
+      const k = sstep(v.h, -0.05, 0);
+      return c.copy(deepSea).lerp(lagoon, k * 0.85).lerp(base, k * 0.3);
+    }
+    const t = Math.min(1, v.h / 0.75);
+    c.copy(base);
+    if (v.region !== UNCH) c.lerp(altTints[v.region], sstep(fbm(v.x * 3.3 + 5, v.y * 3.3 + 1, v.z * 3.3 + 8, 3), -0.12, 0.22) * 0.7);
+    c.multiplyScalar(0.5 + 0.5 * t);
+    c.offsetHSL(t * 0.03, 0, 0);
+    if (v.h < 0.035) c.lerp(sand, 0.6 * (1 - v.h / 0.035)); // beaches
+    if (t > 0.78 && v.region !== UNCH) c.lerp(peakTints[v.region], Math.min(1, (t - 0.78) * 3));
+    const grain = fbm(v.x * 22 + 7, v.y * 22 + 3, v.z * 22 + 9, 2);
+    return c.multiplyScalar(0.9 + grain * 0.25);
+  }
   const sample = (i) => {
     const x = src.getX(i), y = src.getY(i), z = src.getZ(i);
     const key = `${Math.round(x * 1e5)},${Math.round(y * 1e5)},${Math.round(z * 1e5)}`;
     let v = cache.get(key);
-    if (!v) { const t = terrain(x, y, z); v = { x, y, z, h: t.h, region: t.region, e: elevation(x, y, z, t.h) }; cache.set(key, v); }
+    if (!v) {
+      const t = terrain(x, y, z);
+      v = { x, y, z, h: t.h, region: t.region, near: t.near, e: elevation(x, y, z, t.h, t.region), idx: -1 };
+      cache.set(key, v);
+    }
     return v;
   };
+  const use = (v) => {
+    if (v.idx < 0) {
+      v.idx = pos.length / 3;
+      const r = 1 + v.e;
+      pos.push(v.x * r, v.y * r, v.z * r);
+      colorOf(v);
+      col.push(c.r, c.g, c.b);
+      reg.push(v.region === UNCH ? UNCH : v.near);
+    }
+    return v.idx;
+  };
 
-  const pos = [], col = [], reg = [];
-  const c = new THREE.Color(), white = new THREE.Color(1, 1, 1), uncharted = new THREE.Color(UNCHARTED.color);
-  const jitter = rng(7);
   for (let f = 0; f < src.count / 3; f++) {
     const v = [sample(f * 3), sample(f * 3 + 1), sample(f * 3 + 2)];
     const top = v.reduce((a, b) => (b.h > a.h ? b : a));
-    if (top.h <= 0) continue; // open ocean: the data sea covers it
+    if (top.h <= -0.05) continue; // open ocean: the data sea covers it
+    index.push(use(v[0]), use(v[1]), use(v[2]));
+    if (top.h <= 0) continue; // lagoon shelf, not land
     const region = top.region;
     const hAvg = (v[0].h + v[1].h + v[2].h) / 3;
-    const t = Math.min(1, Math.max(0, hAvg / 0.75));
-    c.copy(region === UNCH ? uncharted : REGIONS[region].col);
-    c.multiplyScalar(0.42 + 0.5 * t);
-    if (hAvg < 0.025) c.lerp(white, 0.32); // glowing shoreline
-    if (t > 0.86) c.lerp(white, (t - 0.86) * 2.4); // lit peaks
-    c.offsetHSL(0, 0, (jitter() - 0.5) * 0.06); // hand-made, felt-and-card texture
-    for (const p of v) {
-      const r = 1 + p.e;
-      pos.push(p.x * r, p.y * r, p.z * r);
-      col.push(c.r, c.g, c.b);
-      reg.push(region);
-    }
     const cx = (v[0].x + v[1].x + v[2].x) / 3, cy = (v[0].y + v[1].y + v[2].y) / 3, cz = (v[0].z + v[1].z + v[2].z) / 3;
     const face = { c: new THREE.Vector3(cx, cy, cz).normalize(), r: 1 + (v[0].e + v[1].e + v[2].e) / 3, region, h: hAvg };
-    landFaces.push(face);
-    byRegion[region].push(face);
+    if (hAvg > 0) { landFaces.push(face); byRegion[region].push(face); }
   }
   ico.dispose();
 
@@ -176,9 +216,10 @@ function buildLand() {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setAttribute('aRegion', new THREE.Float32BufferAttribute(reg, 1));
+  g.setIndex(index);
   g.computeVertexNormals();
 
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0.05, transparent: true });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.04, transparent: true });
   mat.userData.uHi = { value: -10 };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = U.uTime;
@@ -191,7 +232,7 @@ function buildLand() {
       .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHi;\nuniform vec3 uSun;\nvarying float vRegion;\nvarying vec3 vWP;')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         float sel = 1.0 - step(0.5, abs(vRegion - uHi));
-        totalEmissiveRadiance += vColor.rgb * (0.07 + sel * (0.1 + 0.06 * sin(uTime * 2.6)));
+        totalEmissiveRadiance += vColor.rgb * (0.05 + sel * (0.05 + 0.035 * sin(uTime * 2.6)));
         float night = smoothstep(0.1, -0.35, dot(normalize(vWP), uSun));
         totalEmissiveRadiance += vColor.rgb * night * 0.07;`);
   };
@@ -410,6 +451,101 @@ const cities = []; // { product, pos (Vector3), region, color }
   bg.setAttribute('position', new THREE.Float32BufferAttribute(beamPos, 3));
   bg.setAttribute('color', new THREE.Float32BufferAttribute(beamCol, 3));
   planet.add(new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })));
+}
+
+/* ------------------------------------------------------------------ flora: what grows on each continent */
+
+const flora = [];
+{
+  const shapes = [
+    () => new THREE.DodecahedronGeometry(0.009, 0), // The Origins: weathered stones
+    () => new THREE.IcosahedronGeometry(0.011, 0), // Memory: round glowing shrubs
+    () => { const g = new THREE.ConeGeometry(0.005, 0.036, 4); g.translate(0, 0.018, 0); return g; }, // Intelligence: crystal spires
+    () => new THREE.BoxGeometry(0.012, 0.012, 0.012), // Creation: building blocks
+    () => { const g = new THREE.CylinderGeometry(0.0022, 0.0036, 0.042, 6); g.translate(0, 0.021, 0); return g; }, // The Future: light towers
+  ];
+  const count = isSmall() || isTouch ? 80 : 150;
+  const q = new THREE.Quaternion(), m4 = new THREE.Matrix4(), sc = new THREE.Vector3(), p = new THREE.Vector3(), spin = new THREE.Quaternion();
+  const white = new THREE.Color(1, 1, 1), colr = new THREE.Color();
+  REGIONS.forEach((reg, ri) => {
+    const pool = byRegion[ri].filter((f) => f.h > 0.05);
+    if (!pool.length) return;
+    const r = rng(500 + ri);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, roughness: 0.55, flatShading: true, transparent: true,
+      emissive: reg.col, emissiveIntensity: ri === 2 || ri === 4 ? 0.5 : 0.16,
+    });
+    const mesh = new THREE.InstancedMesh(shapes[ri](), mat, count);
+    for (let i = 0; i < count; i++) {
+      const f = pool[Math.floor(r() * pool.length)];
+      p.copy(f.c).multiplyScalar(f.r - 0.002);
+      q.setFromUnitVectors(up, f.c);
+      if (ri === 3) spin.setFromEuler(new THREE.Euler(r() * 6, r() * 6, r() * 6)); // blocks tumble where they land
+      else spin.setFromAxisAngle(up, r() * Math.PI * 2);
+      q.multiply(spin);
+      sc.setScalar(0.6 + r() * 0.9);
+      m4.compose(p, q, sc);
+      mesh.setMatrixAt(i, m4);
+      if (ri === 3) colr.setHSL(r(), 0.7, 0.62); // building blocks in every colour
+      else colr.copy(reg.col).lerp(white, 0.25 + r() * 0.35);
+      mesh.setColorAt(i, colr);
+    }
+    mesh.renderOrder = 2;
+    planet.add(mesh);
+    flora.push(mesh);
+  });
+}
+
+/* ------------------------------------------------------------------ beings: little agents who live here */
+
+const beings = [];
+const beingMesh = (() => {
+  const N = isSmall() || isTouch ? 28 : 46;
+  const geo = new THREE.CapsuleGeometry(0.0045, 0.007, 3, 8);
+  geo.translate(0, 0.008, 0);
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5, roughness: 0.4, transparent: true }), N);
+  const r = rng(808);
+  for (let i = 0; i < N; i++) {
+    const home = cities[Math.floor(r() * cities.length)];
+    beings.push({ from: home, to: home, t: 1, wait: r() * 3, speed: 0.05 + r() * 0.04, phase: r() * 10, q: null, angle: 1, off: new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar(0.03) });
+    mesh.setColorAt(i, home.color);
+  }
+  mesh.renderOrder = 3;
+  planet.add(mesh);
+  return mesh;
+})();
+const bQ = new THREE.Quaternion(), bM = new THREE.Matrix4(), bS = new THREE.Vector3(1, 1, 1), bP = new THREE.Vector3(), bD = new THREE.Vector3(), bA = new THREE.Vector3();
+function surfaceRadius(d) {
+  const t = terrain(d.x, d.y, d.z);
+  return t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h, t.region) : 1.003;
+}
+function stepBeings(dt, t) {
+  beings.forEach((b, i) => {
+    if (b.t >= 1) {
+      b.wait -= dt;
+      if (b.wait <= 0) { // off to the next city, usually a neighbour on the same continent
+        const same = cities.filter((c) => c.region === b.to.region && c !== b.to);
+        const pool = Math.random() < 0.85 && same.length ? same : cities;
+        b.from = b.to;
+        b.to = pool[Math.floor(Math.random() * pool.length)];
+        b.angle = Math.max(0.05, b.from.pos.angleTo(b.to.pos));
+        b.q = new THREE.Quaternion().setFromUnitVectors(b.from.pos.clone().normalize(), b.to.pos.clone().normalize());
+        b.t = 0;
+        b.wait = 1 + Math.random() * 4;
+        beingMesh.setColorAt(i, b.to.color);
+        beingMesh.instanceColor.needsUpdate = true;
+      }
+    } else b.t = Math.min(1, b.t + (b.speed * dt) / b.angle);
+    if (b.q && b.t < 1) bD.copy(b.from.pos).normalize().applyQuaternion(bQ.identity().slerp(b.q, b.t));
+    else bD.copy(b.to.pos).add(bA.copy(b.off)).normalize(); // mill about near the city
+    const walking = b.t < 1;
+    const hop = walking ? Math.abs(Math.sin((t + b.phase) * 9)) * 0.008 : Math.abs(Math.sin((t + b.phase) * 2.2)) * 0.002;
+    bP.copy(bD).multiplyScalar(surfaceRadius(bD) + hop);
+    bQ.setFromUnitVectors(up, bD);
+    bM.compose(bP, bQ, bS);
+    beingMesh.setMatrixAt(i, bM);
+  });
+  beingMesh.instanceMatrix.needsUpdate = true;
 }
 
 /* ------------------------------------------------------------------ data flights between cities */
@@ -736,6 +872,8 @@ function applyCore(m, t) {
   ocean.material.depthWrite = m < 0.05;
   clouds.material.uniforms.uFade.value = 1 - m;
   peaks.forEach((p) => { p.obj.visible = m < 0.5; });
+  flora.forEach((f) => { f.visible = m < 0.5; });
+  beingMesh.visible = m < 0.5;
   monoliths.forEach((o) => { o.obj.visible = m < 0.5; });
   shells.forEach((sh, i) => { sh.material.uniforms.uAlpha.value = ss(m, i * 0.1, i * 0.1 + 0.45); });
   const beat = Math.pow(Math.max(0, Math.sin(t * 3.9)), 12) + 0.6 * Math.pow(Math.max(0, Math.sin(t * 3.9 - 0.9)), 12);
@@ -785,7 +923,7 @@ CORE.forces.forEach(([k, , , color], i) => {
   const el = addLabel(`<span class="nm">${k}</span>`, 'force', () => forces[i].orb.getWorldPosition(new THREE.Vector3()), () => enterCore(), { layer: 'core' });
   el.style.setProperty('--c', color);
 });
-addLabel('<span class="nm">Mindaloo AC</span><span class="era">Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
+addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
 /* ------------------------------------------------------------------ camera flights */
 
@@ -861,9 +999,13 @@ function regionHtml(ri) {
       <button type="button" class="cta" data-go="core">Descend beneath the surface ↓</button></section>`;
   }
   if (r.id === 'future') {
-    extra = `<section><h3>Projections</h3><ul class="horizons">${HORIZONS.map(([h, t, d]) => `<li><span class="hz hz-${h.toLowerCase()}">${esc(h)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></section>`;
+    extra = acHtml(true) + `<section><h3>Projections</h3><ul class="horizons">${HORIZONS.map(([h, t, d]) => `<li><span class="hz hz-${h.toLowerCase()}">${esc(h)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></section>`;
   }
   return header(r) + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri);
+}
+function acHtml(withLink) {
+  return `<section><h3>TD1’s direction</h3><ol class="ac-path">${AC_PATH.map(([k, n, d], i) => `<li class="${k === 'AC' ? 'is-ac' : ''}"><span class="ak">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol>
+    ${withLink ? '<button type="button" class="cta" data-go="mindaloo">Meet Mindaloo AC, the first AC</button>' : ''}</section>`;
 }
 function coreHtml() {
   const forcesHtml = CORE.forces.map(([k, n, d, c]) => `<li style="--fc:${c}"><span class="fk">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('');
@@ -888,7 +1030,8 @@ function specialHtml(kind) {
       + `<a class="cta" href="${REALM_URL}">Enter Realm →</a>`;
   }
   if (kind === 'mindaloo') {
-    return header({ name: 'Mindaloo AC', era: 'Moonlight', color: '#D9CCFF', tagline: 'The personal AI OS where Karma AC lives.', intro: 'Mindaloo means moonlight. This moon is Mindaloo AC: a sovereign AI operating system with a persistent identity, a spatial multi-agent canvas and its own home on the web. As it orbits, its light falls across every continent.' })
+    return header({ name: 'Mindaloo AC', era: 'Moonlight · TD1 flagship', color: '#D9CCFF', tagline: 'Autonomous Consciousness, powered by Karma Core.', intro: 'Mindaloo means moonlight, and AC stands for Autonomous Consciousness. Mindaloo AC is TD1’s flagship: a sovereign AI with its own lasting identity and memory, a spatial canvas of agents that work together, and Karma Core at its heart. As it orbits, its light falls across every continent.' })
+      + acHtml(false)
       + (MINDALOO_URL
         ? `<a class="cta" href="${MINDALOO_URL}" target="_blank" rel="noopener">Visit Mindaloo AC ↗</a>`
         : '<span class="cta off" aria-disabled="true">Link coming soon</span>');
@@ -1107,7 +1250,7 @@ function spawnRipple(dir, color) {
   const d = dir.clone().normalize();
   const t = terrain(d.x, d.y, d.z);
   const m = new THREE.Mesh(rippleGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-  m.position.copy(d).multiplyScalar((t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h) : 1) + 0.008);
+  m.position.copy(d).multiplyScalar((t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h, t.region) : 1.003) + 0.008);
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), d);
   m.renderOrder = 3;
   planet.add(m);
@@ -1211,6 +1354,8 @@ function loop() {
   if (Math.abs(coreTarget - coreMix) < 0.001) coreMix = coreTarget;
   applyCore(coreMix, t);
   stepRipples(now);
+  if (!reduceMotion && coreMix < 0.5) stepBeings(Math.min(0.05, t - (loop.lastT ?? t)), t);
+  loop.lastT = t;
 
   clouds.rotation.y = t * 0.01;
   realmPivot.rotation.y = t * 0.06;

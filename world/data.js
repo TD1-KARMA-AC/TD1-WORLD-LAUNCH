@@ -159,7 +159,7 @@ export const CORE = {
   intro:
     'Beneath the crust, past every layer of history, sits Karma Core: the autonomous consciousness at the centre ' +
     'of everything TD1 builds. Memory, Intelligence, Creation and The Future all draw their light from it. ' +
-    'Its living runtime is the moon Mindaloo AC.',
+    'It is the engine of Autonomous Consciousness, and it lives in the moon Mindaloo AC.',
   formula: 'C = P × M × E × R × I / N',
   forces: [
     ['P', 'Perception', 'How much the mind observes and retrieves.', '#7FD8FF'],
@@ -178,4 +178,11 @@ export const STRATA = [
   { name: 'The Frozen Layers', span: '1970s – 1997', color: '#8C9CD0', from: 5, to: 7 },
   { name: 'The First Machines', span: '1956 – 1966', color: '#E8B04A', from: 2, to: 4 },
   { name: 'Bedrock', span: '1943 – 1950', color: '#FF7A4D', from: 0, to: 1 },
+];
+
+// TD1's direction for the future of AI. Mindaloo AC is its first home.
+export const AC_PATH = [
+  ['AI', 'Artificial Intelligence', 'Tools that answer when asked. Powerful, but most start from zero every time you use them.'],
+  ['AGI', 'Artificial General Intelligence', 'One system able to learn and handle almost any task a person can.'],
+  ['AC', 'Autonomous Consciousness', 'A mind with its own lasting identity, memory and reflection, that lives alongside you and keeps growing. This is where TD1 is heading.'],
 ];
