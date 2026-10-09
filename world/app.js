@@ -731,21 +731,86 @@ exchangePivot.rotation.set(0.85, 0, 0.4);
 scene.add(exchangePivot);
 const exchange = new THREE.Group();
 {
-  const gold = new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffb84a, emissiveIntensity: 0.55, metalness: 0.6, roughness: 0.35, flatShading: true });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.009, 8, 40), gold);
-  const hub = new THREE.Mesh(new THREE.OctahedronGeometry(0.03, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd27a, emissiveIntensity: 0.9, flatShading: true }));
-  exchange.add(ring, hub);
-  for (let i = 0; i < 6; i++) { // trading pods around the ring
-    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.018, 0.018), gold);
-    const a = (i / 6) * Math.PI * 2;
-    pod.position.set(Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0);
-    ring.add(pod);
+  const hull = new THREE.MeshStandardMaterial({ color: 0xe9ecf5, metalness: 0.55, roughness: 0.35, flatShading: true });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x8d93a8, metalness: 0.8, roughness: 0.4, flatShading: true });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffb84a, emissiveIntensity: 0.8, metalness: 0.5, roughness: 0.3, flatShading: true });
+  const solar = new THREE.MeshStandardMaterial({ color: 0x1b2f7a, emissive: 0x0b1a5a, emissiveIntensity: 0.6, metalness: 0.7, roughness: 0.25 });
+  const station = new THREE.Group();
+  const pick = [];
+  const add = (mesh, parent = station) => { parent.add(mesh); pick.push(mesh); return mesh; };
+
+  // central market hub, crowned by a glowing gold dome
+  add(new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.07, 12), hull));
+  const dome = add(new THREE.Mesh(new THREE.SphereGeometry(0.019, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), gold));
+  dome.position.y = 0.035;
+  const spire = add(new THREE.Mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.03, 6), steel));
+  spire.position.y = 0.064;
+  const dish = add(new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.006, 16, 1, true), steel));
+  dish.position.set(0.012, 0.058, 0);
+  dish.rotation.z = -0.6;
+  // docking port below
+  const dockNeck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.012, 0.03, 10), steel));
+  dockNeck.position.y = -0.05;
+  const dockRing = add(new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0025, 6, 16), gold));
+  dockRing.position.y = -0.066;
+  dockRing.rotation.x = Math.PI / 2;
+
+  // rotating habitat ring on spokes, with lit shop pods
+  const habitat = new THREE.Group();
+  station.add(habitat);
+  const ring = add(new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.007, 8, 48), hull), habitat);
+  ring.rotation.x = Math.PI / 2;
+  for (let i = 0; i < 3; i++) {
+    const spoke = add(new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.13, 6), steel), habitat);
+    spoke.rotation.z = Math.PI / 2;
+    spoke.rotation.y = (i / 3) * Math.PI;
   }
-  exchange.userData.ring = ring;
-  exchange.userData.hub = hub;
-  exchange.userData.pick = [ring, hub, ...ring.children];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const pod = add(new THREE.Mesh(new THREE.BoxGeometry(0.011, 0.009, 0.011), gold), habitat);
+    pod.position.set(Math.cos(a) * 0.065, 0.006, Math.sin(a) * 0.065);
+    pod.rotation.y = -a;
+  }
+
+  // long truss with solar wings and navigation lights
+  const truss = add(new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.006, 0.006), steel));
+  truss.position.y = 0.012;
+  const navLights = [];
+  [-1, 1].forEach((side) => {
+    [0.095, 0.135].forEach((x) => {
+      const wing = add(new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.0015, 0.075), solar));
+      wing.position.set(side * x, 0.012, 0);
+      const frame = add(new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.0012, 0.003), gold));
+      frame.position.set(side * x, 0.013, 0);
+    });
+    const nav = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), new THREE.MeshBasicMaterial({ color: side < 0 ? 0xff4d4d : 0x4dff9a }));
+    nav.position.set(side * 0.147, 0.012, 0);
+    station.add(nav);
+    navLights.push(nav);
+  });
+
+  // a cargo shuttle running loops around the station
+  const shuttlePath = new THREE.Group();
+  const shuttle = new THREE.Group();
+  const body = add(new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.007, 0.008), hull), shuttle);
+  const nose = add(new THREE.Mesh(new THREE.ConeGeometry(0.0045, 0.01, 6), gold), shuttle);
+  nose.rotation.z = -Math.PI / 2;
+  nose.position.x = 0.013;
+  const engine = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), new THREE.MeshBasicMaterial({ color: 0x8fd3ff }));
+  engine.position.x = -0.009;
+  shuttle.add(engine);
+  shuttle.position.set(0, 0, 0.13);
+  shuttle.rotation.y = Math.PI;
+  shuttlePath.add(shuttle);
+  shuttlePath.rotation.x = 0.35;
+  station.add(shuttlePath);
+  body.userData.isShuttle = true;
+
+  station.rotation.set(0.45, 0, 0.25); // a three-quarter view so the ring and wings both read
+  exchange.add(station);
+  exchange.userData = { station, habitat, navLights, shuttlePath, dome, pick };
 }
-exchange.position.set(1.55, 0, 0);
+exchange.position.set(1.6, 0, 0);
 exchangePivot.add(exchange);
 
 /* ------------------------------------------------------------------ The Beacon: a lighthouse for enquiries and bookings */
@@ -976,7 +1041,7 @@ CORE.forces.forEach(([k, , , color], i) => {
   const el = addLabel(`<span class="nm">${k}</span>`, 'force', () => forces[i].orb.getWorldPosition(new THREE.Vector3()), () => enterCore(), { layer: 'core' });
   el.style.setProperty('--c', color);
 });
-addLabel('<span class="nm">The Exchange</span><span class="era">Shop</span>', 'moon shop', () => exchange.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.12, 0)), () => openShop(), { surface: false });
+addLabel('<span class="nm">The Exchange</span><span class="era">Shop</span>', 'moon shop', () => exchange.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(0.2)), () => openShop(), { surface: false });
 addLabel('<span class="era">Contact &amp; bookings</span><span class="nm">The Beacon</span>', 'beacon', () => beaconPos.clone().add(beaconPos.clone().normalize().multiplyScalar(0.05)), () => openContact(), {});
 addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
@@ -1216,7 +1281,7 @@ function openShop(tab) {
   selected = { kind: 'shop' };
   land.material.userData.uHi.value = -10;
   if (tab) shopTab = tab;
-  flyTo(exchange.getWorldPosition(new THREE.Vector3()), fitDist(1.3, 3.2));
+  flyTo(exchange.getWorldPosition(new THREE.Vector3()), fitDist(1.0, 2.35));
   openPanel(shopHtml(), SHOP_COLOR);
   setDock('shop');
   renderShop();
@@ -1561,13 +1626,21 @@ function loop() {
   realmPivot.rotation.y = t * 0.06;
   realm.rotation.y = t * 0.2;
   mindalooPivot.rotation.y = -t * 0.09;
-  exchangePivot.rotation.y = t * 0.07;
-  exchange.userData.ring.rotation.z = t * 0.6;
-  exchange.userData.hub.rotation.y = t * 1.1;
-  exchange.lookAt(camera.position);
+  { // the station holds still while its shop is open, so it stays in view
+    const dt = Math.min(0.05, t - (exchange.userData.lastT ?? t));
+    exchange.userData.lastT = t;
+    if (!(selected && selected.kind === 'shop')) exchange.userData.angle = (exchange.userData.angle || 0) + dt * 0.07;
+    exchangePivot.rotation.y = exchange.userData.angle || 0;
+  }
+  exchange.userData.habitat.rotation.y = t * 0.5;
+  exchange.lookAt(camera.position); // always shown three-quarter on: ring, dome and wings all visible
+  exchange.userData.station.rotation.set(0.8, 0.5 + Math.sin(t * 0.25) * 0.5, 0.18);
+  exchange.userData.shuttlePath.rotation.y = -t * 0.9;
+  exchange.userData.navLights.forEach((n, i) => { n.visible = Math.sin(t * 4 + i * Math.PI) > 0.3; });
+  exchange.userData.dome.material.emissiveIntensity = 0.7 + Math.sin(t * 1.6) * 0.25;
   {
     const d = exchange.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
-    exchange.scale.setScalar(THREE.MathUtils.clamp((d - 0.3) / 0.8, 0.05, 1));
+    exchange.scale.setScalar(1.5 * THREE.MathUtils.clamp((d - 0.3) / 0.8, 0.05, 1));
   }
   beacon.userData.sweep.rotation.y = t * 1.4;
   beaconFlash = Math.max(0, beaconFlash - 0.01);
