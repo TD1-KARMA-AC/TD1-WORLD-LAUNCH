@@ -11,6 +11,7 @@ A living 3D world of intelligence. Visitors land on a planet they can spin, zoom
 | **The Future** (aurora green) | The projection: near, mid and far horizons |
 | **Ocean of Data** | The flowing sea between every continent |
 | **Uncharted Isles** | Small pale islands: ideas nobody has had yet |
+| **Karma Core** | The heart: descend through five layers of AI history to the consciousness at the centre |
 | **Realm** (moon) | Connected world, served from `/realm/` |
 | **Mindaloo AC** (moon) | Moonlight: links to www.mindaloo.ac, where Karma AC lives |
 

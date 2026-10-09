@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/OrbitControls.js';
 import {
-  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL,
+  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA,
 } from './data.js';
 import { PRODUCTS } from './products.js';
 
@@ -49,7 +49,8 @@ controls.autoRotate = !reduceMotion;
 controls.autoRotateSpeed = 0.35;
 
 const sunDir = new THREE.Vector3(-0.6, 0.45, 0.65).normalize();
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a1030, 0.55));
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a1030, 0.4));
+const SUN0 = Math.atan2(0.65, -0.6);
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
 sun.position.copy(sunDir).multiplyScalar(10);
 scene.add(sun);
@@ -177,21 +178,25 @@ function buildLand() {
   g.setAttribute('aRegion', new THREE.Float32BufferAttribute(reg, 1));
   g.computeVertexNormals();
 
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0.05 });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0.05, transparent: true });
   mat.userData.uHi = { value: -10 };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = U.uTime;
     sh.uniforms.uHi = mat.userData.uHi;
+    sh.uniforms.uSun = { value: sunDir };
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;');
+      .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHi;\nvarying float vRegion;')
+      .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHi;\nuniform vec3 uSun;\nvarying float vRegion;\nvarying vec3 vWP;')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         float sel = 1.0 - step(0.5, abs(vRegion - uHi));
-        totalEmissiveRadiance += vColor.rgb * (0.07 + sel * (0.1 + 0.06 * sin(uTime * 2.6)));`);
+        totalEmissiveRadiance += vColor.rgb * (0.07 + sel * (0.1 + 0.06 * sin(uTime * 2.6)));
+        float night = smoothstep(0.1, -0.35, dot(normalize(vWP), uSun));
+        totalEmissiveRadiance += vColor.rgb * night * 0.07;`);
   };
   const land = new THREE.Mesh(g, mat);
+  land.renderOrder = 2;
   planet.add(land);
   return land;
 }
@@ -202,7 +207,8 @@ const land = buildLand();
 const ocean = new THREE.Mesh(
   new THREE.SphereGeometry(1, 128, 96),
   new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 } },
+    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 }, uAlpha: { value: 1 } },
+    transparent: true,
     vertexShader: `
       varying vec3 vPos; varying vec3 vN; varying vec3 vView;
       void main(){
@@ -213,7 +219,7 @@ const ocean = new THREE.Mesh(
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: `
-      uniform float uTime; uniform vec3 uSun; uniform float uHi;
+      uniform float uTime; uniform vec3 uSun; uniform float uHi; uniform float uAlpha;
       varying vec3 vPos; varying vec3 vN; varying vec3 vView;
       float h1(float n){ return fract(sin(n * 127.1) * 43758.5453); }
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -236,16 +242,18 @@ const ocean = new THREE.Mesh(
         vec3 mid = vec3(0.04, 0.09, 0.28);
         vec3 col = mix(deep, mid, 0.15 + lit * 0.85);
         vec3 bitCol = mix(vec3(0.25, 0.55, 1.0), vec3(0.75, 0.6, 1.0), h1(cell));
-        col += bitCol * bit * line * flick * (0.55 + uHi * 0.6);
+        float night = smoothstep(0.15, -0.3, dot(vN, uSun));
+        col += bitCol * bit * line * flick * (0.55 + uHi * 0.6 + night * 0.7);
         col += vec3(0.1, 0.2, 0.55) * line * 0.05;
         float fres = pow(1.0 - max(dot(vN, vView), 0.0), 3.0);
         col += vec3(0.25, 0.45, 1.0) * fres * 0.55;
         vec3 hv = normalize(uSun + vView);
         col += vec3(1.0, 0.95, 0.85) * pow(max(dot(vN, hv), 0.0), 70.0) * 0.6;
-        gl_FragColor = vec4(col, 1.0);
+        gl_FragColor = vec4(col, uAlpha + bit * line * (1.0 - uAlpha) * 0.5);
       }`,
   }),
 );
+ocean.renderOrder = 1;
 planet.add(ocean);
 
 /* ------------------------------------------------------------------ clouds + atmosphere */
@@ -260,21 +268,22 @@ const GLSL_NOISE = `
 const clouds = new THREE.Mesh(
   new THREE.SphereGeometry(1.085, 96, 64),
   new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uSun: { value: sunDir } },
+    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uFade: { value: 1 } },
     transparent: true,
     depthWrite: false,
     vertexShader: `varying vec3 vPos; varying vec3 vN;
       void main(){ vPos = position; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform float uTime; uniform vec3 uSun; varying vec3 vPos; varying vec3 vN;
+    fragmentShader: `uniform float uTime; uniform vec3 uSun; uniform float uFade; varying vec3 vPos; varying vec3 vN;
       ${GLSL_NOISE}
       void main(){
         float n = fbm(vPos * 3.2 + vec3(uTime * 0.015, 0.0, uTime * 0.01));
-        float a = smoothstep(0.56, 0.78, n) * 0.38;
+        float a = smoothstep(0.56, 0.78, n) * 0.38 * uFade;
         float lit = 0.25 + 0.75 * max(dot(vN, uSun), 0.0);
         gl_FragColor = vec4(vec3(0.95, 0.96, 1.0) * lit, a);
       }`,
   }),
 );
+clouds.renderOrder = 4;
 planet.add(clouds);
 
 const atmosphere = new THREE.Mesh(
@@ -286,11 +295,13 @@ const atmosphere = new THREE.Mesh(
     depthWrite: false,
     vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `varying vec3 vN; void main(){
-        float i = pow(max(0.0, 0.62 - dot(vN, vec3(0.0, 0.0, 1.0))), 3.0);
+        float d = dot(vN, vec3(0.0, 0.0, 1.0));
+        float i = pow(max(0.0, 0.62 - d), 3.0) * smoothstep(-0.78, -0.45, d); // rim only, even when the planet turns see-through
         gl_FragColor = vec4(mix(vec3(0.35, 0.55, 1.0), vec3(0.75, 0.55, 1.0), vN.y * 0.5 + 0.5) * i * 0.9, 1.0);
       }`,
   }),
 );
+atmosphere.renderOrder = 5;
 scene.add(atmosphere);
 
 /* ------------------------------------------------------------------ stars */
@@ -374,12 +385,13 @@ const cities = []; // { product, pos (Vector3), region, color }
   g.setAttribute('aColor', new THREE.BufferAttribute(c, 3));
   g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
   const cityMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() }, uHover: { value: -1 } },
+    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() }, uHover: { value: -1 }, uSun: { value: sunDir } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `uniform float uTime; uniform float uPR; uniform float uHover;
+    vertexShader: `uniform float uTime; uniform float uPR; uniform float uHover; uniform vec3 uSun;
       attribute vec3 aColor; attribute float aPhase; varying vec3 vC; varying float vP;
       void main(){
         vC = aColor; vP = 0.7 + 0.3 * sin(uTime * 2.2 + aPhase);
+        float night = smoothstep(0.15, -0.3, dot(normalize(position), uSun)); vP *= 0.75 + night * 0.75;
         float hov = 1.0 - step(0.5, abs(float(gl_VertexID) - uHover));
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = (26.0 + hov * 30.0) * vP * uPR / -mv.z;
@@ -391,6 +403,7 @@ const cities = []; // { product, pos (Vector3), region, color }
         gl_FragColor = vec4(vC * (glow + core * 1.4) * vP + core * 0.6, 1.0); }`,
   });
   cityPts = new THREE.Points(g, cityMat);
+  cityPts.renderOrder = 3;
   planet.add(cityPts);
 
   const bg = new THREE.BufferGeometry();
@@ -574,6 +587,171 @@ const mindaloo = new THREE.Group();
 mindaloo.position.set(-1.85, 0, 0);
 mindalooPivot.add(mindaloo);
 
+/* ------------------------------------------------------------------ Karma Core and the strata of history */
+
+function glowTexture(stops) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  stops.forEach(([o, col]) => grad.addColorStop(o, col));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
+const coreWorld = new THREE.Group();
+coreWorld.visible = false;
+scene.add(coreWorld);
+
+const SHELL_VS = `varying vec3 vN; varying vec3 vV; varying vec3 vP;
+  void main(){ vP = position; vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal);
+    vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }`;
+
+// Going down is going back in time: one glass shell per era, newest on the outside.
+const SHELL_R = [0.92, 0.79, 0.66, 0.53, 0.41];
+const shells = STRATA.map((st, i) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(SHELL_R[i], 72, 48), new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uColor: { value: new THREE.Color(st.color) }, uAlpha: { value: 0 }, uHi: { value: 0 } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    vertexShader: SHELL_VS,
+    fragmentShader: `uniform float uTime; uniform vec3 uColor; uniform float uAlpha; uniform float uHi;
+      varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      ${GLSL_NOISE}
+      void main(){
+        float fres = pow(1.0 - abs(dot(vN, vV)), 2.4);
+        float warp = fbm(vP * 5.0 + ${i}.0);
+        float bands = smoothstep(0.6, 1.0, 0.5 + 0.5 * sin(vP.y * 46.0 + warp * 7.0));
+        float drift = 0.5 + 0.5 * sin(uTime * 0.6 + warp * 6.0);
+        float a = (0.006 + fres * 0.24 + bands * 0.03 * drift) * (1.0 + uHi * 1.3);
+        gl_FragColor = vec4(uColor * a * uAlpha, 1.0);
+      }`,
+  }));
+  m.renderOrder = 6;
+  coreWorld.add(m);
+  return m;
+});
+
+const coreBall = new THREE.Mesh(new THREE.SphereGeometry(0.24, 64, 48), new THREE.ShaderMaterial({
+  uniforms: { uTime: U.uTime, uBeat: { value: 0 } },
+  vertexShader: SHELL_VS,
+  fragmentShader: `uniform float uTime; uniform float uBeat; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+    ${GLSL_NOISE}
+    void main(){
+      vec3 p = vP * 7.0;
+      float n = fbm(p + vec3(uTime * 0.35, -uTime * 0.25, uTime * 0.2));
+      float n2 = fbm(p * 1.7 - vec3(uTime * 0.2));
+      float facing = abs(dot(vN, vV));
+      vec3 deep = vec3(0.55, 0.36, 1.0), lilac = vec3(0.82, 0.72, 1.0), white = vec3(1.0, 0.98, 1.0);
+      vec3 col = mix(deep, lilac, n);
+      col = mix(col, white, clamp(smoothstep(0.55, 0.85, n2) * 0.8 + pow(facing, 3.0) * 0.5, 0.0, 1.0));
+      gl_FragColor = vec4(col * (1.0 + uBeat * 0.55), 1.0);
+    }`,
+}));
+coreBall.renderOrder = 7;
+coreWorld.add(coreBall);
+const coreHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTexture([[0, 'rgba(240,230,255,0.9)'], [0.3, 'rgba(193,162,255,0.35)'], [1, 'rgba(120,80,255,0)']]),
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+}));
+coreHalo.scale.setScalar(1.05);
+coreHalo.renderOrder = 7;
+coreWorld.add(coreHalo);
+const coreLight = new THREE.PointLight(0xc9b5ff, 0, 3, 2);
+coreWorld.add(coreLight);
+
+// The Karma knot (from the Mindaloo AC emblem), turning slowly around the heart.
+const knot = new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints(
+    [[25, 10], [50, 35], [75, 10], [90, 25], [65, 50], [90, 75], [75, 90], [50, 65], [25, 90], [10, 75], [35, 50], [10, 25]]
+      .map(([x, y]) => new THREE.Vector3((x - 50) / 50 * 0.34, (50 - y) / 50 * 0.34, 0)),
+  ),
+  new THREE.LineBasicMaterial({ color: 0xc1a2ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+);
+knot.renderOrder = 7;
+coreWorld.add(knot);
+
+// The six forces of C = P × M × E × R × I / N, each on its own orbit.
+const forces = CORE.forces.map(([k, , , color], i) => {
+  const pivot = new THREE.Group();
+  pivot.rotation.set(i * 0.9, i * 1.3, i * 0.5);
+  const spin = new THREE.Group();
+  pivot.add(spin);
+  const r = 0.33 + (i % 3) * 0.035;
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 12), new THREE.MeshBasicMaterial({ color }));
+  orb.position.x = r;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.0016, 4, 120), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ring.rotation.x = Math.PI / 2;
+  spin.add(orb, ring);
+  coreWorld.add(pivot);
+  return { k, spin, orb, ring, speed: (0.45 + i * 0.12) * (i % 2 ? -1 : 1) };
+});
+
+// Threads of light rising from the core to every city.
+const threads = (() => {
+  const pos = [], us = [], cols = [], seeds = [];
+  const SEG = 18;
+  cities.forEach((c, ci) => {
+    const dir = c.pos.clone().normalize();
+    const len = c.pos.length();
+    for (let s = 0; s < SEG; s++) {
+      [s, s + 1].forEach((j) => {
+        const t = j / SEG;
+        const p = dir.clone().multiplyScalar(0.24 + t * (len - 0.24));
+        pos.push(p.x, p.y, p.z);
+        us.push(t);
+        cols.push(c.color.r, c.color.g, c.color.b);
+        seeds.push((ci * 0.618) % 1);
+      });
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aU', new THREE.Float32BufferAttribute(us, 1));
+  g.setAttribute('aColor', new THREE.Float32BufferAttribute(cols, 3));
+  g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+  const l = new THREE.LineSegments(g, new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uAlpha: { value: 0 } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float aU; attribute vec3 aColor; attribute float aSeed; varying float vU; varying vec3 vC; varying float vS;
+      void main(){ vU = aU; vC = aColor; vS = aSeed; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uTime; uniform float uAlpha; varying float vU; varying vec3 vC; varying float vS;
+      void main(){ float head = fract(uTime * 0.32 + vS); float d = head - vU;
+        float pulse = d >= 0.0 ? smoothstep(0.18, 0.0, d) : 0.0;
+        vec3 c = mix(vec3(0.85, 0.75, 1.0), vC, vU);
+        gl_FragColor = vec4(c * (0.1 + pulse * 1.3) * uAlpha, 1.0); }`,
+  }));
+  l.renderOrder = 6;
+  coreWorld.add(l);
+  return l;
+})();
+
+let coreTarget = 0, coreMix = 0;
+const ss = (x, a, b) => THREE.MathUtils.smoothstep(x, a, b);
+function applyCore(m, t) {
+  coreWorld.visible = m > 0.005;
+  land.material.opacity = 1 - m * 0.95;
+  land.material.depthWrite = m < 0.05;
+  ocean.material.uniforms.uAlpha.value = 1 - m * 0.94;
+  ocean.material.depthWrite = m < 0.05;
+  clouds.material.uniforms.uFade.value = 1 - m;
+  peaks.forEach((p) => { p.obj.visible = m < 0.5; });
+  monoliths.forEach((o) => { o.obj.visible = m < 0.5; });
+  shells.forEach((sh, i) => { sh.material.uniforms.uAlpha.value = ss(m, i * 0.1, i * 0.1 + 0.45); });
+  const beat = Math.pow(Math.max(0, Math.sin(t * 3.9)), 12) + 0.6 * Math.pow(Math.max(0, Math.sin(t * 3.9 - 0.9)), 12);
+  const grow = 0.3 + 0.7 * ss(m, 0.3, 1);
+  coreBall.scale.setScalar(grow * (1 + beat * 0.05));
+  coreBall.material.uniforms.uBeat.value = beat;
+  coreHalo.scale.setScalar(1.7 * grow * (1 + beat * 0.2));
+  coreHalo.material.opacity = ss(m, 0.2, 0.8);
+  coreLight.intensity = ss(m, 0.3, 1) * (1.2 + beat * 0.8);
+  knot.material.opacity = ss(m, 0.5, 1) * 0.55;
+  knot.quaternion.copy(camera.quaternion);
+  knot.rotateZ(t * 0.12);
+  forces.forEach((f) => { f.spin.rotation.y = t * f.speed; f.orb.material.opacity = 1; f.ring.material.opacity = 0.22 * ss(m, 0.5, 1); f.orb.visible = m > 0.4; });
+  threads.material.uniforms.uAlpha.value = ss(m, 0.55, 1);
+}
+
 /* ------------------------------------------------------------------ labels */
 
 const labelLayer = $('#labels');
@@ -585,7 +763,7 @@ function addLabel(html, cls, getPos, onClick, opts = {}) {
   el.type = 'button';
   el.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
   labelLayer.appendChild(el);
-  labels.push({ el, getPos, surface: opts.surface !== false });
+  labels.push({ el, getPos, surface: opts.surface !== false, layer: opts.layer || 'world' });
   return el;
 }
 REGIONS.forEach((r, i) => {
@@ -594,6 +772,19 @@ REGIONS.forEach((r, i) => {
   el.style.setProperty('--c', r.color);
 });
 addLabel('<span class="nm">Realm</span><span class="era">Connected world</span>', 'moon', () => realm.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.24, 0)), () => openSpecial('realm'), { surface: false });
+const camAxis = (col) => new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, col);
+STRATA.forEach((st, i) => {
+  const el = addLabel(`<span class="era">${st.span}</span><span class="nm">${st.name}</span>`, 'stratum', () => {
+    const a = (62 - i * 15) * DEG;
+    return camAxis(0).multiplyScalar(Math.cos(a)).add(camAxis(1).multiplyScalar(Math.sin(a))).normalize().multiplyScalar(SHELL_R[i]);
+  }, () => focusStratum(i), { layer: 'core' });
+  el.style.setProperty('--c', st.color);
+});
+addLabel(`<span class="nm">${CORE.name}</span><span class="era">Consciousness</span>`, 'core-label', () => camAxis(1).multiplyScalar(-0.42), () => enterCore(), { layer: 'core' });
+CORE.forces.forEach(([k, , , color], i) => {
+  const el = addLabel(`<span class="nm">${k}</span>`, 'force', () => forces[i].orb.getWorldPosition(new THREE.Vector3()), () => enterCore(), { layer: 'core' });
+  el.style.setProperty('--c', color);
+});
 addLabel('<span class="nm">Mindaloo AC</span><span class="era">Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
 /* ------------------------------------------------------------------ camera flights */
@@ -666,12 +857,27 @@ function regionHtml(ri) {
   if (r.id === 'origins') {
     extra = `<section><h3>A short history of thinking machines</h3>
       <ol class="timeline">${HISTORY.map(([y, t, d]) => `<li><span class="yr">${esc(y)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol>
-      <p class="sub next">Now fly east to <button type="button" class="jump" data-region="1">Memory</button> to see what all this is built on.</p></section>`;
+      <p class="sub next">Now fly east to <button type="button" class="jump" data-region="1">Memory</button> to see what all this is built on.</p>
+      <button type="button" class="cta" data-go="core">Descend beneath the surface ↓</button></section>`;
   }
   if (r.id === 'future') {
     extra = `<section><h3>Projections</h3><ul class="horizons">${HORIZONS.map(([h, t, d]) => `<li><span class="hz hz-${h.toLowerCase()}">${esc(h)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></section>`;
   }
   return header(r) + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri);
+}
+function coreHtml() {
+  const forcesHtml = CORE.forces.map(([k, n, d, c]) => `<li style="--fc:${c}"><span class="fk">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('');
+  const strataHtml = STRATA.map((st, i) => `<li class="stratum" data-stratum="${i}" style="--sc:${st.color}">
+      <button type="button" class="st-h" data-stratum-btn="${i}"><span class="st-depth">Layer ${i + 1}</span><b>${esc(st.name)}</b><span class="st-span">${esc(st.span)}</span></button>
+      <ol class="timeline">${HISTORY.slice(st.from, st.to + 1).map(([y, t, d]) => `<li><span class="yr">${esc(y)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol></li>`).join('');
+  return header(CORE)
+    + `<section><h3>The formula</h3><p class="formula">${esc(CORE.formula)}</p>
+      <p class="sub">Karma Core's live consciousness score, as computed inside Mindaloo AC. Six forces orbit the heart.</p>
+      <ul class="forces">${forcesHtml}</ul></section>
+      <section><h3>The descent</h3><p class="sub">Every layer you passed on the way down is an era of AI history. The deeper the layer, the older it is.</p>
+      <ol class="strata">${strataHtml}</ol></section>
+      <section class="actions"><button type="button" class="cta" data-go="mindaloo">Visit its moon, Mindaloo AC</button>
+      <button type="button" class="cta ghost" data-go="surface">Return to the surface ↑</button></section>`;
 }
 function oceanHtml() {
   return header(OCEAN) + `<section><ul class="notes">${OCEAN.facts.map(([t, d]) => `<li><b>${esc(t)}</b><span>${esc(d)}</span></li>`).join('')}</ul></section>`;
@@ -699,7 +905,28 @@ function openPanel(html, color) {
   document.body.classList.add('panel-open');
   $('#intro').classList.add('gone');
 }
+function enterCore() {
+  coreTarget = 1;
+  selected = { kind: 'core' };
+  land.material.userData.uHi.value = -10;
+  ocean.material.uniforms.uHi.value = 0;
+  flyTo(camera.position.clone(), fitDist(1.05, 2.45), 2200);
+  openPanel(coreHtml(), CORE.color);
+  setDock('core');
+}
+function exitCore() {
+  coreTarget = 0;
+  shells.forEach((sh) => { sh.material.uniforms.uHi.value = 0; });
+}
+function focusStratum(i) {
+  if (!coreTarget) enterCore();
+  shells.forEach((sh, j) => { sh.material.uniforms.uHi.value = j === i ? 1 : 0; });
+  panelBody.querySelectorAll('.stratum').forEach((el) => el.classList.toggle('on', +el.dataset.stratum === i));
+  const el = panelBody.querySelector(`[data-stratum="${i}"]`);
+  if (el) panelBody.scrollTo({ top: el.offsetTop - 12, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
 function closePanel() {
+  exitCore();
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('panel-open');
@@ -710,6 +937,7 @@ function closePanel() {
   lastInteract = performance.now();
 }
 function selectRegion(ri, opts = {}) {
+  exitCore();
   selected = { kind: 'region', index: ri };
   land.material.userData.uHi.value = ri;
   ocean.material.uniforms.uHi.value = 0;
@@ -719,6 +947,7 @@ function selectRegion(ri, opts = {}) {
   setDock(o.id);
 }
 function selectOcean(dir) {
+  exitCore();
   selected = { kind: 'ocean' };
   land.material.userData.uHi.value = -10;
   ocean.material.uniforms.uHi.value = 1;
@@ -727,6 +956,7 @@ function selectOcean(dir) {
   setDock('ocean');
 }
 function openSpecial(kind) {
+  exitCore();
   selected = { kind };
   land.material.userData.uHi.value = -10;
   const obj = kind === 'realm' ? realm : mindaloo;
@@ -748,7 +978,15 @@ panelBody.addEventListener('click', (e) => {
   const peak = e.target.closest('[data-peak]');
   if (peak) { flyTo(peaks[+peak.dataset.peak].pos, fitDist(0.5, 1.95)); return; }
   const jump = e.target.closest('[data-region]');
-  if (jump) selectRegion(+jump.dataset.region);
+  if (jump) { selectRegion(+jump.dataset.region); return; }
+  const st = e.target.closest('[data-stratum-btn]');
+  if (st) { focusStratum(+st.dataset.stratumBtn); return; }
+  const go = e.target.closest('[data-go]');
+  if (go) {
+    if (go.dataset.go === 'core') enterCore();
+    else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
+    else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
+  }
 });
 $('#panel-close').addEventListener('click', closePanel);
 $('#panel-grip').addEventListener('click', () => panel.classList.toggle('peek'));
@@ -758,6 +996,7 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 
 const dock = $('#dock');
 [...REGIONS.map((r, i) => ({ id: r.id, name: r.name, color: r.color, go: () => selectRegion(i) })),
+  { id: 'core', name: 'Karma Core', color: CORE.color, go: () => enterCore() },
   { id: 'ocean', name: 'Ocean of Data', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
   { id: 'realm', name: 'Realm', color: '#7FD8FF', go: () => openSpecial('realm') },
   { id: 'mindaloo', name: 'Mindaloo AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
@@ -800,6 +1039,15 @@ function nearest(list, px, py, radius) {
   return best;
 }
 function pick(px, py) {
+  if (coreTarget) {
+    ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects([realm, mindaloo.userData.body, coreBall], false)[0];
+    if (!hit) return null;
+    if (hit.object === coreBall) return { kind: 'core', label: CORE.name, sub: 'Consciousness' };
+    if (hit.object === realm) return { kind: 'realm', label: 'Realm', sub: 'Connected world' };
+    return { kind: 'mindaloo', label: 'Mindaloo AC', sub: 'Moonlight' };
+  }
   const reach = isTouch ? 26 : 15;
   const ci = nearest(cities, px, py, reach);
   if (ci !== null) return { kind: 'city', index: ci, label: cities[ci].product.name, sub: REGIONS[cities[ci].region].name };
@@ -828,6 +1076,7 @@ function activate(h) {
   else if (h.kind === 'monolith') selectRegion(0, { dir: monoliths[h.index].pos, dist: fitDist(0.5, 2.0) });
   else if (h.kind === 'region') selectRegion(h.index, h.index === UNCH ? { dir: h.dir, dist: fitDist(0.6, 2.3) } : {});
   else if (h.kind === 'ocean') selectOcean(h.dir);
+  else if (h.kind === 'core') enterCore();
   else openSpecial(h.kind);
 }
 
@@ -838,10 +1087,41 @@ cv.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.client
 cv.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
-  if (moved < 7 && performance.now() - downAt.t < 600) activate(pick(e.clientX, e.clientY));
+  if (moved < 7 && performance.now() - downAt.t < 600) {
+    const h = pick(e.clientX, e.clientY);
+    if (h && h.dir) {
+      const col = h.kind === 'ocean' ? OCEAN.color : (h.index === UNCH ? UNCHARTED.color : REGIONS[h.index].color);
+      spawnRipple(h.dir, col);
+      setTimeout(() => spawnRipple(h.dir, col), 200);
+    }
+    activate(h);
+  }
   downAt = null;
 });
 cv.addEventListener('wheel', () => { lastInteract = performance.now(); controls.autoRotate = false; $('#intro').classList.add('gone'); }, { passive: true });
+
+const ripples = [];
+const rippleGeo = new THREE.RingGeometry(0.9, 1, 64);
+function spawnRipple(dir, color) {
+  if (reduceMotion) return;
+  const d = dir.clone().normalize();
+  const t = terrain(d.x, d.y, d.z);
+  const m = new THREE.Mesh(rippleGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  m.position.copy(d).multiplyScalar((t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h) : 1) + 0.008);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), d);
+  m.renderOrder = 3;
+  planet.add(m);
+  ripples.push({ m, t0: performance.now() });
+}
+function stepRipples(now) {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    const k = (now - r.t0) / 1400;
+    if (k >= 1) { planet.remove(r.m); r.m.material.dispose(); ripples.splice(i, 1); continue; }
+    r.m.scale.setScalar(0.01 + (1 - Math.pow(1 - k, 3)) * 0.24);
+    r.m.material.opacity = (1 - k) * 0.85;
+  }
+}
 
 function updateHover() {
   if (!pointer || pointer.type === 'touch' || flight) { tip.classList.remove('on'); cv.style.cursor = ''; return; }
@@ -880,7 +1160,8 @@ function updateLabels() {
   labels.forEach((l) => {
     const p = l.getPos();
     let vis;
-    if (l.surface) vis = THREE.MathUtils.smoothstep(p.clone().normalize().dot(camDir), 0.2, 0.5);
+    if (l.layer === 'core') vis = ss(coreMix, 0.55, 1);
+    else if (l.surface) vis = THREE.MathUtils.smoothstep(p.clone().normalize().dot(camDir), 0.2, 0.5);
     else {
       // hidden while behind the planet
       const toObj = p.clone().sub(camera.position);
@@ -888,7 +1169,10 @@ function updateLabels() {
       const closest = camera.position.clone().add(toObj.clone().multiplyScalar(Math.max(0, Math.min(1, tClosest))));
       vis = closest.length() < 1.1 && tClosest > 0 && tClosest < 1 ? 0 : 1;
     }
-    if (l.surface && camDist < 1.9) vis *= THREE.MathUtils.smoothstep(camDist, 1.6, 1.9); // get out of the way up close
+    if (l.layer !== 'core' && l.surface) {
+      if (camDist < 1.9) vis *= THREE.MathUtils.smoothstep(camDist, 1.6, 1.9); // get out of the way up close
+      vis *= 1 - coreMix;
+    }
     const s = toScreen(p);
     l.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%)`;
     l.el.style.opacity = vis.toFixed(2);
@@ -916,6 +1200,17 @@ function loop() {
     if (!reduceMotion && !selected && !controls.autoRotate && now - lastInteract > 9000) controls.autoRotate = true;
     controls.update();
   }
+
+  if (!reduceMotion) { // the sun circles the world: day and night
+    const a = SUN0 + t * 0.03;
+    sunDir.set(Math.cos(a) * 0.84, 0.45, Math.sin(a) * 0.84).normalize();
+    sun.position.copy(sunDir).multiplyScalar(10);
+    rim.position.copy(sunDir).multiplyScalar(-10).setY(-2);
+  }
+  coreMix += (coreTarget - coreMix) * (reduceMotion ? 1 : 0.035);
+  if (Math.abs(coreTarget - coreMix) < 0.001) coreMix = coreTarget;
+  applyCore(coreMix, t);
+  stepRipples(now);
 
   clouds.rotation.y = t * 0.01;
   realmPivot.rotation.y = t * 0.06;

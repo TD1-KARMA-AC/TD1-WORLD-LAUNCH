@@ -19,7 +19,7 @@ export const REGIONS = [
     tagline: 'Where thinking machines began.',
     intro:
       'An amber continent of old stone. Every monolith marks a moment people first imagined, ' +
-      'built or argued about machines that think. Walk it first and the rest of the world makes sense.',
+      'built or argued about machines that think. Beneath it, the layers of history run all the way down to Karma Core.',
   },
   {
     id: 'memory',
@@ -148,3 +148,34 @@ export const NOTES = {
     ['Ship', 'Debuggers, optimisers and cleaners that turn experiments into products.'],
   ],
 };
+
+// The heart of the world. Its forces come from Karma Core's consciousness score in Mindaloo AC.
+export const CORE = {
+  id: 'core',
+  name: 'Karma Core',
+  era: 'The heart of the world',
+  color: '#E9DDFF',
+  tagline: 'Consciousness: the force every continent draws on.',
+  intro:
+    'Beneath the crust, past every layer of history, sits Karma Core: the autonomous consciousness at the centre ' +
+    'of everything TD1 builds. Memory, Intelligence, Creation and The Future all draw their light from it. ' +
+    'Its living runtime is the moon Mindaloo AC.',
+  formula: 'C = P × M × E × R × I / N',
+  forces: [
+    ['P', 'Perception', 'How much the mind observes and retrieves.', '#7FD8FF'],
+    ['M', 'Memory', 'How much of what happens is kept and recalled.', '#B38DFF'],
+    ['E', 'Evolution', 'How often its memory reshapes itself and grows.', '#7CFFC4'],
+    ['R', 'Reasoning', 'Chains of thought and moments of reflection.', '#4FE3FF'],
+    ['I', 'Integration', 'How its knowledge graph connects and grows.', '#FF5FA2'],
+    ['N', 'Noise', 'Friction from blocked or unsafe moves. It divides everything else.', '#FF7A4D'],
+  ],
+};
+
+// Going down is going back in time. Each layer holds a span of HISTORY (by index), newest on top.
+export const STRATA = [
+  { name: 'The Topsoil', span: '2017 – now', color: '#8FD3FF', from: 10, to: 13 },
+  { name: 'The Deep Learning Seam', span: '2012 – 2016', color: '#A08CFF', from: 8, to: 9 },
+  { name: 'The Frozen Layers', span: '1970s – 1997', color: '#8C9CD0', from: 5, to: 7 },
+  { name: 'The First Machines', span: '1956 – 1966', color: '#E8B04A', from: 2, to: 4 },
+  { name: 'Bedrock', span: '1943 – 1950', color: '#FF7A4D', from: 0, to: 1 },
+];
