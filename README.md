@@ -23,7 +23,7 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
 
 **VR:** on a Meta Quest (or any WebXR headset) an **Enter VR** button appears. You stand in space beside the world: grab it (grip or pinch) to spin it, point and pull the trigger to select places and read floating cards, use the thumbstick to move closer, B/Y for Karma Core and A/X to close. Spin it hard and the ocean spills in VR too.
 
-**Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance.
+**Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place: off until the visitor turns it on, then remembered.
 
 TD1’s direction runs AI → AGI → **AC (Autonomous Consciousness)**, shown on The Future and on the Mindaloo AC moon.
 
@@ -35,6 +35,7 @@ Plain static files, no build step. Netlify serves the repo root.
 index.html            the world (page shell)
 world/app.js          the 3D engine (three.js)
 world/data.js         all the words: continents, history, peaks, projections, links
+world/sound.js        the live ambient score and sound effects
 world/products.js     the 50 products (generated from Neuroblock/td1-products-data.js)
 world/style.css       interface styling
 world/vendor/         three.js r160, self-hosted

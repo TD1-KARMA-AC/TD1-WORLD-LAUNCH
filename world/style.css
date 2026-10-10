@@ -54,6 +54,16 @@ body.ready #world { opacity: 1; }
 .top nav a:hover, .top nav button:hover { background: rgba(127, 216, 255, 0.12); }
 #nav-contact { color: #120c02; background: #ffe9a8; box-shadow: 0 0 24px rgba(255, 233, 168, 0.35); }
 #nav-contact:hover { background: #fff3d0; }
+#nav-sound { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+#nav-sound i { display: flex; align-items: flex-end; gap: 2px; width: 14px; height: 12px; }
+#nav-sound i, #nav-sound i::before, #nav-sound i::after { --h: 3px; }
+#nav-sound i::before, #nav-sound i::after { content: ''; width: 3px; height: var(--h); background: currentColor; }
+#nav-sound i { background: linear-gradient(currentColor, currentColor) 50% 100% / 3px 3px no-repeat; }
+body.sound-on #nav-sound { color: var(--signal); }
+body.sound-on #nav-sound i::before { animation: eq 0.9s ease-in-out infinite; }
+body.sound-on #nav-sound i::after { animation: eq 1.2s 0.2s ease-in-out infinite; }
+@keyframes eq { 50% { height: 12px; } }
+@media (max-width: 759px) { #nav-sound span { display: none; } }
 #nav-vr { color: #07050e; background: #7fd8ff; box-shadow: none; }
 #nav-vr:hover { background: #a8e6ff; }
 #nav-vr[hidden] { display: none; }
@@ -393,6 +403,9 @@ body.cine-title #cine .title { opacity: 1; letter-spacing: 0.3em; }
 #cine .title p { margin-top: 18px; font: 500 11px var(--data); letter-spacing: 0.42em; text-transform: uppercase; color: var(--signal); }
 #skip { position: absolute; right: 22px; bottom: calc(11vh + 18px); pointer-events: auto; padding: 10px 14px; font: 600 10.5px var(--display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair-2); clip-path: var(--chamfer-s); opacity: 0; transition: opacity 0.6s; }
 body.cine #skip { opacity: 1; }
+#cine-sound { position: absolute; left: 22px; bottom: calc(11vh + 18px); pointer-events: auto; padding: 10px 14px; font: 600 10.5px var(--display); letter-spacing: 0.2em; text-transform: uppercase; color: #07050e; background: var(--signal); clip-path: var(--chamfer-s); opacity: 0; transition: opacity 0.6s; }
+body.cine #cine-sound { opacity: 1; }
+body.sound-on #cine-sound, body:not(.cine) #cine-sound { opacity: 0; pointer-events: none; }
 body:not(.cine) #skip { pointer-events: none; }
 .top, #hud, #edge, #menu-btn, #labels { transition: opacity 1.2s ease; }
 body.cine .top, body.cine #intro, body.cine #hud, body.cine #edge, body.cine #menu-btn, body.cine #labels { opacity: 0 !important; pointer-events: none; }

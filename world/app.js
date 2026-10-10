@@ -11,6 +11,9 @@ import {
   REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH, SHOP, ENQUIRY, EGGS,
 } from './data.js';
 import { PRODUCTS } from './products.js';
+import { createScore } from './sound.js';
+
+const score = createScore();
 
 /* ------------------------------------------------------------------ setup */
 
@@ -50,15 +53,26 @@ const bloomScale = isSmall() || isTouch ? 0.5 : 0.75;
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
 composer.addPass(bloom);
 const lens = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0.014 }, uVignette: { value: 1 }, uCA: { value: 0.0022 } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0.014 }, uVignette: { value: 1 }, uCA: { value: 0.0022 }, uDof: { value: 0 }, uAspect: { value: innerWidth / innerHeight } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVignette; uniform float uCA; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVignette; uniform float uCA; uniform float uDof; uniform float uAspect; varying vec2 vUv;
     float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + fract(uTime) * 61.0) * 43758.5453); }
     void main(){
       vec2 d = vUv - 0.5;
       float r2 = dot(d, d);
       vec2 off = d * uCA * r2 * 6.0;
       vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      // depth of field for close-ups: the edges of the frame fall softly out of focus
+      float blur = uDof * smoothstep(0.02, 0.2, r2) * 0.007;
+      if (blur > 0.0002) {
+        vec3 acc = col;
+        for (int i = 0; i < 8; i++) {
+          float a = float(i) * 0.7854;
+          acc += texture2D(tDiffuse, vUv + vec2(cos(a) / uAspect, sin(a)) * blur).rgb;
+          acc += texture2D(tDiffuse, vUv + vec2(cos(a + 0.39) / uAspect, sin(a + 0.39)) * blur * 0.5).rgb;
+        }
+        col = acc / 17.0;
+      }
       col *= mix(1.0, smoothstep(0.62, 0.05, r2 * 1.45), 0.55 * uVignette);
       col += (rnd(vUv * 1371.0) - 0.5) * uGrain * (0.35 + col);
       gl_FragColor = vec4(max(col, 0.0), 1.0);
@@ -1198,6 +1212,8 @@ function applyCore(m, t) {
   const grow = 0.3 + 0.7 * ss(m, 0.3, 1);
   coreBall.scale.setScalar(grow * (1 + beat * 0.05));
   coreBall.material.uniforms.uBeat.value = beat;
+  if (m > 0.5 && beat > 0.8 && !(applyCore.lastBeat > 0.8)) score.thump();
+  applyCore.lastBeat = beat;
   coreHalo.scale.setScalar(1.7 * grow * (1 + beat * 0.2));
   coreHalo.material.opacity = ss(m, 0.2, 0.8);
   coreLight.intensity = ss(m, 0.3, 1) * (1.2 + beat * 0.8);
@@ -1294,6 +1310,7 @@ document.body.appendChild(frenzyEl);
 const spill = { active: false, t0: 0, drain: 0, holdUntil: 0, strength: 0, warned: false };
 function startSpill(strength) {
   if (reduceMotion) return;
+  score.splash();
   const oc = ocean.material.uniforms;
   // the water keeps moving the way the surface was moving when the world stopped
   const toLocal = planet.quaternion.clone().invert();
@@ -1684,7 +1701,10 @@ function flyTo(dir, dist = 2.15, dur = 1700) {
   // keep the camera off the exact poles so "up" stays stable
   toDir.y = Math.max(-0.92, Math.min(0.92, toDir.y));
   toDir.normalize();
-  flight = { fromDir, toDir, fromDist: camera.position.length(), toDist: dist, t0: performance.now(), dur: reduceMotion ? 1 : dur };
+  const turn = fromDir.angleTo(toDir);
+  const axis = new THREE.Vector3().crossVectors(fromDir, toDir);
+  const bankSign = Math.sign(axis.dot(camera.up)) || 1;
+  flight = { fromDir, toDir, fromDist: camera.position.length(), toDist: dist, t0: performance.now(), dur: reduceMotion ? 1 : dur * (0.85 + Math.min(0.6, turn * 0.35)), bank: bankSign * Math.min(0.22, turn * 0.14), up: camera.up.clone() };
   spin.w.set(0, 0, 0);
   spin.enabled = false;
 }
@@ -1696,7 +1716,9 @@ function stepFlight(now) {
   const dir = flight.fromDir.clone().applyQuaternion(new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(), q, e));
   const hop = Math.sin(Math.PI * t) * Math.min(0.9, flight.fromDir.angleTo(flight.toDir) * 0.45);
   camera.position.copy(dir.multiplyScalar(THREE.MathUtils.lerp(flight.fromDist, flight.toDist, e) + hop));
+  camera.up.copy(flight.up);
   camera.lookAt(0, 0, 0);
+  camera.rotateZ(flight.bank * Math.sin(Math.PI * t) * (1 - 0.35 * t)); // bank into the turn like a drone
   if (t >= 1) { flight = null; spin.enabled = true; syncSpin(); }
 }
 
@@ -1909,6 +1931,8 @@ function openPanel(html, color) {
 }
 function openShop(tab) {
   exitCore();
+  score.place('shop');
+  score.chime(79);
   selected = { kind: 'shop' };
   land.material.userData.uHi.value = -10;
   if (tab) shopTab = tab;
@@ -1919,6 +1943,8 @@ function openShop(tab) {
 }
 function openContact(prefill) {
   exitCore();
+  score.place('contact');
+  score.chime(77);
   selected = { kind: 'contact' };
   land.material.userData.uHi.value = UNCH;
   flyTo(beaconPos, fitDist(0.6, 2.1));
@@ -1926,6 +1952,8 @@ function openContact(prefill) {
   setDock('contact');
 }
 function enterCore() {
+  score.place('core');
+  score.chime(69);
   coreTarget = 1;
   selected = { kind: 'core' };
   land.material.userData.uHi.value = -10;
@@ -1947,6 +1975,7 @@ function focusStratum(i) {
 }
 function closePanel() {
   exitCore();
+  if (introDone) score.place('space');
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('panel-open');
@@ -1958,6 +1987,8 @@ function closePanel() {
 }
 function selectRegion(ri, opts = {}) {
   exitCore();
+  score.place(ri === UNCH ? 'space' : REGIONS[ri].id);
+  score.chime(ri === UNCH ? 83 : [76, 79, 81, 84, 78][ri]);
   selected = { kind: 'region', index: ri };
   land.material.userData.uHi.value = ri;
   ocean.material.uniforms.uHi.value = 0;
@@ -1968,6 +1999,8 @@ function selectRegion(ri, opts = {}) {
 }
 function selectOcean(dir) {
   exitCore();
+  score.place('ocean');
+  score.chime(72);
   selected = { kind: 'ocean' };
   land.material.userData.uHi.value = -10;
   ocean.material.uniforms.uHi.value = 1;
@@ -1977,6 +2010,8 @@ function selectOcean(dir) {
 }
 function openSpecial(kind) {
   exitCore();
+  score.place('moon');
+  score.chime(80);
   selected = { kind };
   land.material.userData.uHi.value = -10;
   const obj = kind === 'realm' ? realm : mindaloo;
@@ -2657,6 +2692,7 @@ function stepIntro(now) {
   const T = reduceMotion || cine.skip ? 1e9 : hold ? +hold[1] : now - cine.start;
   if (T < CINE_A) { // sunrise over the limb
     const k = T / CINE_A;
+    score.swell(k * 0.55);
     const pos = cinePose(THREE.MathUtils.lerp(0.86, 0.5, ease(k))); // the sun starts hidden behind the planet's edge
     camera.position.copy(pos);
     const aim = cineAim(pos);
@@ -2664,6 +2700,7 @@ function stepIntro(now) {
     camera.lookAt(pos.clone().add(aim.dir));
   } else if (T < CINE_A + CINE_B) { // pull back and swing round to face the world
     const k = ease((T - CINE_A) / CINE_B);
+    score.swell(0.55 + k * 0.45);
     const p0 = cinePose(0.5);
     const q = new THREE.Quaternion().setFromUnitVectors(p0.clone().normalize(), introTo.clone().normalize());
     const dir = p0.clone().normalize().applyQuaternion(new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(), q, k));
@@ -2678,11 +2715,30 @@ function stepIntro(now) {
     camera.lookAt(0, 0, 0);
     introDone = true;
     syncSpin();
+    score.swell(0.38);
+    score.place('space');
     document.body.classList.remove('cine');
     setTimeout(() => document.body.classList.remove('cine-title'), 1400);
   }
 }
 const skipIntro = () => { if (!introDone) cine.skip = true; };
+const soundBtn = $('#nav-sound');
+const soundPref = () => { try { return localStorage.getItem('td1-sound') === 'on'; } catch (e) { return false; } };
+function setSound(onNow) {
+  if (onNow) score.enable(); else score.disable();
+  try { localStorage.setItem('td1-sound', onNow ? 'on' : 'off'); } catch (e) { /* fine */ }
+  soundBtn.setAttribute('aria-pressed', String(onNow));
+  soundBtn.querySelector('span').textContent = onNow ? 'Sound on' : 'Sound off';
+  document.body.classList.toggle('sound-on', onNow);
+}
+soundBtn.addEventListener('click', () => setSound(!score.on));
+$('#cine-sound').addEventListener('click', (e) => { e.stopPropagation(); setSound(true); });
+// browsers only allow audio after a tap or key, so a returning visitor's "sound on" resumes on their first one
+if (soundPref()) {
+  const resume = () => { setSound(true); removeEventListener('pointerdown', resume); removeEventListener('keydown', resume); };
+  addEventListener('pointerdown', resume);
+  addEventListener('keydown', resume);
+}
 addEventListener('keydown', skipIntro);
 $('#skip').addEventListener('click', skipIntro);
 
@@ -2793,6 +2849,11 @@ function loop() {
   } else flareEl.style.opacity = '0';
   U.uLin.value = inVR ? 0 : 1;
   lens.uniforms.uTime.value = t;
+  { // focus pulls in on close-ups
+    const target = introDone && !inVR ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) : 0;
+    lens.uniforms.uDof.value += (target - lens.uniforms.uDof.value) * 0.05;
+  }
+  if (!inVR || score.on) score.spin(spin.energy);
   if (inVR) renderer.render(scene, camera);
   else composer.render(); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
 }
@@ -2803,6 +2864,7 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
   bloom.resolution.set(innerWidth * bloomScale, innerHeight * bloomScale);
+  lens.uniforms.uAspect.value = innerWidth / innerHeight;
 });
 
 document.body.classList.add('ready');
