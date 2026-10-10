@@ -962,6 +962,7 @@ const towns = { boxes: null, spires: null, lightsDots: [] };
 
 /* ------------------------------------------------------------------ forests and plants: what grows on each continent */
 
+const forestMeshes = []; // trimmed on slower devices
 const flora = []; // everything that stands on the surface (hidden while you're down in Karma Core)
 flora.push(towns.boxes, towns.spires);
 const MODEL_MAT = modelMaterial();
@@ -1014,7 +1015,7 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
       made++;
     }
   });
-  Object.keys(lists).forEach((k) => { geos[k] = tree(k); scatterMesh(geos[k], lists[k]); });
+  Object.keys(lists).forEach((k) => { geos[k] = tree(k); const m = scatterMesh(geos[k], lists[k]); if (m) forestMeshes.push({ m, full: m.count }); });
 }
 
 /* ------------------------------------------------------------------ robots: TD1's workers */
@@ -2718,7 +2719,9 @@ function regionHtml(ri) {
     extra = acHtml(true) + `<section><h3>Projections</h3><ul class="horizons">${HORIZONS.map(([h, t, d]) => `<li><span class="hz hz-${h.toLowerCase()}">${esc(h)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></section>`;
   }
   const down = `<section><button type="button" class="cta ghost" data-go="land" data-region="${ri}">Fly down and look around ↓</button></section>`;
-  return header(r) + down + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri);
+  const work = `<section class="work"><h3>Work with TD1</h3><p class="sub">Want this thinking in your business? Book time with TD1 or ask about any product here.</p>
+    <button type="button" class="cta" data-go="book">Book expertise</button></section>`;
+  return header(r) + down + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri) + work;
 }
 function acHtml(withLink) {
   return `<section><h3>TD1’s direction</h3><ol class="ac-path">${AC_PATH.map(([k, n, d], i) => `<li class="${k === 'AC' ? 'is-ac' : ''}"><span class="ak">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol>
@@ -2733,19 +2736,21 @@ async function loadSection(sec) {
   const query = `query($h: String!) { collection(handle: $h) { products(first: 24) { nodes {
       title handle onlineStoreUrl featuredImage { url altText }
       priceRange { minVariantPrice { amount currencyCode } } } } } }`;
-  const res = await fetch(`https://${SHOP.domain}/api/2024-07/graphql.json`, {
+  const headers = { 'Content-Type': 'application/json' };
+  if (SHOP.storefrontToken) headers['X-Shopify-Storefront-Access-Token'] = SHOP.storefrontToken;
+  const res = await fetch(`https://${SHOP.domain}/api/2025-01/graphql.json`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Shopify-Storefront-Access-Token': SHOP.storefrontToken },
+    headers,
     body: JSON.stringify({ query, variables: { h: sec.handle } }),
   });
   if (!res.ok) throw new Error(`Shopify answered ${res.status}`);
   const json = await res.json();
   return (shopCache[sec.id] = json.data?.collection?.products?.nodes || []);
 }
-const shopLive = () => Boolean(SHOP.domain && SHOP.storefrontToken);
+const shopLive = () => Boolean(SHOP.domain);
 function shopHtml() {
   const tabs = SHOP.sections.map((s) => `<button type="button" class="tab${s.id === shopTab ? ' on' : ''}" data-shop-tab="${s.id}">${esc(s.name)}</button>`).join('');
-  return header({ name: 'The Exchange', era: 'Shop', color: SHOP_COLOR, tagline: 'Courses, documents and TD1 clothing.', intro: 'A trading station in orbit around the world. Everything here is made by TD1 to help you build, learn and wear the future.' })
+  return header({ name: 'The Exchange', era: 'Shop', color: SHOP_COLOR, tagline: 'Training gear now. Courses and documents next.', intro: 'A trading station in orbit around the world. Everything here is made by TD1WORLD to help you train, build, learn and wear the future.' })
     + `<section><div class="tabs" role="tablist">${tabs}</div><div id="shop-list" class="shop-list"></div>
       ${SHOP.storeUrl ? `<a class="cta ghost" href="${esc(SHOP.storeUrl)}" target="_blank" rel="noopener">Open the full store ↗</a>` : ''}</section>`;
 }
@@ -2767,9 +2772,11 @@ async function renderShop() {
       ? `<ul class="goods">${items.map((p) => `<li><a href="${esc(p.onlineStoreUrl || `${SHOP.storeUrl}/products/${p.handle}`)}" target="_blank" rel="noopener">
           ${p.featuredImage ? `<img src="${esc(p.featuredImage.url)}&width=400" alt="${esc(p.featuredImage.altText || p.title)}" loading="lazy">` : '<span class="noimg"></span>'}
           <b>${esc(p.title)}</b><span>${esc(money(p.priceRange.minVariantPrice))}</span></a></li>`).join('')}</ul>`
-      : `<div class="shop-empty"><b>Nothing in ${esc(sec.name)} yet.</b><span>${esc(sec.text)}</span></div>`;
-  } catch (e) {
-    box.innerHTML = `<div class="shop-empty"><b>The shop didn’t answer.</b><span>Check your connection and try again. If it keeps happening, the store link may need updating.</span></div>`;
+      : `<div class="shop-empty"><b>${esc(sec.name)} are on their way.</b><span>${esc(sec.text)}</span>
+        <button type="button" class="cta" data-go="notify">Tell me when they land</button></div>`;
+  } catch (e) { // can't reach the store from here: send them straight to it instead
+    box.innerHTML = `<div class="shop-empty"><b>Browse ${esc(sec.name)} in the TD1WORLD store.</b><span>${esc(sec.text)}</span>
+      ${SHOP.storeUrl ? `<a class="cta" href="${esc(SHOP.storeUrl)}/collections/${esc(sec.handle)}" target="_blank" rel="noopener">Open ${esc(sec.name)} ↗</a>` : ''}</div>`;
   }
 }
 
@@ -3002,9 +3009,10 @@ panelBody.addEventListener('click', (e) => {
   if (tab) { shopTab = tab.dataset.shopTab; renderShop(); return; }
   const go = e.target.closest('[data-go]');
   if (go) {
-    if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when The Exchange opens.' });
+    if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when new courses and documents arrive at The Exchange.' });
     else if (go.dataset.go === 'core') enterCore();
     else if (go.dataset.go === 'land') landAt(+go.dataset.region);
+    else if (go.dataset.go === 'book') openContact({ type: 'Book expertise' });
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
     else if (go.dataset.go === 'contact') openContact({ type: 'General enquiry', message: 'I spun the world and found the eggs.' });
     else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
@@ -3077,6 +3085,7 @@ $('#nav-contact').addEventListener('click', () => { closeMenu(); openContact(); 
 function setDock(id) { dock.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.id === id)); }
 
 $('#begin').addEventListener('click', () => selectRegion(0));
+$('#see-products').addEventListener('click', () => { $('#intro').classList.add('gone'); openMenu(); });
 
 /* ------------------------------------------------------------------ picking */
 
@@ -3596,6 +3605,92 @@ function frame() {
   camera.setViewOffset(innerWidth, innerHeight, offX, offY, innerWidth, innerHeight);
 }
 
+
+/* ------------------------------------------------------------------ quality: always smooth, whatever the device */
+
+// Watches how long frames take and steps the detail down (or once back up) so the world never stutters.
+// Level 2: everything. Level 1: lighter pixels, no cloud shadows, fewer trees. Level 0: no bloom or focus blur, sparse forests.
+const QUALITY_FORCED = /q=([012])/.exec(location.hash);
+const quality = { level: -1, max: isSmall() || isTouch ? 1 : 2, frames: [], lastChange: 0, ups: 0, startAt: 0, lastNow: 0 };
+const baseShadow = WEATHER.uShadow.value;
+function setQuality(level) {
+  level = THREE.MathUtils.clamp(level, 0, 2);
+  if (level === quality.level) return;
+  quality.level = level;
+  const dpr = Math.min(devicePixelRatio, [1, 1.5, 2][level]);
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setPixelRatio(dpr);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.enabled = level > 0;
+  WEATHER.uShadow.value = level === 2 ? baseShadow : 0;
+  const keep = [0.4, 0.7, 1][level];
+  forestMeshes.forEach(({ m, full }) => { m.count = Math.floor(full * keep); });
+  document.body.dataset.quality = String(level);
+}
+setQuality(QUALITY_FORCED ? +QUALITY_FORCED[1] : quality.max);
+function stepQuality(now, inVR) {
+  if (QUALITY_FORCED || inVR || /dev/.test(location.hash) || !gateOpen || document.hidden) { quality.lastNow = now; return; }
+  if (!quality.startAt) quality.startAt = now + 2500; // let the opening settle first
+  const dt = now - (quality.lastNow || now);
+  quality.lastNow = now;
+  if (now < quality.startAt || dt <= 0 || dt > 1500) return;
+  quality.frames.push(dt);
+  const sum = quality.frames.reduce((x, y) => x + y, 0);
+  if (sum < 1500 || quality.frames.length < 8) return; // judge every second and a half
+  const avg = sum / quality.frames.length;
+  quality.frames.length = 0;
+  if (avg > 27 && quality.level > 0 && now - quality.lastChange > 2500) { // under ~37 fps: lighten up
+    setQuality(quality.level - 1);
+    quality.lastChange = now;
+  } else if (avg < 15.5 && quality.level < quality.max && quality.ups < 1 && now - quality.lastChange > 9000) { // lots of headroom: one step back up
+    setQuality(quality.level + 1);
+    quality.lastChange = now;
+    quality.ups++;
+  }
+}
+
+/* ------------------------------------------------------------------ products close by */
+
+// Fly near a town and its product introduces itself: what it is, a demo, and a way to ask about it.
+const nearEl = document.createElement('aside');
+nearEl.id = 'near-card';
+nearEl.setAttribute('aria-live', 'polite');
+document.body.appendChild(nearEl);
+let nearCity = -1, nearTick = 0;
+function stepNearCard() {
+  if ((nearTick = (nearTick + 1) % 8) !== 0) return;
+  const dist = camera.position.length();
+  let best = -1;
+  if (introDone && !flight && !panel.classList.contains('open') && coreMix < 0.05 && spin.energy < 0.2 && dist < 2.05) {
+    const cx = innerWidth / 2, cy = innerHeight / 2;
+    let bd = Math.min(innerWidth, innerHeight) * (dist < 1.1 ? 0.45 : 0.2);
+    cities.forEach((c, i) => {
+      if (!facing(c.pos)) return;
+      const sp = toScreen(c.pos);
+      if (sp.z > 1) return;
+      const d = Math.hypot(sp.x - cx, sp.y - cy);
+      if (d < bd) { bd = d; best = i; }
+    });
+  }
+  if (best === nearCity) return;
+  nearCity = best;
+  if (best < 0) { nearEl.classList.remove('on'); return; }
+  const c = cities[best], p = c.product, reg = REGIONS[c.region];
+  nearEl.style.setProperty('--c', reg.color);
+  nearEl.innerHTML = `<p class="kicker">${esc(reg.name)} · Product town</p><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
+    <div class="acts">${p.demo ? `<a class="cta" href="${esc(p.demo)}" target="_blank" rel="noopener">Try the demo ↗</a>` : ''}
+    <button type="button" class="cta ghost" data-ask="${best}">Ask about it</button></div>`;
+  nearEl.classList.add('on');
+}
+nearEl.addEventListener('click', (e) => {
+  const ask = e.target.closest('[data-ask]');
+  if (!ask) return;
+  const p = cities[+ask.dataset.ask].product;
+  nearEl.classList.remove('on');
+  openContact({ type: 'General enquiry', message: `Hi TD1, I'd like to know more about ${p.name}.` });
+});
+
 /* ------------------------------------------------------------------ loop */
 
 const hudEls = { pos: $('#hud-pos'), alt: $('#hud-alt'), over: $('#hud-over'), sun: $('#hud-sun') };
@@ -3785,6 +3880,7 @@ function loop() {
   loop.prevT = t;
   U.uTime.value = t;
   const inVR = renderer.xr.isPresenting;
+  stepQuality(now, inVR);
   camera.getWorldPosition(camWorld);
   camera.getWorldQuaternion(camWorldQ);
 
@@ -3858,12 +3954,13 @@ function loop() {
     updateHover();
     updateLabels();
     stepSay(t);
+    stepNearCard();
     updateFlare();
   } else flareEl.style.opacity = '0';
   U.uLin.value = inVR ? 0 : 1;
   lens.uniforms.uTime.value = t;
   { // focus pulls in on close-ups
-    const target = introDone && !inVR ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
+    const target = introDone && !inVR && quality.level > 0 ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
     lens.uniforms.uDof.value += (target - lens.uniforms.uDof.value) * 0.05;
   }
   const ground = stepGround(inVR);

@@ -1,8 +1,8 @@
 // TD1.WORLD — world content.
 // Everything the planet shows lives here, so the world can grow without touching the engine.
 
-// Mindaloo AC (moonlight) is the moon where Karma AC lives. It has its own GitHub / Netlify / Supabase.
-// While this is empty the moon still appears, but its button says "link coming soon".
+// Mindaloo AC (Mindaloo means moonlight) is TD1's flagship Autonomous Consciousness, shown as a moon.
+// It lives on its own site. While this is empty the moon still appears, but its button says "link coming soon".
 export const MINDALOO_URL = 'https://www.mindaloo.ac';
 
 // Realm is a connected world of its own, served from /realm/.
@@ -18,8 +18,9 @@ export const REGIONS = [
     color: '#E8B04A',
     tagline: 'Where thinking machines began.',
     intro:
-      'An amber continent of old stone. Every monolith marks a moment people first imagined, ' +
-      'built or argued about machines that think. Beneath it, the layers of history run all the way down to Karma Core.',
+      'An ochre desert of old stone and terraced mesas. Every glowing monolith marks a moment people first imagined, ' +
+      'built or argued about machines that think. Miner robots dig through the layers here, and beneath them the history ' +
+      'runs all the way down to Karma Core.',
   },
   {
     id: 'memory',
@@ -29,9 +30,9 @@ export const REGIONS = [
     color: '#B38DFF',
     tagline: 'Nothing intelligent forgets.',
     intro:
-      'A violet highland of archives, graphs and quiet infrastructure. Memory is what turns a clever ' +
-      'answer into a mind that learns: recall, context, connection, continuity. Its cities are the ' +
-      'plumbing every other continent runs on.',
+      'A violet highland of forests, archives and quiet infrastructure. Memory is what turns a clever ' +
+      'answer into a mind that learns: recall, context, connection, continuity. Its towns are the ' +
+      'plumbing every other continent runs on, and its gardener robots keep the ideas growing.',
   },
   {
     id: 'intelligence',
@@ -41,8 +42,8 @@ export const REGIONS = [
     color: '#4FE3FF',
     tagline: 'Reasoning, agents, minds at work.',
     intro:
-      'The largest landmass, crackling cyan. Agents plan, reflect, rewrite themselves and hand work ' +
-      'to each other. Its crystal peaks are the problems nobody has fully climbed yet.',
+      'The largest landmass: teal pine forests and sharp ridgelines where agents plan, reflect, rewrite themselves ' +
+      'and hand work to each other. Surveyor robots scan its crystal peaks, the problems nobody has fully climbed yet.',
   },
   {
     id: 'creation',
@@ -52,8 +53,8 @@ export const REGIONS = [
     color: '#FF5FA2',
     tagline: 'Tools that make the makers faster.',
     intro:
-      'A coral workshop coast where builders live. Sandboxes, labs, debuggers and chaos engines: ' +
-      'everything a developer needs to make the next thing, faster.',
+      'A rose-red workshop coast of mesas and dunes, where builders live. Sandboxes, labs, debuggers and chaos engines: ' +
+      'everything a developer needs to make the next thing, faster. Listen for the builder robots’ hammers.',
   },
   {
     id: 'future',
@@ -64,7 +65,8 @@ export const REGIONS = [
     tagline: 'Where this is all heading.',
     intro:
       'An aurora-lit frontier. Robots, simulations, sovereign systems and personal intelligence. ' +
-      'These are projections, not prophecies: the directions the rest of the world is drifting toward.',
+      'These are projections, not prophecies: the directions the rest of the world is drifting toward. ' +
+      'Welder robots are assembling it as you watch.',
   },
 ];
 
@@ -187,27 +189,27 @@ export const AC_PATH = [
   ['AC', 'Autonomous Consciousness', 'A mind with its own lasting identity, memory and reflection, that lives alongside you and keeps growing. This is where TD1 is heading.'],
 ];
 
-// The Exchange: TD1's shop, served live from Shopify.
-// Fill these in once Shopify API access is back:
-//   domain          your-store.myshopify.com
-//   storefrontToken a public Storefront API access token (Shopify admin → Settings → Apps and sales channels → Develop apps,
-//                   or install the Headless channel)
-//   storeUrl        your shop's public address, for links to the full store
-// Each section shows the products in the Shopify collection with that handle.
+// The Exchange: TD1's shop, served live from the TD1WORLD Shopify store.
+//   domain          the store's myshopify address
+//   storefrontToken optional. Products and collections load without one (Shopify's tokenless Storefront access);
+//                   add a public Storefront token later if you want more (Shopify admin → Apps → Headless).
+//   storeUrl        where "Open the full store" and product links go
+// Each tab shows the products in the Shopify collection with that handle. Create collections called
+// "courses" and "documents" in Shopify and they'll appear here automatically.
 export const SHOP = {
-  domain: '',
+  domain: 'td1world.myshopify.com',
   storefrontToken: '',
-  storeUrl: '',
+  storeUrl: 'https://td1world.myshopify.com',
   sections: [
+    { id: 'clothing', name: 'Clothing', handle: 'shop', text: 'TD1WORLD training gear, built for this.' },
     { id: 'courses', name: 'Courses', handle: 'courses', text: 'Learn to build with AI, agents and autonomous systems.' },
     { id: 'documents', name: 'Documents', handle: 'documents', text: 'Guides, blueprints and playbooks to download.' },
-    { id: 'clothing', name: 'Clothing', handle: 'clothing', text: 'TD1 and Mindaloo AC apparel.' },
   ],
 };
 
 // The Beacon: enquiries and bookings. Submissions arrive in Netlify → Forms → "enquiry".
 export const ENQUIRY = {
-  email: '', // optional: where enquiries go if the form can't send (for example while the site is on GitHub Pages, which has no form service)
+  email: 'td1@td1.world', // where enquiries go if the form can't send (for example while the site is on GitHub Pages, which has no form service)
   bookingUrl: '', // optional: a Calendly or Cal.com link so people can pick a time straight away
   types: ['Book expertise', 'General enquiry', 'Custom build', 'Partnership', 'Press or speaking'],
   expertise: ['AI strategy session', 'Agents and automation', 'Mindaloo AC for your business', 'Product build or audit', 'Workshop or talk'],

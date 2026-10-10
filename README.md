@@ -67,10 +67,22 @@ _parked/legacy-home/  the old home page, Atlas and shared scripts (kept, not ser
 docs/archive/         old setup and fix notes (kept, not served)
 ```
 
+**Always smooth:** the world watches its own frame rate and steps detail down on slower devices (sharpness, cloud shadows, bloom, focus blur, forest density), and back up once if there's room. Phones start one step lighter. Add `#q=0`, `#q=1` or `#q=2` to the address to force a level.
+
+**Finding the business:** fly close to any town and its product introduces itself (demo link and *Ask about it*). Every continent panel ends with *Book expertise*, and the opening has *or see what TD1 makes →*.
+
+## Launch day checklist
+
+- [ ] Netlify has credit and the site deploys from `TD1-World-Live` (or merge it into `main`).
+- [ ] Netlify → Forms → `enquiry`: turn on email notifications so enquiries reach you. If the form can't send, it falls back to an email to `td1@td1.world` (`ENQUIRY.email`).
+- [ ] Shop: the TD1WORLD store (`td1world.myshopify.com`) is connected. Clothing shows the **Shop** collection. Create **courses** and **documents** collections in Shopify and those tabs fill themselves. Prices show in the store's currency (currently USD).
+- [ ] Optional: a Calendly or Cal.com link in `ENQUIRY.bookingUrl`, and your real expertise list in `ENQUIRY.expertise`.
+- [ ] Open it on a phone and on the Quest 3, then check the opening with sound, flying down, tapping a robot, the shop and the contact form.
+
 ## Changing things
 
 - **Words, history, peaks, projections:** edit `world/data.js`.
-- **Shop (Shopify):** fill in `SHOP` in `world/data.js`: your `*.myshopify.com` domain, a public Storefront API token and your store's address. Each tab shows the Shopify collection with the handle `courses`, `documents` or `clothing`.
+- **Shop (Shopify):** `SHOP` in `world/data.js` points at the TD1WORLD store. Products load without a token (Shopify's tokenless Storefront access); if the store can't be reached, each tab links straight to that collection in the store instead. Each tab shows the Shopify collection with its handle (`shop`, `courses`, `documents`).
 - **Enquiries:** they arrive in Netlify → Forms → `enquiry`. Turn on email notifications there. Add a Calendly or Cal.com link as `ENQUIRY.bookingUrl` to let people pick a time straight away, and edit the enquiry types and expertise list in `ENQUIRY`.
 - **Mindaloo AC link:** set `MINDALOO_URL` at the top of `world/data.js`.
 - **Move or add a continent:** each region in `REGIONS` has a `lat`, `lon` and `radius`.
