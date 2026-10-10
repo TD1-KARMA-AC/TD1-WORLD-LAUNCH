@@ -2,9 +2,8 @@
 // One sphere, five impossible continents, an ocean of data, cities of light, and two moons.
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/OrbitControls.js';
 import {
-  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH, SHOP, ENQUIRY,
+  REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH, SHOP, ENQUIRY, EGGS,
 } from './data.js';
 import { PRODUCTS } from './products.js';
 
@@ -37,16 +36,36 @@ function fitDist(r, min) {
   return Math.max(min, r / Math.min(tv, tv * camera.aspect));
 }
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.enablePan = false;
-controls.minDistance = 1.45;
-controls.maxDistance = 10;
-controls.rotateSpeed = 0.55;
-controls.zoomSpeed = 0.8;
-controls.autoRotate = !reduceMotion;
-controls.autoRotateSpeed = 0.35;
+/* The world in your hands: grab it, fling it, spin it in any direction. Left alone, it turns like Earth. */
+const EARTH_AXIS = new THREE.Vector3(Math.sin(23.4 * DEG), Math.cos(23.4 * DEG), 0).normalize();
+const MIN_D = 1.45, MAX_D = 10;
+const spin = {
+  q: new THREE.Quaternion(),
+  dist: 9.5,
+  target: 3.4,
+  w: new THREE.Vector3(), // angular velocity around the camera's own axes, rad/s
+  enabled: true,
+  dragging: false,
+  pointers: new Map(),
+  pinch: 0,
+  lastMove: 0,
+  energy: 0, // builds while the world spins very fast
+  axisWorld: new THREE.Vector3(0, 1, 0),
+};
+const _sq = new THREE.Quaternion(), _sv = new THREE.Vector3();
+function syncSpin() { spin.q.copy(camera.quaternion); spin.dist = spin.target = camera.position.length(); }
+function placeCamera() {
+  camera.quaternion.copy(spin.q);
+  camera.position.set(0, 0, spin.dist).applyQuaternion(spin.q);
+  camera.up.set(0, 1, 0).applyQuaternion(spin.q);
+}
+function turnCamera(ax, ay, az) { // rotate around the camera's own axes by these angles
+  _sv.set(ax, ay, az);
+  const ang = _sv.length();
+  if (ang < 1e-8) return;
+  _sq.setFromAxisAngle(_sv.multiplyScalar(1 / ang), ang);
+  spin.q.multiply(_sq).normalize();
+}
 
 const sunDir = new THREE.Vector3(-0.6, 0.45, 0.65).normalize();
 scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a1030, 0.4));
@@ -248,23 +267,48 @@ const land = buildLand();
 const ocean = new THREE.Mesh(
   new THREE.SphereGeometry(1, 128, 96),
   new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 }, uAlpha: { value: 1 } },
+    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 }, uAlpha: { value: 1 },
+      uSlosh: { value: 0 }, uSloshAge: { value: 99 }, uSloshDir: { value: new THREE.Vector3(1, 0, 0) },
+      uSpin: { value: 0 }, uSpinAxis: { value: new THREE.Vector3(0, 1, 0) },
+      uDrain: { value: 0 }, uHoles: { value: [new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0)] } },
     transparent: true,
     vertexShader: `
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView;
+      uniform float uSlosh; uniform float uSloshAge; uniform vec3 uSloshDir; uniform float uSpin; uniform vec3 uSpinAxis;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge;
       void main(){
         vPos = position;
-        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vec3 n = normalize(position);
+        // after a sudden stop the water keeps going: it piles up on one side and rolls back in waves
+        float side = dot(n, uSloshDir);
+        float fade = exp(-uSloshAge * 0.55);
+        float pile = smoothstep(-0.2, 1.0, side) * fade;
+        float wave = sin(side * 10.0 - uSloshAge * 6.5) * exp(-uSloshAge * 0.4);
+        // spinning hard flings water toward the equator of the spin
+        float bulge = uSpin * (1.0 - abs(dot(n, uSpinAxis)));
+        float lift = uSlosh * (0.04 * pile + 0.012 * wave) + bulge * 0.02;
+        vSurge = clamp(uSlosh * pile * 2.0 + bulge * 0.6, 0.0, 1.0);
+        vec4 wp = modelMatrix * vec4(position * (1.0 + lift), 1.0);
         vN = normalize(mat3(modelMatrix) * normal);
         vView = normalize(cameraPosition - wp.xyz);
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: `
       uniform float uTime; uniform vec3 uSun; uniform float uHi; uniform float uAlpha;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView;
+      uniform float uDrain; uniform vec3 uHoles[3]; uniform float uSpin;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge;
       float h1(float n){ return fract(sin(n * 127.1) * 43758.5453); }
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main(){
+        // drained patches of seabed, with foam around their rims
+        vec3 un = normalize(vPos);
+        float foam = 0.0;
+        for (int i = 0; i < 3; i++) {
+          float d = dot(un, uHoles[i]);
+          float wob = 0.012 * sin(atan(un.z - uHoles[i].z, un.x - uHoles[i].x) * 7.0 + uTime * 2.0);
+          float r = cos(0.15 * uDrain + wob * uDrain);
+          if (uDrain > 0.001 && d > r) discard;
+          foam = max(foam, smoothstep(r - 0.006, r, d) * uDrain);
+        }
         float lat = asin(clamp(vPos.y, -1.0, 1.0));
         float lon = atan(vPos.z, vPos.x);
         float rows = 70.0;
@@ -290,6 +334,8 @@ const ocean = new THREE.Mesh(
         col += vec3(0.25, 0.45, 1.0) * fres * 0.55;
         vec3 hv = normalize(uSun + vView);
         col += vec3(1.0, 0.95, 0.85) * pow(max(dot(vN, hv), 0.0), 70.0) * 0.6;
+        col += vec3(0.75, 0.9, 1.0) * (foam * 0.9 + vSurge * 0.22);
+        col += vec3(0.3, 0.55, 1.0) * uSpin * line * 0.35;
         gl_FragColor = vec4(col, uAlpha + bit * line * (1.0 - uAlpha) * 0.5);
       }`,
   }),
@@ -1008,6 +1054,219 @@ function applyCore(m, t) {
   threads.material.uniforms.uAlpha.value = ss(m, 0.55, 1);
 }
 
+/* ------------------------------------------------------------------ spin it hard enough and the ocean spills */
+
+// A distant sun, so the world visibly turns through day and night.
+const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTexture([[0, 'rgba(255,250,235,1)'], [0.12, 'rgba(255,230,180,0.85)'], [0.4, 'rgba(255,190,120,0.18)'], [1, 'rgba(255,160,90,0)']]),
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+}));
+sunGlow.scale.setScalar(9);
+scene.add(sunGlow);
+
+const seabed = new THREE.Mesh(new THREE.SphereGeometry(0.975, 96, 64), new THREE.MeshStandardMaterial({ color: 0x7a6a8e, roughness: 0.95, emissive: 0x2a2140, emissiveIntensity: 0.9 }));
+seabed.visible = false;
+planet.add(seabed);
+
+const eggMeshes = [0, 1, 2].map(() => {
+  const g = new THREE.Group();
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.02, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd27a, emissiveIntensity: 1, flatShading: true }));
+  gem.position.y = 0.03;
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.012, 8), new THREE.MeshStandardMaterial({ color: 0x8d93a8, metalness: 0.6, roughness: 0.4 }));
+  plinth.position.y = 0.006;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture([[0, 'rgba(255,240,200,0.9)'], [0.4, 'rgba(255,200,120,0.25)'], [1, 'rgba(255,180,90,0)']]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  halo.position.y = 0.03;
+  halo.scale.setScalar(0.12);
+  g.add(plinth, gem, halo);
+  g.visible = false;
+  g.userData = { gem, egg: null, pos: new THREE.Vector3() };
+  planet.add(g);
+  return g;
+});
+const eggsFound = (() => { try { return new Set(JSON.parse(localStorage.getItem('td1-eggs') || '[]')); } catch (e) { return new Set(); } })();
+function saveEggs() { try { localStorage.setItem('td1-eggs', JSON.stringify([...eggsFound])); } catch (e) { /* storage blocked: fine */ } }
+
+// splashes: spray that flies off the coasts and falls back
+const SPLASH_N = 900;
+const splash = (() => {
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(SPLASH_N * 3);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aLife', new THREE.BufferAttribute(new Float32Array(SPLASH_N), 1));
+  const pts = new THREE.Points(g, new THREE.ShaderMaterial({
+    uniforms: { uPR: { value: renderer.getPixelRatio() } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float aLife; uniform float uPR; varying float vL;
+      void main(){ vL = aLife; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = (4.0 + 10.0 * aLife) * uPR / -mv.z * 2.0; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying float vL; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5 || vL <= 0.0) discard;
+        gl_FragColor = vec4(mix(vec3(0.45, 0.75, 1.0), vec3(1.0), vL) * smoothstep(0.5, 0.0, d) * vL, 1.0); }`,
+  }));
+  pts.renderOrder = 4;
+  pts.frustumCulled = false;
+  planet.add(pts);
+  return { pts, pos, life: g.attributes.aLife.array, vel: new Float32Array(SPLASH_N * 3), next: 0 };
+})();
+const coastFaces = landFaces.filter((f) => f.h > 0 && f.h < 0.05);
+function spray(origin, out, count, power) {
+  for (let i = 0; i < count; i++) {
+    const k = splash.next = (splash.next + 1) % SPLASH_N;
+    const jitter = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.02);
+    const p = origin.clone().add(jitter);
+    splash.pos.set([p.x, p.y, p.z], k * 3);
+    const v = origin.clone().normalize().multiplyScalar(power * (0.4 + Math.random() * 0.8))
+      .add(out.clone().multiplyScalar(power * (0.3 + Math.random() * 0.7)))
+      .add(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(power * 0.6));
+    splash.vel.set([v.x, v.y, v.z], k * 3);
+    splash.life[k] = 1;
+  }
+}
+
+// toasts
+const toastEl = document.createElement('div');
+toastEl.id = 'toast';
+toastEl.setAttribute('role', 'status');
+document.body.appendChild(toastEl);
+let toastTimer = 0;
+function toast(msg, ms = 3200) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('on'), ms);
+}
+const frenzyEl = document.createElement('div');
+frenzyEl.id = 'frenzy';
+document.body.appendChild(frenzyEl);
+
+const spill = { active: false, t0: 0, drain: 0, holdUntil: 0, strength: 0, warned: false };
+function startSpill(strength) {
+  if (reduceMotion) return;
+  const oc = ocean.material.uniforms;
+  // the water keeps moving the way the surface was moving when the world stopped
+  const camDir = camera.position.clone().normalize();
+  const dir = new THREE.Vector3().crossVectors(spin.axisWorld, camDir);
+  if (dir.lengthSq() < 1e-4) dir.set(1, 0, 0);
+  dir.normalize();
+  oc.uSloshDir.value.copy(dir);
+  oc.uSlosh.value = Math.min(1, 0.5 + strength);
+  oc.uSloshAge.value = 0;
+  // splash hard against the coasts, heaviest on the side the water rushes toward
+  const front = coastFaces.filter((f) => f.c.dot(camDir) > 0.1);
+  for (let i = 0; i < 70 && front.length; i++) {
+    const f = front[Math.floor(Math.random() * front.length)];
+    const weight = Math.max(0.15, f.c.dot(dir) + 0.6);
+    spray(f.c.clone().multiplyScalar(f.r + 0.004), dir, Math.round(6 * weight), 0.5 * weight);
+    if (i % 6 === 0) spawnRipple(f.c, '#9fe8ff');
+  }
+  // open three patches of seabed in view, each guarding an Easter egg
+  const r = Math.random;
+  const spots = [];
+  for (let tries = 0; spots.length < 3 && tries < 4000; tries++) {
+    const d = camDir.clone().add(new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar(1.5)).normalize();
+    if (d.dot(camDir) < 0.45) continue;
+    if (terrain(d.x, d.y, d.z).h > -0.12) continue;
+    if (spots.some((o) => o.dot(d) > Math.cos(0.32))) continue;
+    spots.push(d);
+  }
+  const order = [...EGGS.filter((e) => !eggsFound.has(e.id)), ...EGGS.filter((e) => eggsFound.has(e.id))];
+  const offset = Math.floor(r() * 3);
+  eggMeshes.forEach((m, i) => {
+    const d = spots[i];
+    oc.uHoles.value[i].copy(d || new THREE.Vector3(0, 9, 0));
+    if (!d) { m.userData.egg = null; return; }
+    m.position.copy(d).multiplyScalar(0.975);
+    m.quaternion.setFromUnitVectors(up, d);
+    m.userData.pos.copy(d).multiplyScalar(1.01);
+    m.userData.egg = order[(i + offset) % Math.min(order.length, 3 + offset)] || order[i];
+  });
+  spill.active = true;
+  spill.t0 = performance.now();
+  spill.holdUntil = spill.t0 + 30000;
+  spill.strength = strength;
+  toast('The Ocean of Data spilled! Find what it left behind.');
+}
+function grab() { // catching the world mid-spin stops it dead
+  const speed = spin.w.length();
+  if (spin.energy > 0.45 && speed > 3) { startSpill(spin.energy); spin.energy = 0; }
+  spin.w.set(0, 0, 0);
+}
+function stepSpin(dt, t, now) {
+  if (spin.enabled) {
+    if (!spin.dragging) {
+      turnCamera(spin.w.x * dt, spin.w.y * dt, spin.w.z * dt);
+      spin.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.45 : 1.25)));
+      // left alone, it turns on a tilted axis like Earth
+      const idle = THREE.MathUtils.clamp((now - lastInteract - 3000) / 4000, 0, 1);
+      if (!selected && !reduceMotion && idle > 0) {
+        _sq.setFromAxisAngle(EARTH_AXIS, -0.06 * dt * idle);
+        spin.q.premultiply(_sq);
+      }
+    }
+    spin.dist += (spin.target - spin.dist) * (1 - Math.exp(-dt * 8));
+    placeCamera();
+  }
+  // track how wildly it is spinning
+  const speed = spin.w.length();
+  if (speed > 0.01) spin.axisWorld.copy(spin.w).applyQuaternion(spin.q).normalize().negate();
+  if (!reduceMotion && speed > 5.5) spin.energy = Math.min(1, spin.energy + dt * 0.55);
+  else spin.energy = Math.max(0, spin.energy - dt * (speed > 3 ? 0.08 : 0.3));
+  if (spin.energy > 0.7 && !spill.warned) { spill.warned = true; toast('Whoa. The oceans are getting dizzy…', 2400); }
+  if (spin.energy < 0.2) spill.warned = false;
+  // let it wind down on its own from a wild spin and the water still sloshes
+  if (spin.energy > 0.6 && speed < 2.2 && !spin.dragging) { startSpill(spin.energy * 0.75); spin.energy = 0; }
+}
+function stepSpill(dt, t) {
+  const oc = ocean.material.uniforms;
+  oc.uSloshAge.value += dt;
+  oc.uSpin.value += (Math.min(1, spin.energy * 1.2) - oc.uSpin.value) * 0.1;
+  oc.uSpinAxis.value.copy(spin.axisWorld);
+  frenzyEl.style.opacity = (spin.energy * 0.85).toFixed(3);
+  const now = performance.now();
+  if (spill.active) {
+    const opening = Math.min(1, (now - spill.t0) / 1600);
+    const closing = now > spill.holdUntil && !(selected && selected.kind === 'egg') ? Math.min(1, (now - spill.holdUntil) / 3500) : 0;
+    spill.drain = ease(opening) * (1 - ease(closing));
+    if (closing >= 1) spill.active = false;
+  } else spill.drain = 0;
+  oc.uDrain.value = spill.drain;
+  seabed.visible = spill.drain > 0.001 && coreMix < 0.05;
+  eggMeshes.forEach((m, i) => {
+    m.visible = Boolean(m.userData.egg) && spill.drain > 0.25 && coreMix < 0.05;
+    m.userData.gem.rotation.y = t * 1.6 + i;
+    m.userData.gem.position.y = 0.03 + Math.sin(t * 2 + i) * 0.006;
+    m.userData.gem.material.emissive.setHSL((t * 0.15 + i / 3) % 1, 0.9, 0.55);
+    m.scale.setScalar(Math.max(0.001, (spill.drain - 0.25) / 0.75));
+  });
+  // spray physics: pulled back to the surface
+  for (let i = 0; i < SPLASH_N; i++) {
+    if (splash.life[i] <= 0) continue;
+    const k = i * 3;
+    const px = splash.pos[k], py = splash.pos[k + 1], pz = splash.pos[k + 2];
+    const len = Math.hypot(px, py, pz);
+    splash.vel[k] -= (px / len) * 2.4 * dt; splash.vel[k + 1] -= (py / len) * 2.4 * dt; splash.vel[k + 2] -= (pz / len) * 2.4 * dt;
+    splash.pos[k] += splash.vel[k] * dt; splash.pos[k + 1] += splash.vel[k + 1] * dt; splash.pos[k + 2] += splash.vel[k + 2] * dt;
+    splash.life[i] -= dt * 0.7;
+    if (Math.hypot(splash.pos[k], splash.pos[k + 1], splash.pos[k + 2]) < 1.0) splash.life[i] = 0;
+  }
+  splash.pts.geometry.attributes.position.needsUpdate = true;
+  splash.pts.geometry.attributes.aLife.needsUpdate = true;
+}
+function eggHtml(egg) {
+  const n = eggsFound.size;
+  return header({ name: egg.title, era: `Easter egg · ${n} of ${EGGS.length} found`, color: '#FFD27A', tagline: n === EGGS.length ? 'You found every egg on the seabed.' : 'Washed up when the ocean spilled.', intro: egg.text })
+    + (egg.cta ? '<section><button type="button" class="cta" data-go="contact">Send TD1 a signal</button></section>' : '')
+    + `<section><p class="sub">Spin the world hard again to spill the ocean somewhere new.</p></section>`;
+}
+function openEgg(m) {
+  const egg = m.userData.egg;
+  if (!egg) return;
+  if (!eggsFound.has(egg.id)) { eggsFound.add(egg.id); saveEggs(); }
+  selected = { kind: 'egg' };
+  spill.holdUntil = Math.max(spill.holdUntil, performance.now() + 15000);
+  flyTo(m.userData.pos, fitDist(0.5, 2.0));
+  openPanel(eggHtml(egg), '#FFD27A');
+  setDock(null);
+}
+
 /* ------------------------------------------------------------------ labels */
 
 const labelLayer = $('#labels');
@@ -1057,8 +1316,8 @@ function flyTo(dir, dist = 2.15, dur = 1700) {
   toDir.y = Math.max(-0.92, Math.min(0.92, toDir.y));
   toDir.normalize();
   flight = { fromDir, toDir, fromDist: camera.position.length(), toDist: dist, t0: performance.now(), dur: reduceMotion ? 1 : dur };
-  controls.autoRotate = false;
-  controls.enabled = false;
+  spin.w.set(0, 0, 0);
+  spin.enabled = false;
 }
 function stepFlight(now) {
   if (!flight) return;
@@ -1069,7 +1328,7 @@ function stepFlight(now) {
   const hop = Math.sin(Math.PI * t) * Math.min(0.9, flight.fromDir.angleTo(flight.toDir) * 0.45);
   camera.position.copy(dir.multiplyScalar(THREE.MathUtils.lerp(flight.fromDist, flight.toDist, e) + hop));
   camera.lookAt(0, 0, 0);
-  if (t >= 1) { flight = null; controls.enabled = true; controls.update(); }
+  if (t >= 1) { flight = null; spin.enabled = true; syncSpin(); }
 }
 
 /* ------------------------------------------------------------------ panel */
@@ -1377,6 +1636,7 @@ panelBody.addEventListener('click', (e) => {
     if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when The Exchange opens.' });
     else if (go.dataset.go === 'core') enterCore();
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
+    else if (go.dataset.go === 'contact') openContact({ type: 'General enquiry', message: 'I spun the world and found the eggs.' });
     else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
   }
 });
@@ -1450,6 +1710,10 @@ function pick(px, py) {
     return { kind: 'mindaloo', label: 'Mindaloo AC', sub: 'Moonlight' };
   }
   const reach = isTouch ? 26 : 15;
+  if (spill.drain > 0.5) {
+    const ei = nearest(eggMeshes.map((m) => ({ pos: m.userData.pos, ok: m.visible })).map((o) => (o.ok ? o : { pos: new THREE.Vector3(0, 0, -50) })), px, py, reach + 14);
+    if (ei !== null) return { kind: 'egg', index: ei, label: 'Something shiny…', sub: 'Easter egg' };
+  }
   const ci = nearest(cities, px, py, reach);
   if (ci !== null) return { kind: 'city', index: ci, label: cities[ci].product.name, sub: REGIONS[cities[ci].region].name };
   const pi = nearest(peaks, px, py, reach + 4);
@@ -1483,6 +1747,7 @@ function activate(h) {
   else if (h.kind === 'region') selectRegion(h.index, h.index === UNCH ? { dir: h.dir, dist: fitDist(0.6, 2.3) } : {});
   else if (h.kind === 'ocean') selectOcean(h.dir);
   else if (h.kind === 'core') enterCore();
+  else if (h.kind === 'egg') openEgg(eggMeshes[h.index]);
   else if (h.kind === 'shop') openShop();
   else if (h.kind === 'contact') openContact();
   else openSpecial(h.kind);
@@ -1491,11 +1756,11 @@ function activate(h) {
 const cv = renderer.domElement;
 cv.addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY, type: e.pointerType }; });
 cv.addEventListener('pointerleave', () => { pointer = null; });
-cv.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; lastInteract = performance.now(); controls.autoRotate = false; $('#intro').classList.add('gone'); });
+cv.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now(), wasSpinning: spin.w.length() > 1.5 || spin.energy > 0.2 }; lastInteract = performance.now(); $('#intro').classList.add('gone'); });
 cv.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
-  if (moved < 7 && performance.now() - downAt.t < 600) {
+  if (moved < 7 && performance.now() - downAt.t < 600 && !downAt.wasSpinning) {
     const h = pick(e.clientX, e.clientY);
     if (h && h.dir) {
       const col = h.kind === 'ocean' ? OCEAN.color : (h.index === UNCH ? UNCHARTED.color : REGIONS[h.index].color);
@@ -1506,7 +1771,55 @@ cv.addEventListener('pointerup', (e) => {
   }
   downAt = null;
 });
-cv.addEventListener('wheel', () => { lastInteract = performance.now(); controls.autoRotate = false; $('#intro').classList.add('gone'); }, { passive: true });
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  lastInteract = performance.now();
+  $('#intro').classList.add('gone');
+  if (!spin.enabled) return;
+  spin.target = THREE.MathUtils.clamp(spin.target * Math.exp(e.deltaY * 0.0012), MIN_D, MAX_D);
+}, { passive: false });
+
+/* grabbing and flinging */
+const pinchDist = () => { const p = [...spin.pointers.values()]; return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); };
+cv.addEventListener('pointerdown', (e) => {
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
+  spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!introDone) { introDone = true; syncSpin(); }
+  if (spin.pointers.size === 1) { grab(); spin.dragging = true; spin.lastMove = performance.now(); }
+  else if (spin.pointers.size === 2) { spin.dragging = false; spin.pinch = pinchDist(); }
+});
+cv.addEventListener('pointermove', (e) => {
+  const prev = spin.pointers.get(e.pointerId);
+  if (!prev) return;
+  const now = performance.now();
+  if (spin.pointers.size === 2) {
+    prev.x = e.clientX; prev.y = e.clientY;
+    const d = pinchDist();
+    if (spin.enabled && spin.pinch > 0) spin.target = THREE.MathUtils.clamp(spin.target * (spin.pinch / d), MIN_D, MAX_D);
+    spin.pinch = d;
+    return;
+  }
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  prev.x = e.clientX; prev.y = e.clientY;
+  if (!spin.dragging || !spin.enabled) return;
+  const k = 0.0052 * Math.max(0.25, (spin.dist - 1) / 2.4);
+  turnCamera(-dy * k, -dx * k, 0);
+  const dt = Math.max(1 / 240, (now - spin.lastMove) / 1000);
+  _sv.set(-dy * k / dt, -dx * k / dt, 0);
+  spin.w.lerp(_sv, 0.6);
+  if (spin.w.length() > 28) spin.w.setLength(28);
+  spin.lastMove = now;
+  lastInteract = now;
+});
+const release = (e) => {
+  spin.pointers.delete(e.pointerId);
+  if (spin.pointers.size === 0) {
+    spin.dragging = false;
+    if (reduceMotion || performance.now() - spin.lastMove > 90) spin.w.set(0, 0, 0); // held still before letting go
+  }
+};
+cv.addEventListener('pointerup', release);
+cv.addEventListener('pointercancel', release);
 
 const ripples = [];
 const rippleGeo = new THREE.RingGeometry(0.9, 1, 64);
@@ -1532,7 +1845,7 @@ function stepRipples(now) {
 }
 
 function updateHover() {
-  if (!pointer || pointer.type === 'touch' || flight) { tip.classList.remove('on'); cv.style.cursor = ''; return; }
+  if (!pointer || pointer.type === 'touch' || flight || spin.dragging || spin.energy > 0.2) { tip.classList.remove('on'); cv.style.cursor = ''; return; }
   hover = pick(pointer.x, pointer.y);
   cityPts.material.uniforms.uHover.value = hover && hover.kind === 'city' ? hover.index : -1;
   if (hover) {
@@ -1581,6 +1894,7 @@ function updateLabels() {
       if (camDist < 1.9) vis *= THREE.MathUtils.smoothstep(camDist, 1.6, 1.9); // get out of the way up close
       vis *= 1 - coreMix;
     }
+    vis *= 1 - Math.min(1, spin.energy * 1.5);
     const s = toScreen(p);
     l.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%)`;
     l.el.style.opacity = vis.toFixed(2);
@@ -1596,18 +1910,17 @@ const introTo = latLon(22, -95).multiplyScalar(fitDist(1.32, 3.4));
 function loop() {
   const now = performance.now();
   const t = clock.getElapsedTime();
+  const dtFrame = Math.min(0.05, t - (loop.prevT ?? t));
+  loop.prevT = t;
   U.uTime.value = t;
 
   if (!introDone) {
     const k = reduceMotion ? 1 : Math.min(1, (now - introStart) / 2800);
     camera.position.lerpVectors(introFrom, introTo, ease(k));
     camera.lookAt(0, 0, 0);
-    if (k >= 1) { introDone = true; controls.update(); }
+    if (k >= 1) { introDone = true; syncSpin(); }
   } else if (flight) stepFlight(now);
-  else {
-    if (!reduceMotion && !selected && !controls.autoRotate && now - lastInteract > 9000) controls.autoRotate = true;
-    controls.update();
-  }
+  else stepSpin(dtFrame, t, now);
 
   if (!reduceMotion) { // the sun circles the world: day and night
     const a = SUN0 + t * 0.03;
@@ -1622,7 +1935,9 @@ function loop() {
   if (!reduceMotion && coreMix < 0.5) stepBeings(Math.min(0.05, t - (loop.lastT ?? t)), t);
   loop.lastT = t;
 
-  clouds.rotation.y = t * 0.01;
+  clouds.rotation.y += dtFrame * (0.01 + spin.energy * 2.5);
+  stepSpill(dtFrame, t);
+  sunGlow.position.copy(sunDir).multiplyScalar(60);
   realmPivot.rotation.y = t * 0.06;
   realm.rotation.y = t * 0.2;
   mindalooPivot.rotation.y = -t * 0.09;
@@ -1669,6 +1984,7 @@ addEventListener('resize', () => {
 });
 
 document.body.classList.add('ready');
+if (location.hash === '#spill') setTimeout(() => startSpill(0.9), 3600); // td1.world/#spill shows the ocean spill straight away
 loop();
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */

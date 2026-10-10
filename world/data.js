@@ -211,3 +211,14 @@ export const ENQUIRY = {
   types: ['Book expertise', 'General enquiry', 'Custom build', 'Partnership', 'Press or speaking'],
   expertise: ['AI strategy session', 'Agents and automation', 'Mindaloo AC for your business', 'Product build or audit', 'Workshop or talk'],
 };
+
+// Easter eggs: hidden on the seabed. They only show when someone spins the world so hard the ocean spills.
+// Swap any of these for prizes later, such as a discount code.
+export const EGGS = [
+  { id: 'bug', title: 'The first computer bug', text: 'In 1947, the team running the Harvard Mark II found a moth trapped in a relay and taped it into the logbook as the first actual case of a bug being found.' },
+  { id: 'robot', title: 'Where “robot” comes from', text: 'The word first appeared in Karel Čapek’s 1920 play R.U.R., from the Czech robota, meaning forced labour.' },
+  { id: 'eliza', title: 'ELIZA’s first confidant', text: 'Joseph Weizenbaum wrote that his own secretary, who knew ELIZA was just a program, asked him to leave the room so she could talk to it in private.' },
+  { id: 'shakey', title: 'Shakey', text: 'Between 1966 and 1972, SRI’s Shakey became the first mobile robot to reason about its own actions, planning a route before it moved.' },
+  { id: 'moonlight', title: 'Moonlight', text: 'Mindaloo means moonlight. Next time the silver moon passes, watch where its light lands on the continents.' },
+  { id: 'spinner', title: 'You spun the world', text: 'Most visitors turn TD1.WORLD gently. You spun it until the ocean spilled. That restless curiosity is exactly who TD1 builds for.', cta: true },
+];

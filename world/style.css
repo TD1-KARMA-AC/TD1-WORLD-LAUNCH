@@ -302,6 +302,20 @@ button.cta { cursor: pointer; }
 .sent span { color: var(--ink-2); }
 @media (max-width: 420px) { .f-row { grid-template-columns: 1fr; } }
 
+/* ---------------------------------------------------------------- spin-out */
+#toast {
+  position: fixed; left: 50%; top: 84px; z-index: 40; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+  padding: 11px 18px; border-radius: 999px; font: 600 14px var(--font); color: #0b1530; white-space: nowrap;
+  background: linear-gradient(135deg, #e6f6ff, #9fe8ff); box-shadow: 0 10px 40px rgba(79, 212, 230, 0.35);
+  transition: opacity 0.35s, transform 0.35s cubic-bezier(.2,.8,.2,1);
+}
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#frenzy {
+  position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0;
+  background: radial-gradient(closest-side, transparent 55%, rgba(79, 140, 255, 0.28) 80%, rgba(10, 8, 30, 0.85) 100%);
+}
+@media (max-width: 759px) { #toast { top: 70px; font-size: 13px; white-space: normal; text-align: center; width: max-content; max-width: calc(100% - 32px); } }
+
 /* ---------------------------------------------------------------- phone: bottom sheet */
 @media (max-width: 759px) {
   .top { padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
