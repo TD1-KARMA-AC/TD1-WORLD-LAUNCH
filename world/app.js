@@ -50,9 +50,9 @@ const camWorld = new THREE.Vector3(), camWorldQ = new THREE.Quaternion();
 
 /* Film pipeline: render → bloom → lens (vignette, grain, fringing) → filmic grade. VR renders directly. */
 // Multisampled (anti-aliased) render target, so edges stay crisp through the film pipeline.
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: isTouch ? 2 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
-const bloomScale = isSmall() || isTouch ? 0.5 : 0.75;
+const bloomScale = isSmall() || isTouch ? 0.4 : 0.75;
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
 composer.addPass(bloom);
 const lens = new ShaderPass({
@@ -168,7 +168,8 @@ let sunShift = 0; // radians, for testing
 const DAY_RATE = 0.03; // radians per second: a day passes in about three and a half minutes
 const U = { uTime: { value: 0 }, uLin: { value: 1 } }; // shared time uniform; uLin: shaders write linear light for the film pipeline
 const AIR = { value: 1 };
-const SKY_FADE = { value: 1 }; // the stars fade behind a blue daytime sky when you land on the day side
+const SKY_FADE = { value: 1 };
+const _srCache = new Map(); // ground heights, see surfaceRadius() // the stars fade behind a blue daytime sky when you land on the day side
 
 /* ------------------------------------------------------------------ noise */
 
@@ -205,7 +206,8 @@ const WEATHER = {
   uNight: { value: null }, // the night-lights map, painted once the towns are placed
   uSunLocal: { value: new THREE.Vector3() }, // the sun in the planet's own frame
   uCloudRot: { value: new THREE.Matrix3() }, // planet frame → cloud frame (the clouds drift round)
-  uShadow: { value: isSmall() || isTouch ? 0 : 1 },
+  uShadow: { value: 1 }, // cheap now the clouds are baked: phones get shadows too
+  uCloudTex: { value: null },
 };
 // Town street grids, shared by the ground shader and the building layout so buildings stand in the blocks.
 const TOWN_GRID = 0.0034;
@@ -218,11 +220,10 @@ const WEATHER_GLSL = `
   uniform sampler2D uNight; uniform vec3 uSunLocal; uniform mat3 uCloudRot; uniform float uShadow;
   ${GLSL_NOISE}
   float fbm3(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++){ s += a * nz(p); p *= 2.03; a *= 0.5; } return s; }
-  float cloudCover(vec3 cp){ // cp: a point on the cloud sphere, in the clouds' frame
-    vec3 p = cp * 2.3;
-    vec3 q = vec3(fbm3(p + vec3(0.0, uTime * 0.012, 0.0)), fbm3(p + vec3(5.2, 1.3, 2.8)), fbm3(p + vec3(1.7, 9.2, 3.1)));
-    float n = fbm(p * 1.5 + q * 2.0 + vec3(uTime * 0.008, 0.0, 0.0));
-    return clamp(smoothstep(0.5, 0.7, n) * (0.7 + 0.6 * fbm3(cp * 13.0)), 0.0, 1.0);
+  uniform sampler2D uCloudTex;
+  float cloudCover(vec3 cp){ // cp: a point on the cloud sphere, in the clouds' frame; read from the baked cloud map
+    vec3 d = normalize(cp);
+    return texture2D(uCloudTex, vec2(atan(-d.z, d.x) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r;
   }
   float cloudShadow(vec3 ld){
     if (uShadow < 0.5) return 0.0;
@@ -438,7 +439,7 @@ function buildLand() {
         if (camD < 0.45) townFloor(ld, pave, street, lamp);
         if (camD < 0.3) { // up close the ground gets real texture: little rises, ruts and stones catch the light
           float kb = smoothstep(0.3, 0.04, camD) * (1.0 - pave * 0.85);
-          float hgt = fbm3(ld * 1500.0) + fbm3(ld * 5600.0) * 0.4 + fbm3(ld * 16000.0) * 0.12;
+          float hgt = fbm3(ld * 1500.0) + fbm3(ld * 5600.0) * 0.4; // no detail finer than a pixel: it would shimmer as you move
           vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition);
           float hx = dFdx(hgt), hy = dFdy(hgt);
           vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
@@ -461,8 +462,8 @@ function buildLand() {
         float shade = cloudShadow(ld);
         if (camD < 0.3) { // close to the ground: soil, grass and stone in fine, crisp detail
           float k = smoothstep(0.3, 0.04, camD);
-          float n1 = fbm3(ld * 1100.0), n2 = fbm3(ld * 4200.0), n3 = hh(floor(ld * 30000.0));
-          diffuseColor.rgb *= mix(1.0, 0.7 + n1 * 0.4 + n2 * 0.3 + (n3 - 0.5) * 0.12, k);
+          float n1 = fbm3(ld * 1100.0), n2 = fbm3(ld * 4200.0);
+          diffuseColor.rgb *= mix(1.0, 0.72 + n1 * 0.42 + n2 * 0.28, k);
         }
         // the town floor: paved blocks and dark streets, with lamps at night
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.52, 0.51, 0.49), pave * 0.8);
@@ -481,6 +482,53 @@ function buildLand() {
   return land;
 }
 const land = buildLand();
+
+
+// Clouds are worked out once into a map (and refreshed a few times a second as they drift and change shape),
+// instead of for every pixel of every frame. The sky looks the same; phones breathe easier.
+const cloudBake = (() => {
+  const W = isSmall() || isTouch ? 512 : 1024;
+  const rt = new THREE.WebGLRenderTarget(W, W / 2, { depthBuffer: false });
+  rt.texture.wrapS = THREE.RepeatWrapping;
+  rt.texture.minFilter = THREE.LinearFilter;
+  rt.texture.generateMipmaps = false;
+  WEATHER.uCloudTex.value = rt.texture;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv;
+      ${GLSL_NOISE}
+      float fbm3(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++){ s += a * nz(p); p *= 2.03; a *= 0.5; } return s; }
+      void main(){
+        float lon = (vUv.x - 0.5) * 6.2831853, lat = (vUv.y - 0.5) * 3.1415927;
+        vec3 cp = vec3(cos(lat) * cos(lon), sin(lat), -cos(lat) * sin(lon)) * 1.045; // the cloud sphere's radius
+        vec3 p = cp * 2.3;
+        vec3 q = vec3(fbm3(p + vec3(0.0, uTime * 0.012, 0.0)), fbm3(p + vec3(5.2, 1.3, 2.8)), fbm3(p + vec3(1.7, 9.2, 3.1)));
+        float n = fbm(p * 1.5 + q * 2.0 + vec3(uTime * 0.008, 0.0, 0.0));
+        float c = clamp(smoothstep(0.5, 0.7, n) * (0.7 + 0.6 * fbm3(cp * 13.0)), 0.0, 1.0);
+        gl_FragColor = vec4(c, c, c, 1.0);
+      }`,
+  });
+  const scene = new THREE.Scene();
+  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  let frame = 0;
+  return {
+    update(t, force) {
+      if (!force && (frame++ % 12) !== 0) return; // a few times a second is plenty for drifting weather
+      mat.uniforms.uTime.value = t;
+      const xr = renderer.xr.enabled;
+      renderer.xr.enabled = false;
+      const prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(rt);
+      renderer.render(scene, cam);
+      renderer.setRenderTarget(prev);
+      renderer.xr.enabled = xr;
+    },
+  };
+})();
+cloudBake.update(0, true);
 
 /* ------------------------------------------------------------------ the ocean of data */
 
@@ -621,10 +669,13 @@ const clouds = new THREE.Mesh(
       ${WEATHER_GLSL}
       void main(){
         float cover = cloudCover(vPos);
+        // fine edges up close, so the baked map never looks soft
+        cover = clamp(cover + (nz(vPos * 70.0) - 0.5) * 0.22 * smoothstep(0.02, 0.5, cover), 0.0, 1.0);
         vec3 un = normalize(vPos);
         float storm = 0.0, flash = 0.0;
         for (int i = 0; i < 3; i++) { // thunderheads: dense, dark-bottomed, lit from inside by lightning
           float d = dot(un, uStorm[i].xyz);
+          if (d < 0.993) continue; // only work out storm detail right around a storm
           float cell = smoothstep(0.9955, 0.9995, d) * (0.75 + 0.5 * fbm3(vPos * 31.0 + uTime * 0.05));
           storm = max(storm, cell);
           flash += uStorm[i].w * smoothstep(0.993, 1.0, d) * (0.6 + 0.4 * fbm3(vPos * 60.0 + uTime));
@@ -1221,9 +1272,9 @@ function stepRobots(dt, t) {
         }
       } else {
         rb.t = Math.min(1, rb.t + (rb.speed * dt) / rb.angle);
-        const prev = rb.d.clone();
+        _rV.copy(rb.d);
         rb.d.copy(rb.start).applyQuaternion(_rQ.identity().slerp(rb.q, rb.t)).normalize();
-        _rT.copy(rb.d).sub(prev);
+        _rT.copy(rb.d).sub(_rV);
         if (_rT.lengthSq() > 1e-14) rb.yaw = faceYaw(rb.d, _rT.normalize());
       }
       const walking = rb.t < 1 && !greeting;
@@ -1307,9 +1358,18 @@ function stepSay(t) {
   sayEl.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
   sayEl.style.visibility = s.z < 1 ? 'visible' : 'hidden';
 }
+// Ground height in a direction. Looked up a lot (everything that walks, flies or sails), so remembered on a fine grid.
 function surfaceRadius(d) {
-  const t = terrain(d.x, d.y, d.z);
-  return t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h, t.region) : 1.003;
+  const ix = Math.round(d.x * 6000), iy = Math.round(d.y * 6000), iz = Math.round(d.z * 6000);
+  const key = ((ix + 7000) * 14001 + (iy + 7000)) * 14001 + (iz + 7000);
+  let r = _srCache.get(key);
+  if (r === undefined) {
+    const t = terrain(d.x, d.y, d.z);
+    r = t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h, t.region) : 1.003;
+    if (_srCache.size > 60000) _srCache.clear();
+    _srCache.set(key, r);
+  }
+  return r;
 }
 
 /* ------------------------------------------------------------------ data flights between cities */
@@ -1390,9 +1450,9 @@ function stepDrones(dt, t) {
       }
     } else {
       dr.t = Math.min(1, dr.t + (dr.speed * dt) / dr.ang);
-      const prev = dr.d.clone();
+      _dT.copy(dr.d);
       dr.d.copy(dr.a.dir).applyQuaternion(_dQ.identity().slerp(dr.q, dr.t)).normalize();
-      _dT.copy(dr.d).sub(prev);
+      _dT.subVectors(dr.d, _dT);
       if (_dT.lengthSq() > 1e-14) dr.yaw = faceYaw(dr.d, _dT.normalize());
       lift += Math.sin(Math.PI * dr.t) * Math.min(0.012, dr.ang * 0.05); // climb, cruise, descend
     }
@@ -1423,6 +1483,7 @@ const flocks = (() => {
   }
   return { mesh, list };
 })();
+const _bBank = new THREE.Quaternion(), _bN = new THREE.Vector3();
 const _bC = new THREE.Vector3(), _bT1 = new THREE.Vector3(), _bT2 = new THREE.Vector3(), _bV = new THREE.Vector3(), _bP = new THREE.Vector3(), _bM = new THREE.Matrix4(), _bQ = new THREE.Quaternion(), _bS = new THREE.Vector3(), _bF = new THREE.Vector3(), _bU = new THREE.Vector3(), _bR = new THREE.Vector3(), _bBasis = new THREE.Matrix4();
 function stepBirds(dt, t) {
   let n = 0;
@@ -1447,12 +1508,12 @@ function stepBirds(dt, t) {
       _bR.crossVectors(_bU, _bF).normalize();
       _bBasis.makeBasis(_bR, _bU, _bF);
       _bQ.setFromRotationMatrix(_bBasis);
-      _bQ.multiply(new THREE.Quaternion().setFromAxisAngle(_bS.set(0, 0, 1), -Math.sign(fl.w) * 0.35)); // bank into the turn
+      _bQ.multiply(_bBank.setFromAxisAngle(_bS.set(0, 0, 1), -Math.sign(fl.w) * 0.35)); // bank into the turn
       _bS.setScalar(0.0011);
       _bM.compose(_bP, _bQ, _bS);
       flocks.mesh.setMatrixAt(n++, _bM);
     });
-    nearest = Math.min(nearest, _bC.clone().multiplyScalar(base).distanceTo(planetLocalCam));
+    nearest = Math.min(nearest, _bN.copy(_bC).multiplyScalar(base).distanceTo(planetLocalCam));
   });
   flocks.mesh.instanceMatrix.needsUpdate = true;
   if (nearest < 0.05 && Math.random() < dt * 0.5) score.birds(1 - nearest / 0.05);
@@ -1560,7 +1621,7 @@ function stepSats(dt, t) {
     s.g.position.copy(_sat);
     // panels face the sun; the dish points down at the world
     s.g.up.copy(s.axis);
-    s.g.lookAt(planet.localToWorld(new THREE.Vector3(0, 0, 0)));
+    s.g.lookAt(planet.position);
     const d = s.g.getWorldPosition(_sat).distanceTo(camWorld);
     s.g.scale.setScalar(s.size * THREE.MathUtils.clamp((d - 0.04) / 0.25, 0.08, 1));
     s.g.userData.blink.visible = Math.sin(t * 3 + i * 2) > 0.92;
@@ -1622,14 +1683,21 @@ function stepComet(t) {
 }
 
 const planetLocalCam = new THREE.Vector3();
+const lifeClock = { frame: 0, acc: 0 };
 function stepLife(dt, t) {
   planetLocalCam.copy(camWorld);
   planet.worldToLocal(planetLocalCam);
-  stepRobots(dt, t);
-  stepDrones(dt, t);
-  stepBirds(dt, t);
-  stepShips(dt);
   stepSats(dt, t);
+  // from orbit the little things are a pixel or two: update them a quarter as often and save the phone the work
+  lifeClock.acc += dt;
+  const close = camWorld.length() < 1.7;
+  if (!close && (lifeClock.frame++ % 4) !== 0) return;
+  const step = lifeClock.acc;
+  lifeClock.acc = 0;
+  stepRobots(step, t);
+  stepDrones(step, t);
+  stepBirds(step, t);
+  stepShips(step);
 }
 
 /* ------------------------------------------------------------------ crystal peaks: unsolved problems */
@@ -2253,7 +2321,7 @@ function stepSpin(dt, t, now) {
   // track how wildly it is spinning
   const speed = spin.w.length();
   if (speed > 0.01) spin.axisWorld.copy(spin.w).applyQuaternion(spin.q).normalize().negate();
-  if (!reduceMotion && speed > 5.5 && spin.dist > 1.4) spin.energy = Math.min(1, spin.energy + dt * 0.55);
+  if (!reduceMotion && speed > 7 && spin.dist > 1.4) spin.energy = Math.min(1, spin.energy + dt * 0.55);
   else spin.energy = Math.max(0, spin.energy - dt * (speed > 3 ? 0.08 : 0.3));
   if (spin.energy > 0.7 && !spill.warned) { spill.warned = true; toast('Whoa. The oceans are getting dizzy…', 2400); }
   if (spin.energy < 0.2) spill.warned = false;
@@ -2722,12 +2790,26 @@ function flyTo(dir, dist = 2.15, dur = 1700) {
   spin.w.set(0, 0, 0);
   spin.enabled = false;
 }
+const _fQ = new THREE.Quaternion(), _fS = new THREE.Quaternion(), _fD = new THREE.Vector3(), _fCam = new THREE.PerspectiveCamera();
+// Touch the world mid-flight and you take over right there: no waiting for the flight to land.
+function cancelFlight() {
+  if (!flight) return;
+  _fCam.position.copy(camera.position);
+  _fCam.up.copy(flight.up);
+  _fCam.lookAt(0, 0, 0);
+  flight = null;
+  spin.enabled = true;
+  spin.q.copy(_fCam.quaternion);
+  spin.qT.copy(_fCam.quaternion);
+  spin.dist = spin.target = camera.position.length();
+  spin.w.set(0, 0, 0);
+}
 function stepFlight(now) {
   if (!flight) return;
   const t = Math.min(1, (now - flight.t0) / flight.dur);
   const e = ease(t);
-  const q = new THREE.Quaternion().setFromUnitVectors(flight.fromDir, flight.toDir);
-  const dir = flight.fromDir.clone().applyQuaternion(new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(), q, e));
+  const q = _fQ.setFromUnitVectors(flight.fromDir, flight.toDir);
+  const dir = _fD.copy(flight.fromDir).applyQuaternion(_fS.identity().slerp(q, e));
   const hop = Math.sin(Math.PI * t) * Math.min(0.9, flight.fromDir.angleTo(flight.toDir) * 0.45);
   camera.position.copy(dir.multiplyScalar(THREE.MathUtils.lerp(flight.fromDist, flight.toDist, e) + hop));
   camera.up.copy(flight.up);
@@ -3175,8 +3257,9 @@ const ndc = new THREE.Vector2();
 const tip = $('#tip');
 let pointer = null, hover = null, downAt = null;
 
+const _tsV = new THREE.Vector3();
 function toScreen(v) {
-  const p = v.clone().project(camera);
+  const p = _tsV.copy(v).project(camera);
   return { x: (p.x * 0.5 + 0.5) * innerWidth, y: (-p.y * 0.5 + 0.5) * innerHeight, z: p.z };
 }
 function facing(v) { return v.clone().normalize().dot(camera.position.clone().normalize()) > 0.18; }
@@ -3351,6 +3434,7 @@ function pointerDown(e, label) {
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!introDone) cine.skip = true;
   enableMotion();
+  if (introDone) cancelFlight();
   grab(); // catching the world stops it
   spin.qT.copy(spin.q); // and it stays exactly where you caught it
   grabState.samples.length = 0;
@@ -3449,6 +3533,7 @@ function stepRipples(now) {
 }
 
 function updateHover() {
+  if ((updateHover.n = (updateHover.n || 0) + 1) % 3 !== 0) return;
   if (!pointer || pointer.type === 'touch' || flight || spin.dragging || spin.energy > 0.2) { tip.classList.remove('on'); cv.style.cursor = ''; return; }
   hover = pick(pointer.x, pointer.y);
   cityPts.material.uniforms.uHover.value = hover && hover.kind === 'city' ? hover.index : -1;
@@ -3820,7 +3905,10 @@ function stepQuality(now, inVR) {
   if (sum < 1500 || quality.frames.length < 8) return; // judge every second and a half
   const avg = sum / quality.frames.length;
   quality.frames.length = 0;
-  if (avg > 27 && quality.level > 0 && now - quality.lastChange > 2500) { // under ~37 fps: lighten up
+  if (avg > 27) quality.wantDown = true;
+  if (spin.pointers.size > 0 || now - lastInteract < 1200) return; // never switch mid-gesture: wait for a pause
+  if (quality.wantDown && quality.level > 0 && now - quality.lastChange > 2500) {
+    quality.wantDown = false; // under ~37 fps: lighten up
     setQuality(quality.level - 1);
     quality.lastChange = now;
   } else if (avg < 15.5 && quality.level < quality.max && quality.ups < 1 && now - quality.lastChange > 9000) { // lots of headroom: one step back up
@@ -3894,19 +3982,20 @@ function updateHud() {
   const el = d.dot(sunDir);
   hudEls.sun.textContent = spin.energy > 0.3 ? 'Spin warning' : `${el > 0.12 ? 'Day' : el > -0.12 ? (hr < 12 ? 'Dawn' : 'Dusk') : 'Night'} ${hm}`;
 }
+const _lC = new THREE.Vector3(), _lT = new THREE.Vector3(), _lP = new THREE.Vector3();
 function updateLabels() {
-  const camDir = camera.position.clone().normalize();
+  const camDir = _lC.copy(camera.position).normalize();
   const camDist = camera.position.length();
   labels.forEach((l) => {
     const p = l.getPos();
     let vis;
     if (l.layer === 'core') vis = ss(coreMix, 0.55, 1);
-    else if (l.surface) vis = THREE.MathUtils.smoothstep(p.clone().normalize().dot(camDir), 0.2, 0.5);
+    else if (l.surface) vis = THREE.MathUtils.smoothstep(_lP.copy(p).normalize().dot(camDir), 0.2, 0.5);
     else {
       // hidden while behind the planet
-      const toObj = p.clone().sub(camera.position);
+      const toObj = _lT.copy(p).sub(camera.position);
       const tClosest = -camera.position.dot(toObj) / toObj.lengthSq();
-      const closest = camera.position.clone().add(toObj.clone().multiplyScalar(Math.max(0, Math.min(1, tClosest))));
+      const closest = _lP.copy(camera.position).addScaledVector(toObj, Math.max(0, Math.min(1, tClosest)));
       vis = closest.length() < 1.1 && tClosest > 0 && tClosest < 1 ? 0 : 1;
     }
     if (l.layer !== 'core' && l.surface) {
@@ -3914,10 +4003,14 @@ function updateLabels() {
       vis *= 1 - coreMix;
     }
     vis *= 1 - Math.min(1, spin.energy * 1.5);
+    const op = vis.toFixed(2);
+    if (op !== l.op) { l.el.style.opacity = op; l.op = op; }
+    const pe = vis > 0.4 ? 'auto' : 'none';
+    if (pe !== l.pe) { l.el.style.pointerEvents = pe; l.pe = pe; }
+    if (vis < 0.005) return; // hidden: no need to move it
     const s = toScreen(p);
-    l.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%)`;
-    l.el.style.opacity = vis.toFixed(2);
-    l.el.style.pointerEvents = vis > 0.4 ? 'auto' : 'none';
+    const tr = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+    if (tr !== l.tr) { l.el.style.transform = tr; l.tr = tr; }
   });
 }
 
@@ -4089,6 +4182,7 @@ function loop() {
   WEATHER.uSunLocal.value.copy(sunDir).applyQuaternion(_pq.copy(planet.quaternion).invert());
   WEATHER.uCloudRot.value.setFromMatrix4(_cm.makeRotationY(-clouds.rotation.y));
   stepStorms(t, dtFrame);
+  cloudBake.update(t, false);
   stepSpill(dtFrame, t);
   sunGlow.position.copy(sunDir).multiplyScalar(60);
   realmPivot.rotation.y = t * 0.06;
@@ -4144,7 +4238,7 @@ function loop() {
   U.uLin.value = inVR ? 0 : 1;
   lens.uniforms.uTime.value = t;
   { // focus pulls in on close-ups
-    const target = introDone && !inVR && quality.level > 0 ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
+    const target = introDone && !inVR && quality.level > 0 && !isTouch ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
     lens.uniforms.uDof.value += (target - lens.uniforms.uDof.value) * 0.05;
   }
   const ground = stepGround(inVR);
