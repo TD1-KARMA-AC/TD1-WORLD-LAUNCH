@@ -200,6 +200,46 @@ export function createScore() {
       src.start(t);
       tone(55, { level: 0.3, decay: 1.4, bend: 0.5 });
     },
+    thunder(k = 0.5) { // a distant rumble after the lightning
+      if (!ctx || !on || k < 0.05) return;
+      const t = ctx.currentTime + 0.3 + (1 - k) * 1.2;
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(4);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(320 + k * 300, t);
+      lp.frequency.exponentialRampToValueAtTime(90, t + 3.5);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.5 * k, t + 0.12);
+      g.gain.setTargetAtTime(0.25 * k, t + 0.4, 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 3.8);
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(sfx);
+      src.start(t);
+      src.stop(t + 4);
+    },
+    birds(k = 0.5) { // a few chirps when you're down among the flocks
+      if (!ctx || !on) return;
+      const n = 2 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) {
+        const t = ctx.currentTime + i * (0.09 + Math.random() * 0.08);
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const f = 2600 + Math.random() * 1600;
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f, t);
+        o.frequency.exponentialRampToValueAtTime(f * (Math.random() < 0.5 ? 1.4 : 0.7), t + 0.07);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.05 * k, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+        o.connect(g);
+        g.connect(sfx);
+        o.start(t);
+        o.stop(t + 0.12);
+      }
+    },
     thump() { // Karma Core's heartbeat
       if (!ctx || !on) return;
       tone(62, { level: 0.32, decay: 0.5, bend: 0.55, attack: 0.005 });

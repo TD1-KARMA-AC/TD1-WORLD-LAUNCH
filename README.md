@@ -25,6 +25,23 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
 
 **Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place: on by default (it starts on the first tap, as browsers require) and remembered if the visitor turns it off.
 
+**Alive and real:**
+- **Night side:** as the world turns away from the sun its towns light up, with suburbs and winding roads glowing between them, and a golden-hour band runs along the line between day and night.
+- **Towns:** every product is a real town of modelled buildings, with windows that light up at night and a landmark spire at its heart.
+- **Weather:** clouds cast shadows on the land and sea. Thunderstorms flash with lightning (you hear the thunder) and aurora curtains ripple over both poles at night.
+- **Life:**
+  - Forests grow on every continent, and little robots work:
+    - The Origins: miners with picks
+    - Memory: gardeners
+    - Intelligence: surveyors with scanners
+    - Creation: builders with hammers
+    - The Future: welders with torches
+  - Courier robots carry glowing data blocks from town to town.
+  - Cargo drones fly overhead, flocks of birds wheel over the land and container ships cross the Ocean of Data with wakes and navigation lights.
+  - Satellites orbit, and a comet streams its tails away from the sun.
+- **Real stars and real time:** the sky is the real night sky (5,044 stars down to naked-eye brightness, the Milky Way where it really is, the constellations drawn faintly), lined up with the world's axis. You arrive on the side of the world that matches your own clock (night if it's night where you are), with the sun as high or low as it is today. Then days pass in about three and a half minutes. The HUD shows local time below you.
+- **Landing:** keep zooming in, or press **Fly down and look around** on any continent, and the camera drops to drone height. The view tips up to the horizon and the sky turns blue (gold at sunset, starry at night), with haze in the distance and clouds overhead. Drag up and down to fly, side to side to turn.
+
 TD1’s direction runs AI → AGI → **AC (Autonomous Consciousness)**, shown on The Future and on the Mindaloo AC moon.
 
 ## How it's built
@@ -36,6 +53,8 @@ index.html            the world (page shell)
 world/app.js          the 3D engine (three.js)
 world/data.js         all the words: continents, history, peaks, projections, links
 world/sound.js        the live ambient score and sound effects
+world/models.js       robots, drones, birds, ships, trees, satellites
+world/stars.js        the real night sky (star catalogue and constellation lines)
 world/products.js     the 50 products (generated from Neuroblock/td1-products-data.js)
 world/style.css       interface styling
 world/vendor/         three.js r160, self-hosted
@@ -55,6 +74,12 @@ docs/archive/         old setup and fix notes (kept, not served)
 - **Mindaloo AC link:** set `MINDALOO_URL` at the top of `world/data.js`.
 - **Move or add a continent:** each region in `REGIONS` has a `lat`, `lon` and `radius`.
 - **Products:** regenerate `world/products.js` from the NeuroBlock catalogue, or edit it directly.
+
+## Credits
+
+Star positions, brightness and constellation lines come from [d3-celestial](https://github.com/ofrohn/d3-celestial) by Olaf Frohn (BSD-3-Clause), built on the HYG star database (CC BY-SA). three.js is MIT licensed.
+
+`#dev` in the address exposes a few handles (`window.td1`) for testing and framing shots.
 
 ## Run locally
 

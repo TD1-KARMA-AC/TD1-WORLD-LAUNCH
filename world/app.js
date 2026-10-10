@@ -12,6 +12,8 @@ import {
 } from './data.js';
 import { PRODUCTS } from './products.js';
 import { createScore } from './sound.js';
+import { STARS, LINES } from './stars.js';
+import { robotBody, robotArm, robotTool, dataCube, drone, bird, ship, tree, satellite, modelMaterial, merge } from './models.js';
 
 const score = createScore();
 
@@ -89,6 +91,15 @@ function fitDist(r, min) {
 /* The world in your hands: grab it, fling it, spin it in any direction. Left alone, it turns like Earth. */
 const EARTH_AXIS = new THREE.Vector3(Math.sin(23.4 * DEG), Math.cos(23.4 * DEG), 0).normalize();
 const MIN_D = 1.45, MAX_D = 10;
+// Landing: keep zooming past orbit and the camera drops to drone height, tilting up to the horizon.
+const ALT_MIN = 0.006; // the lowest you can fly, above sea level
+const GROUND_CLEAR = 0.0045; // and above the land
+const LAND_TILT = 1.16; // radians: how far the view tips up to the horizon at the lowest height
+const landK = (dist) => THREE.MathUtils.smoothstep(0.42 - (dist - 1), 0, 0.42 - ALT_MIN * 1.3); // 0 in orbit, 1 at the ground
+function zoomBy(k) { // k > 1 zooms out; works in height above the ground, so it slows as you near the surface
+  const alt = Math.max(ALT_MIN, spin.target - 1);
+  spin.target = 1 + THREE.MathUtils.clamp(alt * k, ALT_MIN, MAX_D - 1);
+}
 const spin = {
   q: new THREE.Quaternion(),
   dist: 9.5,
@@ -108,6 +119,7 @@ function placeCamera() {
   camera.quaternion.copy(spin.q);
   camera.position.set(0, 0, spin.dist).applyQuaternion(spin.q);
   camera.up.set(0, 1, 0).applyQuaternion(spin.q);
+  camera.rotateX(landK(spin.dist) * LAND_TILT); // near the ground, look out to the horizon
 }
 function turnCamera(ax, ay, az) { // rotate around the camera's own axes by these angles
   _sv.set(ax, ay, az);
@@ -117,18 +129,33 @@ function turnCamera(ax, ay, az) { // rotate around the camera's own axes by thes
   spin.q.multiply(_sq).normalize();
 }
 
-const sunDir = new THREE.Vector3(-0.6, 0.45, 0.65).normalize();
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a1030, 0.4));
-const SUN0 = Math.atan2(0.65, -0.6);
+// Real time: the side of the world you arrive on matches your own clock (night if it's night where you are),
+// and the sun sits as high or low as it really does today, so the seasons are real. Then days pass in minutes.
+const LOCAL = (() => {
+  const d = new Date();
+  const hour = d.getHours() + d.getMinutes() / 60;
+  const day = (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 864e5;
+  return { hour, decl: -23.44 * DEG * Math.cos((2 * Math.PI / 365) * (day + 10)) };
+})();
+const ARRIVE_LON = -95; // where the opening shot sets you down
+const SUN0 = -ARRIVE_LON * DEG + ((LOCAL.hour - 12) / 24) * Math.PI * 2;
+const sunAt = (a, out) => out.set(Math.cos(LOCAL.decl) * Math.cos(a), Math.sin(LOCAL.decl), Math.cos(LOCAL.decl) * Math.sin(a));
+const sunDir = sunAt(SUN0, new THREE.Vector3());
+const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x1a1030, 0.26);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
 sun.position.copy(sunDir).multiplyScalar(10);
 scene.add(sun);
-const rim = new THREE.DirectionalLight(0x8a7dff, 1.1);
+const rim = new THREE.DirectionalLight(0x6f7dff, 0.22); // faint moonlight on the night side
 rim.position.set(0.8, -0.2, -1).multiplyScalar(10);
 scene.add(rim);
 
 const clock = new THREE.Clock();
+let sunShift = 0; // radians, for testing
+const DAY_RATE = 0.03; // radians per second: a day passes in about three and a half minutes
 const U = { uTime: { value: 0 }, uLin: { value: 1 } }; // shared time uniform; uLin: shaders write linear light for the film pipeline
+const AIR = { value: 1 };
+const SKY_FADE = { value: 1 }; // the stars fade behind a blue daytime sky when you land on the day side
 
 /* ------------------------------------------------------------------ noise */
 
@@ -153,6 +180,48 @@ function fbm(x, y, z, oct = 5) {
   for (let i = 0; i < oct; i++) { s += a * (vnoise(x * f, y * f, z * f) * 2 - 1); f *= 2.03; a *= 0.5; }
   return s;
 }
+const GLSL_NOISE = `
+  float hh(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float nz(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hh(i), hh(i + vec3(1,0,0)), f.x), mix(hh(i + vec3(0,1,0)), hh(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(hh(i + vec3(0,0,1)), hh(i + vec3(1,0,1)), f.x), mix(hh(i + vec3(0,1,1)), hh(i + vec3(1,1,1)), f.x), f.y), f.z); }
+  float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++){ s += a * nz(p); p *= 2.02; a *= 0.5; } return s; }`;
+
+// Weather shared by the clouds, the land and the sea: one cloud field, so shadows fall exactly under the clouds.
+const WEATHER = {
+  uNight: { value: null }, // the night-lights map, painted once the towns are placed
+  uSunLocal: { value: new THREE.Vector3() }, // the sun in the planet's own frame
+  uCloudRot: { value: new THREE.Matrix3() }, // planet frame → cloud frame (the clouds drift round)
+  uShadow: { value: isSmall() || isTouch ? 0 : 1 },
+};
+const WEATHER_GLSL = `
+  uniform sampler2D uNight; uniform vec3 uSunLocal; uniform mat3 uCloudRot; uniform float uShadow;
+  ${GLSL_NOISE}
+  float fbm3(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++){ s += a * nz(p); p *= 2.03; a *= 0.5; } return s; }
+  float cloudCover(vec3 cp){ // cp: a point on the cloud sphere, in the clouds' frame
+    vec3 p = cp * 2.3;
+    vec3 q = vec3(fbm3(p + vec3(0.0, uTime * 0.012, 0.0)), fbm3(p + vec3(5.2, 1.3, 2.8)), fbm3(p + vec3(1.7, 9.2, 3.1)));
+    float n = fbm(p * 1.5 + q * 2.0 + vec3(uTime * 0.008, 0.0, 0.0));
+    return clamp(smoothstep(0.5, 0.7, n) * (0.7 + 0.6 * fbm3(cp * 13.0)), 0.0, 1.0);
+  }
+  float cloudShadow(vec3 ld){
+    if (uShadow < 0.5) return 0.0;
+    float day = smoothstep(-0.1, 0.2, dot(ld, uSunLocal));
+    if (day <= 0.0) return 0.0;
+    vec3 c = normalize(ld + uSunLocal * 0.045);
+    return cloudCover(uCloudRot * c * 1.045) * 0.55 * day;
+  }
+  float nightLights(vec3 ld, float dist){
+    vec2 uv = vec2(atan(-ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+    float dens = texture2D(uNight, uv).r;
+    vec3 q = ld * 2600.0;
+    float hs = hh(floor(q));
+    float far = dens * dens * (0.45 + hs * 1.1);
+    // close up, the glow resolves into separate street lights and windows
+    float pts = step(1.0 - dens * 0.45, hs) * smoothstep(0.26, 0.06, length(fract(q) - 0.5)) * (0.5 + hs * 0.6);
+    return mix(pts, far, smoothstep(0.03, 0.22, dist));
+  }`;
+
 function rng(seed) { // mulberry32
   return () => {
     seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
@@ -306,16 +375,41 @@ function buildLand() {
     sh.uniforms.uTime = U.uTime;
     sh.uniforms.uHi = mat.userData.uHi;
     sh.uniforms.uSun = { value: sunDir };
+    Object.assign(sh.uniforms, WEATHER);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;\nvarying vec3 vLP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvLP = position;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHi;\nuniform vec3 uSun;\nvarying float vRegion;\nvarying vec3 vWP;')
+      .replace('#include <common>', `#include <common>
+        uniform float uTime; uniform float uHi; uniform vec3 uSun;
+        varying float vRegion; varying vec3 vWP; varying vec3 vLP;
+        ${WEATHER_GLSL}`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         float sel = 1.0 - step(0.5, abs(vRegion - uHi));
         totalEmissiveRadiance += vColor.rgb * (0.015 + sel * (0.07 + 0.04 * sin(uTime * 2.6)));
-        float night = smoothstep(0.1, -0.35, dot(normalize(vWP), uSun));
-        totalEmissiveRadiance += vColor.rgb * night * 0.025;`);
+        vec3 upW = normalize(vWP);
+        float sunUp = dot(upW, uSun);
+        float night = smoothstep(0.05, -0.25, sunUp);
+        totalEmissiveRadiance += vColor.rgb * night * 0.02;
+        // city lights: towns, suburbs and the roads between them glow on the night side
+        vec3 ld = normalize(vLP);
+        float camD = distance(vWP, cameraPosition);
+        float lights = nightLights(ld, camD) * smoothstep(0.004, 0.02, camD);
+        float twinkle = 0.85 + 0.15 * sin(uTime * 3.0 + dot(ld, vec3(913.0, 517.0, 731.0)));
+        totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * lights * night * twinkle * 1.6;
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.4, 0.38), smoothstep(0.05, 0.6, texture2D(uNight, vec2(atan(-ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r) * 0.22); // by day, towns read as grey-brown patches
+        float shade = cloudShadow(ld);
+        if (camD < 0.25) { // close to the ground: soil, grass and stone in fine detail
+          float k = smoothstep(0.25, 0.04, camD);
+          float n1 = fbm3(ld * 900.0), n2 = fbm3(ld * 3600.0);
+          diffuseColor.rgb *= mix(1.0, 0.72 + n1 * 0.42 + n2 * 0.26, k);
+        }`)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+        reflectedLight.directDiffuse *= 1.0 - shade;
+        reflectedLight.directSpecular *= 1.0 - shade;
+        // golden hour: the light warms and reddens along the line between day and night
+        float dusk = smoothstep(-0.06, 0.06, sunUp) * (1.0 - smoothstep(0.06, 0.32, sunUp));
+        reflectedLight.directDiffuse *= mix(vec3(1.0), vec3(1.45, 0.78, 0.48), dusk);`);
   };
   const land = new THREE.Mesh(g, mat);
   land.renderOrder = 2;
@@ -343,12 +437,13 @@ const ocean = new THREE.Mesh(
     uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 }, uAlpha: { value: 1 },
       uSlosh: { value: 0 }, uSloshAge: { value: 99 }, uSloshDir: { value: new THREE.Vector3(1, 0, 0) },
       uSpin: { value: 0 }, uSpinAxis: { value: new THREE.Vector3(0, 1, 0) },
-      uDrain: { value: 0 }, uHoles: { value: [new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0)] } },
+      uDrain: { value: 0 }, uHoles: { value: [new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0), new THREE.Vector3(0, 9, 0)] },
+      uFog: { value: 0 }, uFogCol: { value: new THREE.Color() }, ...WEATHER },
     transparent: true,
     vertexShader: `
       uniform float uSlosh; uniform float uSloshAge; uniform vec3 uSloshDir; uniform float uSpin; uniform vec3 uSpinAxis;
       attribute float aDepth;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth; varying float vDist;
       void main(){
         vPos = position;
         vDepth = aDepth;
@@ -365,12 +460,14 @@ const ocean = new THREE.Mesh(
         vec4 wp = modelMatrix * vec4(position * (1.0 + lift), 1.0);
         vN = normalize(mat3(modelMatrix) * normal);
         vView = normalize(cameraPosition - wp.xyz);
+        vDist = distance(cameraPosition, wp.xyz);
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: `
       uniform float uTime; uniform vec3 uSun; uniform float uHi; uniform float uAlpha;
-      uniform float uDrain; uniform vec3 uHoles[3]; uniform float uSpin;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth;
+      uniform float uDrain; uniform vec3 uHoles[3]; uniform float uSpin; uniform float uFog; uniform vec3 uFogCol;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth; varying float vDist;
+      ${WEATHER_GLSL}
       float h1(float n){ return fract(sin(n * 127.1) * 43758.5453); }
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main(){
@@ -406,6 +503,9 @@ const ocean = new THREE.Mesh(
         col += vec3(1.0, 0.94, 0.82) * spec * lit;
         float fres = pow(1.0 - max(dot(vN, vView), 0.0), 4.0);
         col += vec3(0.32, 0.55, 0.95) * fres * 0.45 * lit;
+        col *= 1.0 - cloudShadow(un) * 0.85;
+        float dusk = smoothstep(-0.06, 0.06, sunUp) * (1.0 - smoothstep(0.06, 0.32, sunUp));
+        col *= mix(vec3(1.0), vec3(1.35, 0.8, 0.55), dusk);
 
         // surf along the coasts
         float coast = smoothstep(0.035, 0.0, depth) * (0.55 + 0.45 * sin(uTime * 1.6 + un.x * 90.0 + un.z * 70.0));
@@ -431,6 +531,7 @@ const ocean = new THREE.Mesh(
 
         col += vec3(0.75, 0.9, 1.0) * (holeFoam * 0.9 + vSurge * 0.2);
         col += vec3(0.3, 0.55, 1.0) * uSpin * line * 0.3;
+        col = mix(col, uFogCol, (1.0 - exp(-pow(uFog * vDist, 2.0))) * 0.92); // haze toward the horizon when you're down low
         gl_FragColor = vec4(col, uAlpha + bit * line * (1.0 - uAlpha) * 0.5);
       }`,
   }),
@@ -440,34 +541,37 @@ planet.add(ocean);
 
 /* ------------------------------------------------------------------ clouds + atmosphere */
 
-const GLSL_NOISE = `
-  float hh(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-  float nz(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(hh(i), hh(i + vec3(1,0,0)), f.x), mix(hh(i + vec3(0,1,0)), hh(i + vec3(1,1,0)), f.x), f.y),
-               mix(mix(hh(i + vec3(0,0,1)), hh(i + vec3(1,0,1)), f.x), mix(hh(i + vec3(0,1,1)), hh(i + vec3(1,1,1)), f.x), f.y), f.z); }
-  float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++){ s += a * nz(p); p *= 2.02; a *= 0.5; } return s; }`;
 
+
+const CLOUD_R = 1.045; // high enough to fly beneath
+const STORMS = [0, 1, 2].map(() => new THREE.Vector4(0, 1, 0, 0)); // storm cells: xyz where (cloud frame), w = lightning now
 const clouds = new THREE.Mesh(
-  new THREE.SphereGeometry(1.03, 128, 96),
+  new THREE.SphereGeometry(CLOUD_R, 128, 96),
   new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uFade: { value: 1 } },
+    uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uFade: { value: 1 }, uStorm: { value: STORMS }, ...WEATHER },
     transparent: true,
     depthWrite: false,
     vertexShader: `varying vec3 vPos; varying vec3 vN;
       void main(){ vPos = position; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform float uTime; uniform vec3 uSun; uniform float uFade; varying vec3 vPos; varying vec3 vN;
-      ${GLSL_NOISE}
-      float fbm3(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++){ s += a * nz(p); p *= 2.03; a *= 0.5; } return s; }
+    fragmentShader: `uniform float uTime; uniform vec3 uSun; uniform float uFade; uniform vec4 uStorm[3]; varying vec3 vPos; varying vec3 vN;
+      ${WEATHER_GLSL}
       void main(){
-        vec3 p = vPos * 2.3;
-        // swirling weather systems: noise warped by noise
-        vec3 q = vec3(fbm3(p + vec3(0.0, uTime * 0.012, 0.0)), fbm3(p + vec3(5.2, 1.3, 2.8)), fbm3(p + vec3(1.7, 9.2, 3.1)));
-        float n = fbm(p * 1.5 + q * 2.0 + vec3(uTime * 0.008, 0.0, 0.0));
-        float cover = smoothstep(0.5, 0.7, n) * (0.7 + 0.6 * fbm3(vPos * 13.0));
+        float cover = cloudCover(vPos);
+        vec3 un = normalize(vPos);
+        float storm = 0.0, flash = 0.0;
+        for (int i = 0; i < 3; i++) { // thunderheads: dense, dark-bottomed, lit from inside by lightning
+          float d = dot(un, uStorm[i].xyz);
+          float cell = smoothstep(0.9955, 0.9995, d) * (0.75 + 0.5 * fbm3(vPos * 31.0 + uTime * 0.05));
+          storm = max(storm, cell);
+          flash += uStorm[i].w * smoothstep(0.993, 1.0, d) * (0.6 + 0.4 * fbm3(vPos * 60.0 + uTime));
+        }
+        cover = max(cover, clamp(storm, 0.0, 1.0));
         float sunUp = dot(vN, uSun);
         float lit = smoothstep(-0.22, 0.4, sunUp);
         vec3 tint = mix(vec3(1.0, 0.68, 0.48), vec3(1.0), smoothstep(-0.02, 0.3, sunUp)); // warm at dawn and dusk
-        gl_FragColor = vec4(tint * (0.05 + 0.95 * lit), clamp(cover, 0.0, 1.0) * 0.85 * uFade);
+        vec3 col = tint * (0.05 + 0.95 * lit) * mix(1.0, 0.62, storm);
+        col += vec3(0.78, 0.85, 1.0) * flash * 2.6;
+        gl_FragColor = vec4(col, clamp(cover * 0.85 + flash * 0.4, 0.0, 1.0) * uFade);
       }`,
   }),
 );
@@ -518,30 +622,72 @@ const haze = new THREE.Mesh( // soft blue haze over the surface toward the edge,
 haze.renderOrder = 5;
 scene.add(haze);
 
-/* ------------------------------------------------------------------ stars */
+/* ------------------------------------------------------------------ stars: the real night sky */
 
+// Every star you can see with the naked eye, where it really is. The sky's north pole lines up with the world's
+// spin axis, so the Southern Cross sits over the south and Polaris over the north.
+const SKY_E = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 0, 1), EARTH_AXIS).normalize(); // right ascension 0
+const SKY_F = new THREE.Vector3().crossVectors(EARTH_AXIS, SKY_E).normalize(); // right ascension 90
+function skyDir(ra, dec) {
+  const r = ra * DEG, d = dec * DEG;
+  return SKY_E.clone().multiplyScalar(Math.cos(d) * Math.cos(r)).addScaledVector(SKY_F, Math.cos(d) * Math.sin(r)).addScaledVector(EARTH_AXIS, Math.sin(d));
+}
+function bvColor(bv) { // star colour from its B-V index: blue-white hot stars to orange-red cool ones
+  const t = THREE.MathUtils.clamp((bv + 0.3) / 2.1, 0, 1);
+  const stops = [[0, [0.62, 0.72, 1.0]], [0.18, [0.8, 0.86, 1.0]], [0.38, [1.0, 0.98, 0.95]], [0.6, [1.0, 0.86, 0.66]], [1, [1.0, 0.6, 0.38]]];
+  for (let i = 1; i < stops.length; i++) {
+    if (t <= stops[i][0]) {
+      const k = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
+      return stops[i - 1][1].map((v, j) => v + (stops[i][1][j] - v) * k);
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+const SKY_R = 80;
 {
-  const N = 2600, p = new Float32Array(N * 3), ph = new Float32Array(N), sz = new Float32Array(N);
-  const r = rng(99);
+  const N = STARS.length / 4, p = new Float32Array(N * 3), ph = new Float32Array(N), sz = new Float32Array(N), col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const v = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1).normalize().multiplyScalar(40 + r() * 40);
+    const v = skyDir(STARS[i * 4], STARS[i * 4 + 1]).multiplyScalar(SKY_R);
     p.set([v.x, v.y, v.z], i * 3);
-    ph[i] = r() * 6.28;
-    sz[i] = 0.6 + Math.pow(r(), 6) * 3;
+    const mag = STARS[i * 4 + 2];
+    ph[i] = (i * 2.399) % 6.283;
+    sz[i] = 0.7 + 4.2 * Math.pow(10, -0.4 * (mag + 1.5) * 0.42); // Sirius biggest, the faintest just a speck
+    col.set(bvColor(STARS[i * 4 + 3]).map((c) => c * Math.min(1, 0.32 + Math.pow(10, -0.4 * (mag - 1.2)) * 0.68)), i * 3);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
   g.setAttribute('aSize', new THREE.BufferAttribute(sz, 1));
-  scene.add(new THREE.Points(g, new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() } },
+  g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+  const stars = new THREE.Points(g, new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() }, uSkyFade: SKY_FADE },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `uniform float uTime; uniform float uPR; attribute float aPhase; attribute float aSize; varying float vA;
-      void main(){ vA = 0.55 + 0.45 * sin(uTime * 1.3 + aPhase); gl_PointSize = aSize * uPR * (0.8 + vA * 0.4);
+    vertexShader: `uniform float uTime; uniform float uPR; attribute float aPhase; attribute float aSize; attribute vec3 aColor; varying float vA; varying vec3 vC;
+      void main(){ vA = 0.78 + 0.22 * sin(uTime * (1.1 + fract(aPhase) * 2.0) + aPhase); vC = aColor; gl_PointSize = aSize * uPR;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
-        gl_FragColor = vec4(vec3(0.85, 0.88, 1.0), smoothstep(0.5, 0.0, d) * vA); }`,
-  })));
+    fragmentShader: `uniform float uSkyFade; varying float vA; varying vec3 vC; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
+        float core = smoothstep(0.5, 0.0, d); core *= core;
+        gl_FragColor = vec4(vC * 1.6, core * vA * uSkyFade); }`,
+  }));
+  stars.renderOrder = -1;
+  scene.add(stars);
+
+  // the constellation figures, drawn so faintly you only notice them when you look
+  const lp = new Float32Array(LINES.length / 2 * 3);
+  for (let i = 0; i < LINES.length / 2; i++) {
+    const v = skyDir(LINES[i * 2], LINES[i * 2 + 1]).multiplyScalar(SKY_R + 1);
+    lp.set([v.x, v.y, v.z], i * 3);
+  }
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', new THREE.BufferAttribute(lp, 3));
+  const figures = new THREE.LineSegments(lg, new THREE.ShaderMaterial({
+    uniforms: { uSkyFade: SKY_FADE },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: 'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform float uSkyFade; void main(){ gl_FragColor = vec4(vec3(0.55, 0.62, 1.0) * 0.07 * uSkyFade, 1.0); }',
+  }));
+  figures.renderOrder = -1;
+  scene.add(figures);
 }
 
 /* ------------------------------------------------------------------ placing things on land */
@@ -570,7 +716,7 @@ function standOn(obj, face, lift = 0) {
 
 /* ------------------------------------------------------------------ cities of light */
 
-let cityPts;
+let cityPts, cityBeams;
 const cities = []; // { product, pos (Vector3), region, color }
 {
   REGIONS.forEach((reg, ri) => {
@@ -605,10 +751,11 @@ const cities = []; // { product, pos (Vector3), region, color }
       attribute vec3 aColor; attribute float aPhase; varying vec3 vC; varying float vP;
       void main(){
         vC = aColor; vP = 0.7 + 0.3 * sin(uTime * 2.2 + aPhase);
-        float night = smoothstep(0.15, -0.3, dot(normalize(position), uSun)); vP *= 0.75 + night * 0.75;
+        float night = smoothstep(0.15, -0.3, dot(normalize(position), uSun)); vP *= 0.7 + night * 0.2;
         float hov = 1.0 - step(0.5, abs(float(gl_VertexID) - uHover));
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = (26.0 + hov * 30.0) * vP * uPR / -mv.z;
+        vP *= smoothstep(0.18, 0.7, -mv.z); // up close the real town takes over from the glow
+        gl_PointSize = min(70.0, (21.0 + hov * 30.0) * vP * uPR / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `varying vec3 vC; varying float vP;
@@ -623,102 +770,403 @@ const cities = []; // { product, pos (Vector3), region, color }
   const bg = new THREE.BufferGeometry();
   bg.setAttribute('position', new THREE.Float32BufferAttribute(beamPos, 3));
   bg.setAttribute('color', new THREE.Float32BufferAttribute(beamCol, 3));
-  planet.add(new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })));
+  cityBeams = new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  planet.add(cityBeams);
 }
 
-/* ------------------------------------------------------------------ flora: what grows on each continent */
+/* ------------------------------------------------------------------ towns: real buildings, and the lights they make at night */
 
-const flora = [];
+// Put an object flat on the ground at direction d (unit), turned by yaw.
+const _gq = new THREE.Quaternion(), _gy = new THREE.Quaternion();
+function groundMatrix(d, yaw, scale, lift, out) {
+  const r = surfaceRadius(d) + lift;
+  _gq.setFromUnitVectors(up, d).multiply(_gy.setFromAxisAngle(up, yaw));
+  return out.compose(d.clone().multiplyScalar(r), _gq, scale);
+}
+// A random direction near d, about `ang` radians away.
+function nearDir(d, ang, r) {
+  const t1 = new THREE.Vector3().crossVectors(d, Math.abs(d.y) < 0.9 ? up : new THREE.Vector3(1, 0, 0)).normalize();
+  const t2 = new THREE.Vector3().crossVectors(d, t1);
+  const a = r() * Math.PI * 2;
+  return d.clone().addScaledVector(t1, Math.cos(a) * ang).addScaledVector(t2, Math.sin(a) * ang).normalize();
+}
+const onLand = (d, min = 0.01) => { const t = terrain(d.x, d.y, d.z); return t.h > min && t.region !== UNCH && t.region >= 0; };
+const gauss = (r) => (r() + r() + r() + r() - 2) * 0.87;
+
+// Windows that light up at night, rooftop lights, glass by day.
+function townMaterial() {
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.25 });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSun = { value: sunDir };
+    sh.uniforms.uTime = U.uTime;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 aDims; attribute float aSeed; varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBox = position * aDims; vNl = normal; vSeed = aSeed;\nvWorld = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uSun; uniform float uTime; varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld;\nfloat wh(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 15731.7); }')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float night = smoothstep(0.08, -0.2, dot(normalize(vWorld), uSun));
+        if (abs(vNl.y) < 0.5) {
+          vec2 f = abs(vNl.x) > 0.5 ? vec2(vBox.z, vBox.y) : vec2(vBox.x, vBox.y);
+          vec2 cell = floor(f / vec2(0.00055, 0.00062));
+          vec2 w = fract(f / vec2(0.00055, 0.00062));
+          float win = step(0.22, w.x) * step(w.x, 0.78) * step(0.3, w.y) * step(w.y, 0.8);
+          float on = step(0.42, wh(cell + vSeed * 17.0));
+          vec3 warm = mix(vec3(1.0, 0.72, 0.4), vec3(0.75, 0.88, 1.0), step(0.8, wh(cell + 3.1)));
+          totalEmissiveRadiance += warm * win * on * (0.04 + night * 1.4);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.45, win * 0.6); // glass
+        } else if (vNl.y > 0.5) {
+          totalEmissiveRadiance += vec3(1.0, 0.25, 0.2) * night * step(0.94, fract(uTime * 0.5 + vSeed)) * step(0.006, vBox.y); // aircraft warning light on tall roofs
+        }`);
+  };
+  return mat;
+}
+
+const towns = { boxes: null, spires: null, lightsDots: [] };
 {
-  const shapes = [
-    () => new THREE.DodecahedronGeometry(0.009, 0), // The Origins: weathered stones
-    () => new THREE.IcosahedronGeometry(0.011, 0), // Memory: round glowing shrubs
-    () => { const g = new THREE.ConeGeometry(0.005, 0.036, 4); g.translate(0, 0.018, 0); return g; }, // Intelligence: crystal spires
-    () => new THREE.BoxGeometry(0.012, 0.012, 0.012), // Creation: building blocks
-    () => { const g = new THREE.CylinderGeometry(0.0022, 0.0036, 0.042, 6); g.translate(0, 0.021, 0); return g; }, // The Future: light towers
+  const r = rng(4242);
+  const boxes = [], spires = [];
+  const TOWER = [ // per continent: [base colours], height range, footprint
+    { cols: ['#c9a774', '#b88f5c', '#d8c39a'], h: [0.0016, 0.0045], w: [0.0016, 0.0028] }, // The Origins: low sandstone blocks
+    { cols: ['#8f86b8', '#b9b2d6', '#6f6796'], h: [0.002, 0.0075], w: [0.0014, 0.0024] }, // Memory: lavender stone and glass
+    { cols: ['#a8c9c4', '#dfe9e8', '#6f9792'], h: [0.003, 0.011], w: [0.0012, 0.002] }, // Intelligence: tall glass towers
+    { cols: ['#e07b6a', '#f2c46d', '#7ec4cf', '#b48ad8'], h: [0.0018, 0.006], w: [0.0016, 0.0026] }, // Creation: colourful blocks
+    { cols: ['#eef4ef', '#cfe7d6', '#ffffff'], h: [0.003, 0.012], w: [0.0011, 0.0019] }, // The Future: white spires
   ];
-  const count = isSmall() || isTouch ? 80 : 150;
-  const q = new THREE.Quaternion(), m4 = new THREE.Matrix4(), sc = new THREE.Vector3(), p = new THREE.Vector3(), spin = new THREE.Quaternion();
-  const white = new THREE.Color(1, 1, 1), colr = new THREE.Color();
-  REGIONS.forEach((reg, ri) => {
-    const pool = byRegion[ri].filter((f) => f.h > 0.05);
-    if (!pool.length) return;
-    const r = rng(500 + ri);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, roughness: 0.55, flatShading: true, transparent: true,
-      emissive: reg.col, emissiveIntensity: ri === 2 || ri === 4 ? 0.5 : 0.16,
-    });
-    const mesh = new THREE.InstancedMesh(shapes[ri](), mat, count);
-    for (let i = 0; i < count; i++) {
-      const f = pool[Math.floor(r() * pool.length)];
-      p.copy(f.c).multiplyScalar(f.r - 0.001);
-      q.setFromUnitVectors(up, f.c);
-      if (ri === 3) spin.setFromEuler(new THREE.Euler(r() * 6, r() * 6, r() * 6)); // blocks tumble where they land
-      else spin.setFromAxisAngle(up, r() * Math.PI * 2);
-      q.multiply(spin);
-      sc.setScalar((0.6 + r() * 0.9) * 0.5);
-      m4.compose(p, q, sc);
-      mesh.setMatrixAt(i, m4);
-      if (ri === 3) colr.setHSL(r(), 0.7, 0.62); // building blocks in every colour
-      else colr.copy(reg.col).lerp(white, 0.25 + r() * 0.35);
-      mesh.setColorAt(i, colr);
+  cities.forEach((ct, ci) => {
+    const kind = TOWER[ct.region];
+    const c = ct.face.c.clone().normalize();
+    ct.dir = c;
+    const n = isSmall() || isTouch ? 12 : 22;
+    const placed = [];
+    for (let k = 1; k < n; k++) {
+      const d = nearDir(c, 0.003 + Math.pow(r(), 0.7) * 0.011, r);
+      if (!onLand(d, 0.004)) continue;
+      const centre = 1 - d.angleTo(c) / 0.014;
+      const h = THREE.MathUtils.lerp(kind.h[0], kind.h[1], Math.max(0, centre) * (0.5 + r() * 0.5));
+      const w = THREE.MathUtils.lerp(kind.w[0], kind.w[1], r());
+      // keep buildings apart so their walls never cut through each other (or the landmark spire)
+      if (d.angleTo(c) < 0.0022 + w * 0.8 && k > 0) continue;
+      if (placed.some((p) => p.d.angleTo(d) < (p.w + w) * 0.85)) continue;
+      placed.push({ d, w });
+      boxes.push({ d, yaw: r() * Math.PI, dims: new THREE.Vector3(w, h, w * (0.7 + r() * 0.6)), col: new THREE.Color(kind.cols[Math.floor(r() * kind.cols.length)]), seed: r() });
     }
-    mesh.renderOrder = 2;
-    planet.add(mesh);
-    flora.push(mesh);
+    // a landmark spire at the heart of every town: this is the product
+    spires.push({ d: c, yaw: 0, dims: new THREE.Vector3(0.0016, 0.012 + (ci % 3) * 0.003, 0.0016), col: ct.color.clone().lerp(new THREE.Color('#ffffff'), 0.3), seed: r() });
   });
+  // villages scattered across the land, between the towns
+  for (let k = 0, made = 0; k < 900 && made < (isSmall() || isTouch ? 70 : 140); k++) {
+    const f = landFaces[Math.floor(r() * landFaces.length)];
+    if (f.region === UNCH || f.h < 0.03) continue;
+    made++;
+    const c = f.c.clone().normalize();
+    towns.lightsDots.push({ d: c, n: 18, spread: 0.004, b: 0.5 });
+    for (let j = 0; j < 3; j++) {
+      const d = nearDir(c, r() * 0.004, r);
+      if (!onLand(d, 0.004)) continue;
+      boxes.push({ d, yaw: r() * Math.PI, dims: new THREE.Vector3(0.0012, 0.0012 + r() * 0.0012, 0.0014), col: new THREE.Color(TOWER[f.region].cols[0]).multiplyScalar(0.9), seed: r() });
+    }
+  }
+  const build = (list, geo) => {
+    geo.translate(0, 0.5, 0);
+    const dims = new Float32Array(list.length * 3), seeds = new Float32Array(list.length);
+    const mesh = new THREE.InstancedMesh(geo, townMaterial(), list.length);
+    const m4 = new THREE.Matrix4(), sc = new THREE.Vector3();
+    list.forEach((b, i) => {
+      sc.copy(b.dims);
+      mesh.setMatrixAt(i, groundMatrix(b.d, b.yaw, sc, -0.0022, m4)); // footings sunk into the hillside
+      mesh.setColorAt(i, b.col);
+      dims.set([b.dims.x, b.dims.y, b.dims.z], i * 3);
+      seeds[i] = b.seed;
+    });
+    geo.setAttribute('aDims', new THREE.InstancedBufferAttribute(dims, 3));
+    geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
+    mesh.renderOrder = 2;
+    mesh.computeBoundingSphere();
+    planet.add(mesh);
+    return mesh;
+  };
+  // vertex colours must exist for the instance colours to show
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  boxGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Array(boxGeo.attributes.position.count * 3).fill(1), 3));
+  towns.boxes = build(boxes, boxGeo);
+  const spireGeo = new THREE.CylinderGeometry(0.18, 0.5, 1, 6);
+  spireGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Array(spireGeo.attributes.position.count * 3).fill(1), 3));
+  towns.spires = build(spires, spireGeo);
 }
 
-/* ------------------------------------------------------------------ beings: little agents who live here */
+// The night-lights map: dense lit cores, suburbs, roads between neighbouring towns, scattered villages.
+{
+  const W = isSmall() || isTouch ? 2048 : 4096, H = W / 2;
+  const cvs = document.createElement('canvas');
+  cvs.width = W; cvs.height = H;
+  const g = cvs.getContext('2d');
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'lighter';
+  const r = rng(77777);
+  const plot = (d, a) => {
+    const lat = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)), lon = Math.atan2(-d.z, d.x);
+    const x = (lon / (Math.PI * 2) + 0.5) * W, y = (0.5 - lat / Math.PI) * H;
+    const wpx = Math.max(1, Math.round(1 / Math.max(0.2, Math.cos(lat))));
+    g.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+    g.fillRect(Math.floor(x), Math.floor(y), wpx, 1);
+  };
+  const cluster = (c, n, spread, b) => {
+    for (let k = 0; k < n; k++) {
+      const d = nearDir(c, Math.abs(gauss(r)) * spread, r);
+      if (onLand(d, 0.004)) plot(d, b * (0.4 + r() * 0.6));
+    }
+  };
+  cities.forEach((ct) => {
+    const c = ct.dir;
+    cluster(c, 260, 0.007, 0.95); // the lit core
+    cluster(c, 420, 0.022, 0.55); // suburbs
+    // roads to the two nearest towns on the same continent
+    cities.filter((o) => o !== ct && o.region === ct.region)
+      .sort((a, b) => a.dir.angleTo(c) - b.dir.angleTo(c)).slice(0, 2)
+      .forEach((o) => {
+        const ang = c.angleTo(o.dir), q = new THREE.Quaternion().setFromUnitVectors(c, o.dir);
+        const steps = Math.ceil(ang / 0.0009);
+        const side = new THREE.Vector3().crossVectors(c, o.dir).normalize();
+        const seed = r() * 100;
+        for (let i = 0; i <= steps; i++) {
+          const k = i / steps;
+          const d = c.clone().applyQuaternion(new THREE.Quaternion().slerp(q, k));
+          // roads wander with the land instead of running dead straight
+          const wander = (fbm(d.x * 30 + seed, d.y * 30, d.z * 30, 3) * 0.05 + Math.sin(k * Math.PI * 3 + seed) * 0.012) * Math.sin(Math.PI * k) * Math.min(1, ang * 8);
+          d.addScaledVector(side, wander).normalize();
+          const j = nearDir(d, Math.abs(gauss(r)) * 0.001, r);
+          if (onLand(j, 0.003) && r() < 0.5) plot(j, 0.16 + r() * 0.2);
+        }
+      });
+  });
+  towns.lightsDots.forEach((v) => cluster(v.d, v.n, v.spread, v.b));
+  g.globalCompositeOperation = 'source-over';
+  try { // a soft glow around everything
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.45;
+    g.filter = `blur(${W / 1400}px)`;
+    g.drawImage(cvs, 0, 0);
+    g.filter = 'none';
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
+  } catch (e) { /* no canvas filters: sharp lights are fine */ }
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = THREE.RepeatWrapping;
+  WEATHER.uNight.value = tex;
+}
 
-const beings = [];
-const beingMesh = (() => {
-  const N = isSmall() || isTouch ? 28 : 46;
-  const geo = new THREE.CapsuleGeometry(0.0045, 0.007, 3, 8);
-  geo.translate(0, 0.008, 0);
-  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5, roughness: 0.4, transparent: true }), N);
-  const r = rng(808);
-  for (let i = 0; i < N; i++) {
-    const home = cities[Math.floor(r() * cities.length)];
-    beings.push({ from: home, to: home, t: 1, wait: r() * 3, speed: 0.05 + r() * 0.04, phase: r() * 10, q: null, angle: 1, off: new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar(0.03) });
-    mesh.setColorAt(i, home.color);
-  }
-  mesh.renderOrder = 3;
+/* ------------------------------------------------------------------ forests and plants: what grows on each continent */
+
+const flora = []; // everything that stands on the surface (hidden while you're down in Karma Core)
+flora.push(towns.boxes, towns.spires);
+const MODEL_MAT = modelMaterial();
+// Face the direction T (a tangent at d): returns the yaw for groundMatrix.
+const _fx = new THREE.Vector3(), _fz = new THREE.Vector3();
+function faceYaw(d, T) {
+  _gq.setFromUnitVectors(up, d);
+  _fx.set(1, 0, 0).applyQuaternion(_gq);
+  _fz.set(0, 0, 1).applyQuaternion(_gq);
+  return Math.atan2(T.dot(_fx), T.dot(_fz));
+}
+function scatterMesh(geo, list, mat = MODEL_MAT) {
+  if (!list.length) return null;
+  const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+  const m4 = new THREE.Matrix4(), sc = new THREE.Vector3();
+  list.forEach((it, i) => {
+    sc.setScalar(it.s);
+    mesh.setMatrixAt(i, groundMatrix(it.d, it.yaw, sc, it.lift ?? -0.0003, m4));
+    mesh.setColorAt(i, it.c);
+  });
+  mesh.renderOrder = 2;
+  mesh.computeBoundingSphere();
   planet.add(mesh);
+  flora.push(mesh);
   return mesh;
+}
+{
+  const FOREST = [ // per continent: what grows, its colours, how tall, how much
+    { kinds: ['cactus', 'rock', 'rock'], cols: ['#6f8f4a', '#a07a50', '#8a6844'], h: [0.0012, 0.0022], n: 500 }, // The Origins: desert
+    { kinds: ['round', 'round', 'tall'], cols: ['#7d6bc0', '#9a86d6', '#5f5199'], h: [0.0017, 0.003], n: 1800 }, // Memory: violet forest
+    { kinds: ['pine', 'pine', 'pine'], cols: ['#2f7a68', '#3f9480', '#24604f'], h: [0.0019, 0.0033], n: 2000 }, // Intelligence: teal conifers
+    { kinds: ['shrub', 'shrub', 'rock'], cols: ['#b0505e', '#c9705e', '#8e4a4a'], h: [0.001, 0.0018], n: 800 }, // Creation: rose scrub
+    { kinds: ['tall', 'round', 'tall'], cols: ['#3e9a58', '#5cbf6e', '#2f7f46'], h: [0.002, 0.0035], n: 1800 }, // The Future: emerald groves
+  ];
+  const lists = {};
+  const geos = {};
+  const r = rng(9090);
+  const scale = isSmall() || isTouch ? 0.45 : 1;
+  FOREST.forEach((F, ri) => {
+    const pool = byRegion[ri].filter((f) => f.h > 0.04);
+    if (!pool.length) return;
+    for (let i = 0, made = 0; i < F.n * 6 && made < F.n * scale; i++) {
+      const f = pool[Math.floor(r() * pool.length)];
+      const d = nearDir(f.c, r() * 0.006, r);
+      // forests grow in patches, and keep clear of the towns
+      if (fbm(d.x * 7 + ri, d.y * 7, d.z * 7) < -0.02) continue;
+      if (cities.some((c) => c.dir.dot(d) > 0.99987)) continue;
+      const kind = F.kinds[Math.floor(r() * F.kinds.length)];
+      (lists[kind] = lists[kind] || []).push({ d, yaw: r() * 6.28, s: THREE.MathUtils.lerp(F.h[0], F.h[1], r()), c: new THREE.Color(F.cols[Math.floor(r() * F.cols.length)]).multiplyScalar(0.85 + r() * 0.3) });
+      made++;
+    }
+  });
+  Object.keys(lists).forEach((k) => { geos[k] = tree(k); scatterMesh(geos[k], lists[k]); });
+}
+
+/* ------------------------------------------------------------------ robots: TD1's workers */
+
+// Every continent has its trade: miners in The Origins, gardeners in Memory, surveyors in Intelligence,
+// builders in Creation, welders in The Future. Couriers carry glowing blocks of data between towns.
+const ROBOT_H = 0.0013;
+const JOBS = ['pick', 'can', 'scanner', 'hammer', 'torch'];
+const robots = [];
+const robotParts = (() => {
+  const nWork = isSmall() || isTouch ? 6 : 12, nWalk = isSmall() || isTouch ? 16 : 30;
+  const r = rng(808);
+  const props = { rock: [], round: [], blocks: [], pylon: [] };
+  REGIONS.forEach((reg, ri) => {
+    // towns to work near; The Origins has none, so its miners work the open desert
+    const towns = cities.filter((c) => c.region === ri);
+    const sites = towns.length ? towns : pickFaces(ri, nWork, 31, { minSep: 3, minH: 0.1 }).map((f) => ({ dir: f.c.clone().normalize() }));
+    for (let i = 0; i < nWork && sites.length; i++) {
+      const home = sites[i % sites.length];
+      let d = null;
+      for (let k = 0; k < 20 && !d; k++) { const c = nearDir(home.dir, 0.006 + r() * 0.008, r); if (onLand(c, 0.01)) d = c; }
+      if (!d) continue;
+      // something to work on, just in front
+      const at = nearDir(d, 0.0008, r);
+      const T = at.clone().sub(d).normalize();
+      robots.push({ kind: 'work', job: JOBS[ri], d, yaw: faceYaw(d, T), phase: r() * 10, col: reg.col.clone().lerp(new THREE.Color('#ffffff'), 0.7) });
+      const prop = { d: at, yaw: r() * 6.28, s: 0.0011, c: new THREE.Color('#ffffff') };
+      if (ri === 0) props.rock.push({ ...prop, c: new THREE.Color('#9a7550') });
+      else if (ri === 1) props.round.push({ ...prop, s: 0.0022, c: new THREE.Color('#9a86d6') });
+      else if (ri === 3) props.blocks.push(prop);
+      else if (ri === 4) props.pylon.push({ ...prop, s: 0.0024 });
+    }
+  });
+  for (let i = 0; i < nWalk; i++) {
+    const home = cities[Math.floor(r() * cities.length)];
+    robots.push({ kind: 'walk', from: home, to: home, t: 1, wait: r() * 3, speed: 0.012 + r() * 0.008, phase: r() * 10, q: null, angle: 1,
+      off: null, carry: r() < 0.6, d: nearDir(home.dir, 0.003 + r() * 0.004, r), yaw: r() * 6, col: new THREE.Color('#ffffff') });
+  }
+  if (props.rock.length) scatterMesh(tree('rock'), props.rock);
+  if (props.round.length) scatterMesh(tree('round'), props.round);
+  { // builders' stacks of coloured blocks
+    const g = merge([0, 1, 2, 3, 4, 5].map((k) => { const b = new THREE.BoxGeometry(0.3, 0.3, 0.3).toNonIndexed(); b.translate((k % 3) * 0.32 - 0.32, Math.floor(k / 3) * 0.31 + 0.15, k > 2 ? 0.05 : 0); const c = new THREE.Color().setHSL(k / 6, 0.7, 0.6); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).map((_, j) => [c.r, c.g, c.b][j % 3]), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count), 1)); return b; }));
+    scatterMesh(g, props.blocks);
+  }
+  { // The Future's light pylons, being welded
+    const g = merge([(() => { const b = new THREE.CylinderGeometry(0.06, 0.1, 1, 6).toNonIndexed(); b.translate(0, 0.5, 0); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).fill(0.95), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count), 1)); return b; })(),
+      (() => { const b = new THREE.SphereGeometry(0.1, 10, 8).toNonIndexed(); b.translate(0, 1.05, 0); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).map((_, j) => [0.5, 1, 0.7][j % 3]), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count).fill(1), 1)); return b; })()]);
+    scatterMesh(g, props.pylon);
+  }
+
+  const N = robots.length;
+  const mk = (geo, n) => { const m = new THREE.InstancedMesh(geo, MODEL_MAT, n); m.renderOrder = 3; m.frustumCulled = false; planet.add(m); flora.push(m); return m; };
+  const body = mk(robotBody(), N), arms = mk(robotArm(), N * 2), cube = mk(dataCube(), N);
+  const tools = {};
+  JOBS.forEach((j) => { tools[j] = mk(robotTool(j), N); tools[j].count = 0; });
+  robots.forEach((rb, i) => body.setColorAt(i, rb.col));
+  // sparks from the hammers and torches
+  const SP = 24, sp = new Float32Array(N * 3), ss = new Float32Array(N);
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  sg.setAttribute('aSize', new THREE.BufferAttribute(ss, 1));
+  const sparks = new THREE.Points(sg, new THREE.ShaderMaterial({
+    uniforms: { uPR: { value: renderer.getPixelRatio() } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: 'uniform float uPR; attribute float aSize; varying float vS; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vS = aSize; gl_PointSize = min(40.0, aSize * 0.012 * uPR / -mv.z * 100.0); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying float vS; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5 || vS < 0.01) discard; gl_FragColor = vec4(vec3(1.0, 0.8, 0.45) * smoothstep(0.5, 0.0, d) * 2.0, 1.0); }',
+  }));
+  sparks.frustumCulled = false;
+  sparks.renderOrder = 4;
+  planet.add(sparks);
+  flora.push(sparks);
+  void SP;
+  return { body, arms, cube, tools, sparks };
 })();
-const bQ = new THREE.Quaternion(), bM = new THREE.Matrix4(), bS = new THREE.Vector3(1, 1, 1), bP = new THREE.Vector3(), bD = new THREE.Vector3(), bA = new THREE.Vector3();
+
+const _rB = new THREE.Matrix4(), _rL = new THREE.Matrix4(), _rM = new THREE.Matrix4(), _rS = new THREE.Vector3(), _rV = new THREE.Vector3(), _rT = new THREE.Vector3();
+const _rQ = new THREE.Quaternion();
+function armMatrix(base, side, angle, out) { // shoulder at (±0.29, 0.58, 0) in robot units; angle swings it forward/up
+  _rL.makeRotationX(-angle).setPosition(side * 0.29, 0.58, 0);
+  return out.multiplyMatrices(base, _rL);
+}
+function stepRobots(dt, t) {
+  const { body, arms, cube, tools, sparks } = robotParts;
+  JOBS.forEach((j) => { tools[j].count = 0; });
+  let nCube = 0;
+  const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
+  _rS.setScalar(ROBOT_H);
+  robots.forEach((rb, i) => {
+    let swingR = 0, swingL = 0, bob = 0, yawWobble = 0, spark = 0;
+    if (rb.kind === 'walk') {
+      if (rb.t >= 1) {
+        rb.wait -= dt;
+        if (rb.wait <= 0) { // off to the next town, usually a neighbour on the same continent
+          const same = cities.filter((c) => c.region === rb.to.region && c !== rb.to);
+          const pool = Math.random() < 0.85 && same.length ? same : cities;
+          rb.from = rb.to;
+          rb.to = pool[Math.floor(Math.random() * pool.length)];
+          rb.start = rb.d.clone();
+          rb.goal = nearDir(rb.to.dir, 0.003 + Math.random() * 0.004, Math.random);
+          rb.angle = Math.max(0.002, rb.start.angleTo(rb.goal));
+          rb.q = new THREE.Quaternion().setFromUnitVectors(rb.start, rb.goal);
+          rb.t = 0;
+          rb.wait = 2 + Math.random() * 5;
+        }
+      } else {
+        rb.t = Math.min(1, rb.t + (rb.speed * dt) / rb.angle);
+        const prev = rb.d.clone();
+        rb.d.copy(rb.start).applyQuaternion(_rQ.identity().slerp(rb.q, rb.t)).normalize();
+        _rT.copy(rb.d).sub(prev);
+        if (_rT.lengthSq() > 1e-14) rb.yaw = faceYaw(rb.d, _rT.normalize());
+      }
+      const walking = rb.t < 1;
+      swingR = walking ? Math.sin((t + rb.phase) * 9) * 0.5 : Math.sin((t + rb.phase) * 1.3) * 0.08;
+      swingL = -swingR;
+      bob = walking ? Math.abs(Math.sin((t + rb.phase) * 9)) * 0.05 : 0;
+      if (rb.carry) { swingR = swingL = 2.85; } // holding a data block overhead
+    } else {
+      const w = t + rb.phase;
+      switch (rb.job) {
+        case 'pick': { const k = Math.pow(Math.max(0, Math.sin(w * 3.2)), 0.6); swingR = 2.4 - k * 2.2; swingL = swingR * 0.6; bob = (1 - k) * 0.02; break; }
+        case 'hammer': { const k = Math.max(0, Math.sin(w * 5.5)); swingR = 1.7 - k * 1.3; swingL = 0.4; spark = k > 0.97 ? 1 : 0; break; }
+        case 'scanner': swingR = 1.35; swingL = 0.15; yawWobble = Math.sin(w * 0.8) * 0.7; break;
+        case 'can': swingR = 1.0 + Math.sin(w * 1.4) * 0.25; swingL = 0.1; yawWobble = Math.sin(w * 0.3) * 0.3; break;
+        case 'torch': swingR = 1.45 + Math.sin(w * 13) * 0.05; swingL = 0.5; spark = Math.random() < 0.6 ? 0.6 + Math.random() * 0.6 : 0; break;
+        default: break;
+      }
+    }
+    groundMatrix(rb.d, rb.yaw + yawWobble, _rS, bob * ROBOT_H - 0.0002, _rB);
+    body.setMatrixAt(i, _rB);
+    arms.setMatrixAt(i * 2, armMatrix(_rB, 1, swingR, _rM));
+    const tool = rb.kind === 'work' ? tools[rb.job] : null;
+    if (tool) { tool.setMatrixAt(tool.count++, _rM); }
+    arms.setMatrixAt(i * 2 + 1, armMatrix(_rB, -1, swingL, _rM));
+    if (rb.kind === 'walk' && rb.carry) {
+      _rL.makeRotationY(t * 0.8 + rb.phase).setPosition(0, 1.48 + Math.sin(t * 2 + rb.phase) * 0.02, 0);
+      cube.setMatrixAt(nCube++, _rM.multiplyMatrices(_rB, _rL));
+    }
+    // sparks at the tool's tip
+    if (spark > 0 && tool) {
+      _rV.set(0, -0.36, rb.job === 'hammer' ? 0.36 : 0.3).applyMatrix4(armMatrix(_rB, 1, swingR, _rM));
+      sp.setXYZ(i, _rV.x, _rV.y, _rV.z);
+      ss.setX(i, spark);
+    } else ss.setX(i, Math.max(0, ss.getX(i) - dt * 8));
+  });
+  cube.count = nCube;
+  [body, arms, cube, ...Object.values(tools)].forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+  sp.needsUpdate = true;
+  ss.needsUpdate = true;
+}
 function surfaceRadius(d) {
   const t = terrain(d.x, d.y, d.z);
   return t.h > 0 ? 1 + elevation(d.x, d.y, d.z, t.h, t.region) : 1.003;
-}
-function stepBeings(dt, t) {
-  beings.forEach((b, i) => {
-    if (b.t >= 1) {
-      b.wait -= dt;
-      if (b.wait <= 0) { // off to the next city, usually a neighbour on the same continent
-        const same = cities.filter((c) => c.region === b.to.region && c !== b.to);
-        const pool = Math.random() < 0.85 && same.length ? same : cities;
-        b.from = b.to;
-        b.to = pool[Math.floor(Math.random() * pool.length)];
-        b.angle = Math.max(0.05, b.from.pos.angleTo(b.to.pos));
-        b.q = new THREE.Quaternion().setFromUnitVectors(b.from.pos.clone().normalize(), b.to.pos.clone().normalize());
-        b.t = 0;
-        b.wait = 1 + Math.random() * 4;
-        beingMesh.setColorAt(i, b.to.color);
-        beingMesh.instanceColor.needsUpdate = true;
-      }
-    } else b.t = Math.min(1, b.t + (b.speed * dt) / b.angle);
-    if (b.q && b.t < 1) bD.copy(b.from.pos).normalize().applyQuaternion(bQ.identity().slerp(b.q, b.t));
-    else bD.copy(b.to.pos).add(bA.copy(b.off)).normalize(); // mill about near the city
-    const walking = b.t < 1;
-    const hop = walking ? Math.abs(Math.sin((t + b.phase) * 9)) * 0.008 : Math.abs(Math.sin((t + b.phase) * 2.2)) * 0.002;
-    bP.copy(bD).multiplyScalar(surfaceRadius(bD) + hop);
-    bQ.setFromUnitVectors(up, bD);
-    bM.compose(bP, bQ, bS);
-    beingMesh.setMatrixAt(i, bM);
-  });
-  beingMesh.instanceMatrix.needsUpdate = true;
 }
 
 /* ------------------------------------------------------------------ data flights between cities */
@@ -754,15 +1202,291 @@ function stepBeings(dt, t) {
   g.setAttribute('aOff', new THREE.Float32BufferAttribute(offs, 2));
   g.setAttribute('aColor', new THREE.Float32BufferAttribute(cols, 3));
   planet.add(new THREE.LineSegments(g, new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime },
+    uniforms: { uTime: U.uTime, uAir: AIR },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: `attribute float aU; attribute vec2 aOff; attribute vec3 aColor; varying float vU; varying vec2 vO; varying vec3 vC;
       void main(){ vU = aU; vO = aOff; vC = aColor; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform float uTime; varying float vU; varying vec2 vO; varying vec3 vC;
+    fragmentShader: `uniform float uTime; uniform float uAir; varying float vU; varying vec2 vO; varying vec3 vC;
       void main(){ float head = fract(uTime * 0.18 * vO.y + vO.x);
         float d = head - vU; float pulse = d >= 0.0 ? smoothstep(0.22, 0.0, d) : 0.0;
-        gl_FragColor = vec4(vC * (0.07 + pulse * 1.3), 1.0); }`,
+        gl_FragColor = vec4(vC * (0.07 + pulse * 1.3) * uAir, 1.0); }`,
   })));
+}
+
+/* ------------------------------------------------------------------ life in the air, on the sea and in orbit */
+
+// Cargo drones: quadcopters carrying data blocks between towns, low over the land.
+const drones = (() => {
+  const N = isSmall() || isTouch ? 8 : 16, r = rng(3131), list = [];
+  const mesh = new THREE.InstancedMesh(drone(), MODEL_MAT, N);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 3;
+  planet.add(mesh);
+  flora.push(mesh);
+  for (let i = 0; i < N; i++) {
+    const a = cities[Math.floor(r() * cities.length)];
+    list.push({ a, b: a, t: 1, wait: r() * 4, speed: 0.03 + r() * 0.02, d: a.dir.clone(), phase: r() * 10, yaw: 0 });
+  }
+  return { mesh, list };
+})();
+const _dS = new THREE.Vector3(), _dM = new THREE.Matrix4(), _dT = new THREE.Vector3(), _dQ = new THREE.Quaternion(), _dTilt = new THREE.Matrix4();
+function stepDrones(dt, t) {
+  _dS.setScalar(0.0013);
+  drones.list.forEach((dr, i) => {
+    let lift = 0.0025;
+    if (dr.t >= 1) {
+      dr.wait -= dt;
+      if (dr.wait <= 0) {
+        dr.a = dr.b;
+        const near = cities.filter((c) => c !== dr.a && c.dir.angleTo(dr.a.dir) < 0.6);
+        dr.b = (near.length ? near : cities)[Math.floor(Math.random() * (near.length || cities.length))];
+        dr.ang = Math.max(0.01, dr.a.dir.angleTo(dr.b.dir));
+        dr.q = new THREE.Quaternion().setFromUnitVectors(dr.a.dir, dr.b.dir);
+        dr.t = 0;
+        dr.wait = 1.5 + Math.random() * 4;
+      }
+    } else {
+      dr.t = Math.min(1, dr.t + (dr.speed * dt) / dr.ang);
+      const prev = dr.d.clone();
+      dr.d.copy(dr.a.dir).applyQuaternion(_dQ.identity().slerp(dr.q, dr.t)).normalize();
+      _dT.copy(dr.d).sub(prev);
+      if (_dT.lengthSq() > 1e-14) dr.yaw = faceYaw(dr.d, _dT.normalize());
+      lift += Math.sin(Math.PI * dr.t) * Math.min(0.012, dr.ang * 0.05); // climb, cruise, descend
+    }
+    lift += Math.sin(t * 2.3 + dr.phase) * 0.0003; // hover wobble
+    groundMatrix(dr.d, dr.yaw, _dS, Math.max(lift, 0.002), _dM);
+    if (dr.t < 1) _dM.multiply(_dTilt.makeRotationX(0.18)); // lean into the flight
+    drones.mesh.setMatrixAt(i, _dM);
+  });
+  drones.mesh.instanceMatrix.needsUpdate = true;
+}
+
+// Birds: flocks wheeling over the continents, wings flapping.
+const flocks = (() => {
+  const nF = isSmall() || isTouch ? 4 : 8, per = isSmall() || isTouch ? 9 : 14, r = rng(2727);
+  const mat = modelMaterial({ flap: true, timeUniform: U.uTime });
+  mat.side = THREE.DoubleSide;
+  const mesh = new THREE.InstancedMesh(bird(), mat, nF * per);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 3;
+  planet.add(mesh);
+  flora.push(mesh);
+  const list = [];
+  for (let f = 0; f < nF; f++) {
+    const home = landFaces[Math.floor(r() * landFaces.length)].c.clone().normalize();
+    const birds = [];
+    for (let k = 0; k < per; k++) birds.push({ off: new THREE.Vector3((r() - 0.5) * 2, (r() - 0.5) * 0.6, (r() - 0.5) * 2), ph: r() * 10 });
+    list.push({ home, rad: 0.012 + r() * 0.02, w: (0.06 + r() * 0.05) * (r() < 0.5 ? 1 : -1), a: r() * 6.28, alt: 0.006 + r() * 0.006, birds, drift: new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5).normalize() });
+  }
+  return { mesh, list };
+})();
+const _bC = new THREE.Vector3(), _bT1 = new THREE.Vector3(), _bT2 = new THREE.Vector3(), _bV = new THREE.Vector3(), _bP = new THREE.Vector3(), _bM = new THREE.Matrix4(), _bQ = new THREE.Quaternion(), _bS = new THREE.Vector3(), _bF = new THREE.Vector3(), _bU = new THREE.Vector3(), _bR = new THREE.Vector3(), _bBasis = new THREE.Matrix4();
+function stepBirds(dt, t) {
+  let n = 0;
+  let nearest = 9;
+  flocks.list.forEach((fl) => {
+    fl.a += fl.w * dt * 6;
+    fl.home.addScaledVector(fl.drift, dt * 0.0008).normalize(); // the flock wanders
+    if (!onLand(fl.home, -0.2)) fl.drift.negate();
+    _bT1.crossVectors(fl.home, Math.abs(fl.home.y) < 0.9 ? up : _bR.set(1, 0, 0)).normalize();
+    _bT2.crossVectors(fl.home, _bT1);
+    _bC.copy(fl.home).addScaledVector(_bT1, Math.cos(fl.a) * fl.rad).addScaledVector(_bT2, Math.sin(fl.a) * fl.rad).normalize();
+    _bV.copy(_bT1).multiplyScalar(-Math.sin(fl.a)).addScaledVector(_bT2, Math.cos(fl.a)).multiplyScalar(Math.sign(fl.w)).normalize(); // heading
+    const base = Math.max(surfaceRadius(_bC), 1.001) + fl.alt;
+    fl.birds.forEach((b) => {
+      const sway = Math.sin(t * 0.9 + b.ph);
+      _bP.copy(_bC).multiplyScalar(base)
+        .addScaledVector(_bT1, (b.off.x + sway * 0.3) * 0.0028)
+        .addScaledVector(_bT2, (b.off.z + Math.cos(t * 0.7 + b.ph) * 0.3) * 0.0028)
+        .addScaledVector(_bC, b.off.y * 0.0014);
+      _bU.copy(_bP).normalize();
+      _bF.copy(_bV).addScaledVector(_bU, -_bV.dot(_bU)).normalize();
+      _bR.crossVectors(_bU, _bF).normalize();
+      _bBasis.makeBasis(_bR, _bU, _bF);
+      _bQ.setFromRotationMatrix(_bBasis);
+      _bQ.multiply(new THREE.Quaternion().setFromAxisAngle(_bS.set(0, 0, 1), -Math.sign(fl.w) * 0.35)); // bank into the turn
+      _bS.setScalar(0.0011);
+      _bM.compose(_bP, _bQ, _bS);
+      flocks.mesh.setMatrixAt(n++, _bM);
+    });
+    nearest = Math.min(nearest, _bC.clone().multiplyScalar(base).distanceTo(planetLocalCam));
+  });
+  flocks.mesh.instanceMatrix.needsUpdate = true;
+  if (nearest < 0.05 && Math.random() < dt * 0.5) score.birds(1 - nearest / 0.05);
+}
+
+// Ships: container ships crossing the Ocean of Data, with wakes and navigation lights.
+const ships = (() => {
+  const N = isSmall() || isTouch ? 6 : 12, r = rng(6161);
+  const mesh = new THREE.InstancedMesh(ship(7), MODEL_MAT, N);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 3;
+  planet.add(mesh);
+  flora.push(mesh);
+  const wakeGeo = new THREE.PlaneGeometry(1, 1, 1, 1);
+  wakeGeo.rotateX(-Math.PI / 2);
+  wakeGeo.translate(0, 0, -0.5); // trails behind
+  const wake = new THREE.InstancedMesh(wakeGeo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: U.uTime },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv;
+      void main(){
+        float y = 1.0 - vUv.y; // 0 at the stern, 1 far behind
+        float x = abs(vUv.x - 0.5) * 2.0;
+        float edge = 0.12 + y * 0.85;
+        float arms = exp(-pow((x - edge) / (0.05 + y * 0.1), 2.0)) * (1.0 - y);
+        float churn = exp(-pow(x / (0.12 + y * 0.2), 2.0)) * pow(1.0 - y, 2.0) * (0.7 + 0.3 * sin(y * 60.0 - uTime * 8.0));
+        gl_FragColor = vec4(vec3(0.85, 0.95, 1.0) * (arms * 0.5 + churn * 0.7), 1.0);
+      }`,
+  }), N);
+  wake.frustumCulled = false;
+  wake.renderOrder = 2;
+  planet.add(wake);
+  flora.push(wake);
+  const sea = (d) => terrain(d.x, d.y, d.z).h < -0.04;
+  const list = [];
+  for (let i = 0, k = 0; i < N && k < 4000; k++) {
+    const d = new THREE.Vector3(r() * 2 - 1, (r() * 2 - 1) * 0.8, r() * 2 - 1).normalize();
+    if (!sea(d)) continue;
+    list.push({ d, heading: null, left: 0, speed: 0.004 + r() * 0.003 });
+    i++;
+  }
+  return { mesh, wake, list, sea };
+})();
+const _sM = new THREE.Matrix4(), _sS = new THREE.Vector3(), _sAx = new THREE.Vector3(), _sQ = new THREE.Quaternion();
+function newCourse(sh) { // the longest clear run of sea from here, in one of a dozen directions
+  const t1 = new THREE.Vector3().crossVectors(sh.d, Math.abs(sh.d.y) < 0.9 ? up : new THREE.Vector3(1, 0, 0)).normalize();
+  const t2 = new THREE.Vector3().crossVectors(sh.d, t1);
+  let best = null, bestLen = 0;
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2 + Math.random() * 0.3;
+    const T = t1.clone().multiplyScalar(Math.cos(a)).addScaledVector(t2, Math.sin(a));
+    const axis = new THREE.Vector3().crossVectors(sh.d, T).normalize();
+    let len = 0;
+    for (; len < 1.2; len += 0.02) {
+      const p = sh.d.clone().applyAxisAngle(axis, len + 0.02);
+      if (!ships.sea(p)) break;
+    }
+    if (len > bestLen) { bestLen = len; best = axis; }
+  }
+  sh.axis = best || t1;
+  sh.left = Math.max(0.05, bestLen - 0.02);
+}
+function stepShips(dt) {
+  ships.list.forEach((sh, i) => {
+    if (sh.left <= 0 || !sh.axis) newCourse(sh);
+    const step = sh.speed * dt;
+    sh.d.applyAxisAngle(sh.axis, step).normalize();
+    sh.left -= step;
+    const T = _sAx.crossVectors(sh.axis, sh.d).normalize(); // direction of travel
+    const yaw = faceYaw(sh.d, T);
+    _sS.setScalar(0.009);
+    groundMatrix(sh.d, yaw, _sS, 0, _sM);
+    _sM.setPosition(sh.d.x * 1.0004, sh.d.y * 1.0004, sh.d.z * 1.0004); // ride on the water, not the seabed
+    ships.mesh.setMatrixAt(i, _sM);
+    _sS.set(0.016, 1, 0.05);
+    groundMatrix(sh.d, yaw, _sS, 0, _sM);
+    _sM.setPosition(sh.d.x * 1.0007, sh.d.y * 1.0007, sh.d.z * 1.0007);
+    _sM.multiply(_dTilt.makeTranslation(0, 0, -0.1));
+    ships.wake.setMatrixAt(i, _sM);
+  });
+  ships.mesh.instanceMatrix.needsUpdate = true;
+  ships.wake.instanceMatrix.needsUpdate = true;
+  void _sQ;
+}
+
+// Satellites in low orbit, on tilted paths, with blinking lights.
+const sats = (() => {
+  const r = rng(5151), list = [];
+  for (let i = 0; i < (isSmall() || isTouch ? 4 : 7); i++) {
+    const g = satellite();
+    const radius = 1.16 + r() * 0.42;
+    const axis = new THREE.Vector3(r() - 0.5, 1.5, r() - 0.5).normalize().applyAxisAngle(new THREE.Vector3(1, 0, 0), (r() - 0.5) * 2.2).normalize();
+    const start = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(r(), r(), r())).normalize();
+    planet.add(g);
+    list.push({ g, radius, axis, start, w: 0.32 / Math.pow(radius, 1.5) * (r() < 0.2 ? -1 : 1), a: r() * 6.28, size: 0.016 + r() * 0.006 });
+  }
+  return list;
+})();
+const _sat = new THREE.Vector3();
+function stepSats(dt, t) {
+  sats.forEach((s, i) => {
+    s.a += s.w * dt;
+    _sat.copy(s.start).applyAxisAngle(s.axis, s.a).multiplyScalar(s.radius);
+    s.g.position.copy(_sat);
+    // panels face the sun; the dish points down at the world
+    s.g.up.copy(s.axis);
+    s.g.lookAt(planet.localToWorld(new THREE.Vector3(0, 0, 0)));
+    const d = s.g.getWorldPosition(_sat).distanceTo(camWorld);
+    s.g.scale.setScalar(s.size * THREE.MathUtils.clamp((d - 0.04) / 0.25, 0.08, 1));
+    s.g.userData.blink.visible = Math.sin(t * 3 + i * 2) > 0.92;
+    s.g.visible = coreMix < 0.5;
+  });
+}
+
+// A comet, far out, its tails always streaming away from the sun.
+const comet = (() => {
+  const g = new THREE.Group();
+  const nucleus = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 2), new THREE.MeshStandardMaterial({ color: '#8d8a85', roughness: 1 }));
+  { // lumpy, like a real nucleus
+    const p = nucleus.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const v = new THREE.Vector3().fromBufferAttribute(p, i);
+      v.multiplyScalar(1 + fbm(v.x * 3, v.y * 3, v.z * 3, 3) * 0.5).multiply(new THREE.Vector3(1.3, 0.9, 1));
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    nucleus.geometry.computeVertexNormals();
+  }
+  g.add(nucleus);
+  const coma = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture([[0, 'rgba(235,250,255,0.95)'], [0.12, 'rgba(170,230,255,0.55)'], [0.4, 'rgba(110,190,255,0.14)'], [1, 'rgba(80,140,255,0)']]),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  coma.scale.setScalar(5);
+  g.add(coma);
+  const tail = (len, rad, col, bend) => {
+    const geo = new THREE.ConeGeometry(rad, len, 32, 24, true);
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, 0, len / 2);
+    const p = geo.attributes.position; // curve the dust tail a little
+    for (let i = 0; i < p.count; i++) { const z = p.getZ(i); p.setX(i, p.getX(i) + bend * (z / len) * (z / len) * len); }
+    const m = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      uniforms: { uTime: U.uTime, uCol: { value: new THREE.Color(col) }, uLen: { value: len } },
+      vertexShader: 'uniform float uLen; varying float vZ; varying vec3 vN; varying vec3 vV; void main(){ vZ = position.z / uLen; vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+      fragmentShader: `uniform float uTime; uniform vec3 uCol; varying float vZ; varying vec3 vN; varying vec3 vV;
+        void main(){
+          float edge = pow(abs(dot(vN, vV)), 1.4);
+          float a = pow(1.0 - vZ, 1.8) * smoothstep(0.0, 0.05, vZ) * edge;
+          a *= 0.8 + 0.2 * sin(vZ * 40.0 - uTime * 2.0);
+          gl_FragColor = vec4(uCol * a * 0.55, 1.0);
+        }`,
+    }));
+    g.add(m);
+    return m;
+  };
+  tail(24, 0.7, '#7fc4ff', 0); // ion tail: straight, blue
+  tail(16, 1.7, '#ffe3b0', 0.35); // dust tail: wider, curved, golden
+  scene.add(g);
+  return { g, A: new THREE.Vector3(0.2, 0.55, -0.8).normalize(), B: new THREE.Vector3(-0.9, 0.1, -0.2).normalize() };
+})();
+function stepComet(t) {
+  const a = 0.6 + t * 0.0025;
+  comet.g.position.copy(comet.A).multiplyScalar(Math.cos(a)).addScaledVector(comet.B, Math.sin(a)).normalize().multiplyScalar(48);
+  comet.g.lookAt(comet.g.position.clone().sub(sunDir)); // +z (the tails) points away from the sun
+  comet.g.visible = SKY_FADE.value > 0.05;
+}
+
+const planetLocalCam = new THREE.Vector3();
+function stepLife(dt, t) {
+  planetLocalCam.copy(camWorld);
+  planet.worldToLocal(planetLocalCam);
+  stepRobots(dt, t);
+  stepDrones(dt, t);
+  stepBirds(dt, t);
+  stepShips(dt);
+  stepSats(dt, t);
 }
 
 /* ------------------------------------------------------------------ crystal peaks: unsolved problems */
@@ -1205,7 +1929,6 @@ function applyCore(m, t) {
   haze.material.uniforms.uFade.value = 1 - m;
   peaks.forEach((p) => { p.obj.visible = m < 0.5; });
   flora.forEach((f) => { f.visible = m < 0.5; });
-  beingMesh.visible = m < 0.5;
   monoliths.forEach((o) => { o.obj.visible = m < 0.5; });
   shells.forEach((sh, i) => { sh.material.uniforms.uAlpha.value = ss(m, i * 0.1, i * 0.1 + 0.45); });
   const beat = Math.pow(Math.max(0, Math.sin(t * 3.9)), 12) + 0.6 * Math.pow(Math.max(0, Math.sin(t * 3.9 - 0.9)), 12);
@@ -1369,17 +2092,23 @@ function stepSpin(dt, t, now) {
       // left alone, it turns on a tilted axis like Earth
       const idle = THREE.MathUtils.clamp((now - lastInteract - 3000) / 4000, 0, 1);
       if (!selected && !reduceMotion && idle > 0) {
-        _sq.setFromAxisAngle(EARTH_AXIS, -0.06 * dt * idle);
+        _sq.setFromAxisAngle(EARTH_AXIS, -0.06 * dt * idle * Math.min(1, (spin.dist - 1) / 0.6));
         spin.q.premultiply(_sq);
       }
     }
     spin.dist += (spin.target - spin.dist) * (1 - Math.exp(-dt * 8));
+    if (spin.dist < 1.1) { // stay above the ground
+      _sv.set(0, 0, 1).applyQuaternion(spin.q);
+      const floor = surfaceRadius(_sv) + GROUND_CLEAR;
+      if (spin.dist < floor) spin.dist = floor;
+      if (spin.target < floor) spin.target = floor;
+    }
     placeCamera();
   }
   // track how wildly it is spinning
   const speed = spin.w.length();
   if (speed > 0.01) spin.axisWorld.copy(spin.w).applyQuaternion(spin.q).normalize().negate();
-  if (!reduceMotion && speed > 5.5) spin.energy = Math.min(1, spin.energy + dt * 0.55);
+  if (!reduceMotion && speed > 5.5 && spin.dist > 1.4) spin.energy = Math.min(1, spin.energy + dt * 0.55);
   else spin.energy = Math.max(0, spin.energy - dt * (speed > 3 ? 0.08 : 0.3));
   if (spin.energy > 0.7 && !spill.warned) { spill.warned = true; toast('Whoa. The oceans are getting dizzy…', 2400); }
   if (spin.energy < 0.2) spill.warned = false;
@@ -1439,6 +2168,77 @@ function openEgg(m) {
   setDock(null);
 }
 
+
+/* storms: thunderheads that flicker with lightning, loudest on the night side */
+const _pq = new THREE.Quaternion(), _cm = new THREE.Matrix4();
+const storms = STORMS.map((v, i) => ({ v, next: 2 + i * 3, burst: 0, moveAt: 0, gap: 0 }));
+function stepStorms(t, dt) {
+  storms.forEach((st, i) => {
+    if (t > st.moveAt) { // drift to a new spot now and then, over the warm seas between latitudes 45 S and 45 N
+      st.moveAt = t + 45 + Math.random() * 40;
+      const lat = (Math.random() * 2 - 1) * 45, lon = Math.random() * 360;
+      st.v.set(...latLon(lat, lon).toArray(), 0);
+    }
+    if (reduceMotion) { st.v.w = 0; return; }
+    if (t > st.next) { st.burst = 2 + Math.floor(Math.random() * 3); st.next = t + 3 + Math.random() * 7; st.gap = 0; }
+    st.gap -= dt;
+    if (st.burst > 0 && st.gap <= 0) {
+      st.burst--;
+      st.v.w = 0.7 + Math.random() * 0.5;
+      st.gap = 0.07 + Math.random() * 0.18;
+      if (st.burst === 0) { // thunder for the storm you can see, softer the further it is
+        const w = new THREE.Vector3(st.v.x, st.v.y, st.v.z).applyMatrix4(_cm.makeRotationY(clouds.rotation.y)).applyQuaternion(planet.quaternion).multiplyScalar(CLOUD_R);
+        const facing = w.clone().normalize().dot(camWorld.clone().normalize());
+        if (facing > 0.3) score.thunder(Math.min(1, 0.4 / Math.max(0.1, w.distanceTo(camWorld) - 0.2)));
+      }
+    }
+    st.v.w *= Math.exp(-dt * 16);
+  });
+}
+
+
+/* aurora: curtains of light that ripple over both poles on the night side */
+{
+  const SEG = 360;
+  [1, -1].forEach((pole) => {
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= SEG; i++) {
+      const u = i / SEG, lon = u * 360;
+      const lat = pole * (67 + Math.sin(u * Math.PI * 2 * 3 + pole) * 3.5 + Math.sin(u * Math.PI * 2 * 7) * 1.2);
+      const d = latLon(lat, lon);
+      const b = d.clone().multiplyScalar(1.014), t = d.clone().multiplyScalar(1.075);
+      pos.push(b.x, b.y, b.z, t.x, t.y, t.z);
+      uv.push(u, 0, u, 1);
+      if (i < SEG) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    const m = new THREE.Mesh(g, new THREE.ShaderMaterial({
+      uniforms: { uTime: U.uTime, uSun: { value: sunDir } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      vertexShader: `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vW = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.0); }`,
+      fragmentShader: `uniform float uTime; uniform vec3 uSun; varying vec2 vUv; varying vec3 vW;
+        ${GLSL_NOISE}
+        void main(){
+          float x = vUv.x * 260.0;
+          float rays = fbm(vec3(x * 0.18, uTime * 0.25, 0.0)) * 0.7 + fbm(vec3(x * 0.9, uTime * 0.6, 3.0)) * 0.5;
+          float folds = fbm(vec3(vUv.x * 18.0 + uTime * 0.05, uTime * 0.08, 7.0));
+          float v = vUv.y;
+          float shape = smoothstep(0.0, 0.08, v) * pow(1.0 - v, 1.6);
+          vec3 col = mix(vec3(0.15, 1.0, 0.5), vec3(0.75, 0.25, 0.95), smoothstep(0.35, 0.95, v));
+          float night = smoothstep(0.1, -0.25, dot(normalize(vW), uSun));
+          float a = shape * smoothstep(0.35, 0.8, rays) * smoothstep(0.3, 0.6, folds) * night;
+          gl_FragColor = vec4(col * a * 2.0, 1.0);
+        }`,
+    }));
+    m.renderOrder = 5;
+    planet.add(m);
+    flora.push(m);
+  });
+}
+
 /* ------------------------------------------------------------------ labels */
 
 const labelLayer = $('#labels');
@@ -1479,11 +2279,11 @@ addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonl
 /* ------------------------------------------------------------------ deep space: a sky with real depth */
 
 // Far: a nebula dome with a Milky Way band and dust lanes.
-const BAND_N = new THREE.Vector3(0.3, 0.9, 0.35).normalize();
+const BAND_N = skyDir(192.86, 27.13); // the real galactic pole: the Milky Way runs where it does in our sky
 const nebula = new THREE.Mesh(new THREE.SphereGeometry(95, 160, 120), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false,
-  uniforms: { uTime: U.uTime, uBand: { value: BAND_N } },
-  fragmentShader: `varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }`,
+  uniforms: { uTime: U.uTime, uBand: { value: BAND_N }, uSkyFade: SKY_FADE },
+  fragmentShader: `uniform float uSkyFade; varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol * uSkyFade, 1.0); }`,
   vertexShader: `uniform float uTime; uniform vec3 uBand; varying vec3 vCol;
     ${GLSL_NOISE}
     void main(){
@@ -1522,10 +2322,10 @@ scene.add(nebula);
   g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
   g.setAttribute('aSize', new THREE.BufferAttribute(sz, 1));
   const band = new THREE.Points(g, new THREE.ShaderMaterial({
-    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() } },
+    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() }, uSkyFade: SKY_FADE },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `uniform float uTime; uniform float uPR; attribute float aPhase; attribute float aSize; varying float vA;
-      void main(){ vA = 0.45 + 0.35 * sin(uTime * 0.9 + aPhase); gl_PointSize = aSize * uPR;
+    vertexShader: `uniform float uTime; uniform float uPR; uniform float uSkyFade; attribute float aPhase; attribute float aSize; varying float vA;
+      void main(){ vA = (0.45 + 0.35 * sin(uTime * 0.9 + aPhase)) * uSkyFade; gl_PointSize = aSize * uPR;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
         gl_FragColor = vec4(vec3(0.9, 0.88, 1.0), smoothstep(0.5, 0.0, d) * vA); }`,
@@ -1628,6 +2428,66 @@ function stepMeteor(t) {
   meteor.l.material.opacity = Math.sin(Math.PI * k);
 }
 
+
+// The sky from the ground: blue by day, gold and rose at sunset, deep blue-black at night with the stars showing.
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(1.07, 64, 48), new THREE.ShaderMaterial({
+  side: THREE.BackSide, transparent: true, depthWrite: false,
+  uniforms: { uSun: { value: sunDir }, uUp: { value: new THREE.Vector3(0, 1, 0) }, uFade: { value: 0 } },
+  vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+  fragmentShader: `uniform vec3 uSun; uniform vec3 uUp; uniform float uFade; varying vec3 vW;
+    void main(){
+      vec3 V = normalize(vW - cameraPosition);
+      float h = dot(V, uUp);
+      float sunUp = dot(uUp, uSun);
+      float day = smoothstep(-0.12, 0.18, sunUp);
+      float dusk = smoothstep(-0.28, 0.0, sunUp) * (1.0 - smoothstep(0.0, 0.32, sunUp));
+      float toSun = max(dot(V, uSun), 0.0);
+      float hp = clamp(h, 0.0, 1.0);
+      vec3 col = mix(vec3(0.42, 0.6, 0.86), vec3(0.06, 0.2, 0.58), pow(hp, 0.5)) * day;
+      col += vec3(1.0, 0.45, 0.2) * dusk * (pow(toSun, 2.5) * 0.9 + 0.12) * (1.0 - pow(hp, 0.6));
+      col += vec3(0.55, 0.3, 0.6) * dusk * 0.25 * pow(hp, 0.5);
+      col += vec3(1.0, 0.95, 0.85) * (pow(toSun, 1200.0) * 6.0 + pow(toSun, 40.0) * 0.25) * smoothstep(-0.05, 0.05, sunUp);
+      col += vec3(0.006, 0.01, 0.03);
+      float a = uFade * mix(0.35, 0.97, max(day, dusk * 0.8)) * smoothstep(-0.2, 0.02, h);
+      gl_FragColor = vec4(col, a);
+    }`,
+}));
+skyDome.renderOrder = 0.5;
+skyDome.visible = false;
+scene.add(skyDome);
+scene.fog = new THREE.FogExp2(0x9fc3f5, 0);
+const _fogDay = new THREE.Color(0x7f9fcc), _fogDusk = new THREE.Color(0xd9906a), _fogNight = new THREE.Color(0x070b18);
+let landedHint = 0;
+function stepGround(inVR) {
+  const alt = camWorld.length() - 1;
+  const L = inVR ? 0 : THREE.MathUtils.smoothstep(0.07 - alt, 0, 0.05); // inside the air
+  AIR.value = 1 - L; // the data arcs and beams fade when you're down among them
+  cityBeams.material.opacity = AIR.value;
+  skyDome.visible = L > 0.001;
+  const upv = skyDome.material.uniforms.uUp.value.copy(camWorld).normalize();
+  skyDome.material.uniforms.uFade.value = L;
+  const sunUp = upv.dot(sunDir);
+  const day = THREE.MathUtils.smoothstep(sunUp, -0.12, 0.18);
+  const dusk = THREE.MathUtils.smoothstep(sunUp, -0.28, 0) * (1 - THREE.MathUtils.smoothstep(sunUp, 0, 0.32));
+  SKY_FADE.value = 1 - L * Math.max(day * 0.97, dusk * 0.6);
+  scene.fog.color.copy(_fogNight).lerp(_fogDusk, dusk * 0.8).lerp(_fogDay, day);
+  const fogD = L * (4.5 - day * 3.0);
+  scene.fog.density = fogD;
+  ocean.material.uniforms.uFog.value = fogD;
+  ocean.material.uniforms.uFogCol.value.copy(scene.fog.color).convertLinearToSRGB();
+  giant.visible = SKY_FADE.value > 0.3;
+  clouds.material.side = alt < 0.045 ? THREE.DoubleSide : THREE.FrontSide;
+  // the near plane follows the height, so things right in front of you aren't clipped
+  const near = THREE.MathUtils.clamp(alt * 0.22, 0.0012, 0.05);
+  if (Math.abs(near - camera.near) / camera.near > 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
+  // a word of help the first times you get close
+  if (!inVR && introDone && !flight && performance.now() - lastInteract < 1500) {
+    if (landedHint === 0 && alt < 0.6 && alt > 0.2) { landedHint = 1; toast(isTouch ? 'Keep pinching to fly down to the surface' : 'Keep zooming in to fly down to the surface', 3000); }
+    if (landedHint === 1 && alt < 0.03) { landedHint = 2; toast(isTouch ? 'Drag up and down to fly, side to side to turn' : 'Drag up and down to fly, side to side to turn. Scroll out to climb.', 4200); }
+  }
+  return L;
+}
+
 /* ------------------------------------------------------------------ spatial movement: phone tilt, mouse, and breathing */
 
 const parallax = { x: 0, y: 0, tx: 0, ty: 0, mx: 0, my: 0, base: null, shakeAt: 0, motionOn: false };
@@ -1684,9 +2544,14 @@ function applyParallax(t) {
   parallax.x += (tx - parallax.x) * 0.07;
   parallax.y += (ty - parallax.y) * 0.07;
   camera.updateMatrixWorld();
-  const k = 0.16 * camera.position.length() / 3.4;
+  const dist = camera.position.length();
+  const L = landK(dist);
+  if (L > 0) camera.rotateX(-L * LAND_TILT); // work in the orbit frame, then tip back up
+  camera.updateMatrixWorld();
+  const k = 0.16 * Math.max(0.004, dist - 1) / 2.4;
   camera.position.addScaledVector(camAxis(0), parallax.x * k).addScaledVector(camAxis(1), -parallax.y * k);
   camera.lookAt(0, 0, 0);
+  if (L > 0) camera.rotateX(L * LAND_TILT);
   camera.updateMatrixWorld();
 }
 
@@ -1719,7 +2584,15 @@ function stepFlight(now) {
   camera.up.copy(flight.up);
   camera.lookAt(0, 0, 0);
   camera.rotateZ(flight.bank * Math.sin(Math.PI * t) * (1 - 0.35 * t)); // bank into the turn like a drone
-  if (t >= 1) { flight = null; spin.enabled = true; syncSpin(); }
+  camera.rotateX(landK(camera.position.length()) * LAND_TILT);
+  if (t >= 1) {
+    flight = null;
+    spin.enabled = true;
+    const L = landK(camera.position.length());
+    if (L > 0) camera.rotateX(-L * LAND_TILT); // the spin frame is the untilted one
+    syncSpin();
+    placeCamera();
+  }
 }
 
 /* ------------------------------------------------------------------ panel */
@@ -1774,7 +2647,8 @@ function regionHtml(ri) {
   if (r.id === 'future') {
     extra = acHtml(true) + `<section><h3>Projections</h3><ul class="horizons">${HORIZONS.map(([h, t, d]) => `<li><span class="hz hz-${h.toLowerCase()}">${esc(h)}</span><div><b>${esc(t)}</b><span>${esc(d)}</span></div></li>`).join('')}</ul></section>`;
   }
-  return header(r) + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri);
+  const down = `<section><button type="button" class="cta ghost" data-go="land" data-region="${ri}">Fly down and look around ↓</button></section>`;
+  return header(r) + down + notesHtml(r.id) + extra + peaksHtml(ri) + citiesHtml(ri);
 }
 function acHtml(withLink) {
   return `<section><h3>TD1’s direction</h3><ol class="ac-path">${AC_PATH.map(([k, n, d], i) => `<li class="${k === 'AC' ? 'is-ac' : ''}"><span class="ak">${esc(k)}</span><div><b>${esc(n)}</b><span>${esc(d)}</span></div></li>`).join('')}</ol>
@@ -1997,6 +2871,19 @@ function selectRegion(ri, opts = {}) {
   openPanel(ri === UNCH ? header(UNCHARTED) : regionHtml(ri), o.color);
   setDock(o.id);
 }
+
+// Fly down to the ground at a continent: you arrive just outside its biggest town, looking at it.
+function landAt(ri) {
+  const town = cities.filter((c) => c.region === ri)[0];
+  if (!town) return;
+  closePanel();
+  const camUp = camera.up.clone();
+  const tangent = camUp.addScaledVector(town.dir, -camUp.dot(town.dir)).normalize();
+  let spot = town.dir.clone().addScaledVector(tangent, -0.022).normalize();
+  for (let k = 0; k < 8 && !onLand(spot, 0); k++) spot = town.dir.clone().addScaledVector(tangent, -0.022 + k * 0.003).normalize();
+  flyTo(spot, surfaceRadius(spot) + 0.0085, 3400);
+  landedHint = Math.max(landedHint, 1);
+}
 function selectOcean(dir) {
   exitCore();
   score.place('ocean');
@@ -2042,6 +2929,7 @@ panelBody.addEventListener('click', (e) => {
   if (go) {
     if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when The Exchange opens.' });
     else if (go.dataset.go === 'core') enterCore();
+    else if (go.dataset.go === 'land') landAt(+go.dataset.region);
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
     else if (go.dataset.go === 'contact') openContact({ type: 'General enquiry', message: 'I spun the world and found the eggs.' });
     else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
@@ -2217,7 +3105,7 @@ cv.addEventListener('wheel', (e) => {
   lastInteract = performance.now();
   $('#intro').classList.add('gone');
   if (!spin.enabled) return;
-  spin.target = THREE.MathUtils.clamp(spin.target * Math.exp(e.deltaY * 0.0012), MIN_D, MAX_D);
+  zoomBy(Math.exp(e.deltaY * 0.0016));
 }, { passive: false });
 
 /* grabbing and flinging */
@@ -2240,17 +3128,19 @@ cv.addEventListener('pointermove', (e) => {
   if (spin.pointers.size === 2) {
     prev.x = e.clientX; prev.y = e.clientY;
     const d = pinchDist();
-    if (spin.enabled && spin.pinch > 0) spin.target = THREE.MathUtils.clamp(spin.target * (spin.pinch / d), MIN_D, MAX_D);
+    if (spin.enabled && spin.pinch > 0) zoomBy(Math.pow(spin.pinch / d, 1.6));
     spin.pinch = d;
     return;
   }
   const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
   prev.x = e.clientX; prev.y = e.clientY;
   if (!spin.dragging || !spin.enabled) return;
-  const k = 0.0052 * Math.max(0.25, (spin.dist - 1) / 2.4);
-  turnCamera(-dy * k, -dx * k, 0);
+  const L = landK(spin.dist);
+  const k = 0.0052 * Math.max(0.0035, (spin.dist - 1) / 2.4);
+  const turn = 0.004 * L; // on the ground, side to side turns you around
+  turnCamera(-dy * k, -dx * k * (1 - L), dx * turn);
   const dt = Math.max(1 / 240, (now - spin.lastMove) / 1000);
-  _sv.set(-dy * k / dt, -dx * k / dt, 0);
+  _sv.set(-dy * k / dt, -dx * k * (1 - L) / dt, dx * turn / dt);
   spin.w.lerp(_sv, 0.6);
   if (spin.w.length() > 28) spin.w.setLength(28);
   spin.lastMove = now;
@@ -2638,7 +3528,12 @@ function updateHud() {
   hudEls.alt.textContent = `${Math.round((camera.position.length() - 1) * 6371).toLocaleString('en-AU')} km`;
   const tr = terrain(d.x, d.y, d.z);
   hudEls.over.textContent = tr.h > 0 ? (tr.region === UNCH ? UNCHARTED.name : REGIONS[tr.region].name) : OCEAN.name;
-  hudEls.sun.textContent = spin.energy > 0.3 ? 'Spin warning' : (d.dot(sunDir) > 0 ? 'Day side' : 'Night side');
+  // local time down there, on the world's own clock
+  let hr = 12 + ((Math.atan2(sunDir.z, sunDir.x) - Math.atan2(d.z, d.x)) / (Math.PI * 2)) * 24;
+  hr = ((hr % 24) + 24) % 24;
+  const hm = `${String(Math.floor(hr)).padStart(2, '0')}:${String(Math.floor((hr % 1) * 60)).padStart(2, '0')}`;
+  const el = d.dot(sunDir);
+  hudEls.sun.textContent = spin.energy > 0.3 ? 'Spin warning' : `${el > 0.12 ? 'Day' : el > -0.12 ? (hr < 12 ? 'Dawn' : 'Dusk') : 'Night'} ${hm}`;
 }
 function updateLabels() {
   const camDir = camera.position.clone().normalize();
@@ -2668,7 +3563,7 @@ function updateLabels() {
 }
 
 let introDone = false;
-const introTo = latLon(22, -95).multiplyScalar(fitDist(1.32, 3.4));
+const introTo = latLon(22, ARRIVE_LON).multiplyScalar(fitDist(1.32, 3.4));
 
 /* The opening shot: skim low over the night side as the sun rises over the horizon, then pull back to reveal the world. */
 const cine = { start: 0, S: new THREE.Vector3(), N: new THREE.Vector3(), titled: false, skip: false };
@@ -2799,8 +3694,7 @@ function loop() {
   else stepSpin(dtFrame, t, now);
 
   if (!reduceMotion) { // the sun circles the world: day and night
-    const a = SUN0 + t * 0.03;
-    sunDir.set(Math.cos(a) * 0.84, 0.45, Math.sin(a) * 0.84).normalize();
+    sunAt(SUN0 + sunShift + t * DAY_RATE, sunDir);
     sun.position.copy(sunDir).multiplyScalar(10);
     rim.position.copy(sunDir).multiplyScalar(-10).setY(-2);
   }
@@ -2808,10 +3702,13 @@ function loop() {
   if (Math.abs(coreTarget - coreMix) < 0.001) coreMix = coreTarget;
   applyCore(coreMix, t);
   stepRipples(now);
-  if (!reduceMotion && coreMix < 0.5) stepBeings(Math.min(0.05, t - (loop.lastT ?? t)), t);
+  if (coreMix < 0.5) stepLife(reduceMotion ? 0 : Math.min(0.05, t - (loop.lastT ?? t)), t);
   loop.lastT = t;
 
   clouds.rotation.y += dtFrame * (0.01 + spin.energy * 2.5);
+  WEATHER.uSunLocal.value.copy(sunDir).applyQuaternion(_pq.copy(planet.quaternion).invert());
+  WEATHER.uCloudRot.value.setFromMatrix4(_cm.makeRotationY(-clouds.rotation.y));
+  stepStorms(t, dtFrame);
   stepSpill(dtFrame, t);
   sunGlow.position.copy(sunDir).multiplyScalar(60);
   realmPivot.rotation.y = t * 0.06;
@@ -2853,6 +3750,7 @@ function loop() {
 
   if (!inVR && (loop.hudTick = (loop.hudTick || 0) + 1) % 6 === 0) updateHud();
   stepMeteor(t);
+  stepComet(t);
   dust.rotation.y = t * 0.004;
   if (!inVR) {
     applyParallax(t);
@@ -2864,10 +3762,11 @@ function loop() {
   U.uLin.value = inVR ? 0 : 1;
   lens.uniforms.uTime.value = t;
   { // focus pulls in on close-ups
-    const target = introDone && !inVR ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) : 0;
+    const target = introDone && !inVR ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
     lens.uniforms.uDof.value += (target - lens.uniforms.uDof.value) * 0.05;
   }
-  if (!inVR || score.on) score.spin(spin.energy);
+  const ground = stepGround(inVR);
+  if (!inVR || score.on) score.spin(Math.max(spin.energy, ground * 0.22)); // wind when you're down in the air
   if (inVR) renderer.render(scene, camera);
   else composer.render(); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
 }
@@ -2896,6 +3795,10 @@ scene.traverse((o) => {
   m.needsUpdate = true;
 });
 renderer.setAnimationLoop(loop);
+// td1.world/#dev exposes a few handles for framing shots and testing
+if (/dev/.test(location.hash)) {
+  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, robots, ships, flocks, sats, comet, skip: () => { cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+}
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
 
