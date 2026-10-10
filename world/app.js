@@ -110,10 +110,11 @@ function zoomAt(k, px, py) {
   _zC.copy(camera.position).normalize();
   _zR.setFromUnitVectors(_zC, _zH.normalize());
   // rotate part of the way toward it, more the harder you zoom; barely at all once you're down low
-  spin.q.premultiply(_zI.identity().slerp(_zR, (1 - k) * 0.9 * (1 - L))).normalize();
+  spin.qT.premultiply(_zI.identity().slerp(_zR, (1 - k) * 0.9 * (1 - L))).normalize();
 }
 const spin = {
-  q: new THREE.Quaternion(),
+  q: new THREE.Quaternion(), // what you see
+  qT: new THREE.Quaternion(), // where your finger has put it; the view glides after it every frame
   dist: 9.5,
   target: 3.4,
   w: new THREE.Vector3(), // angular velocity around the camera's own axes, rad/s
@@ -126,7 +127,7 @@ const spin = {
   axisWorld: new THREE.Vector3(0, 1, 0),
 };
 const _sq = new THREE.Quaternion(), _sv = new THREE.Vector3();
-function syncSpin() { spin.q.copy(camera.quaternion); spin.dist = spin.target = camera.position.length(); }
+function syncSpin() { spin.q.copy(camera.quaternion); spin.qT.copy(spin.q); spin.dist = spin.target = camera.position.length(); }
 function placeCamera() {
   camera.quaternion.copy(spin.q);
   camera.position.set(0, 0, spin.dist).applyQuaternion(spin.q);
@@ -138,7 +139,7 @@ function turnCamera(ax, ay, az) { // rotate around the camera's own axes by thes
   const ang = _sv.length();
   if (ang < 1e-8) return;
   _sq.setFromAxisAngle(_sv.multiplyScalar(1 / ang), ang);
-  spin.q.multiply(_sq).normalize();
+  spin.qT.multiply(_sq).normalize();
 }
 
 // Real time: the side of the world you arrive on matches your own clock (night if it's night where you are),
@@ -2230,17 +2231,19 @@ function stepSpin(dt, t, now) {
   if (spin.enabled) {
     if (!spin.dragging) {
       turnCamera(spin.w.x * dt, spin.w.y * dt, spin.w.z * dt);
-      spin.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.45 : 1.25)));
+      spin.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.45 : spin.dist < 1.2 ? 3.2 : 1.7))); // a long, easy glide
       // left alone, it turns on a tilted axis like Earth
       const idle = THREE.MathUtils.clamp((now - lastInteract - 3000) / 4000, 0, 1);
       if (!selected && !reduceMotion && idle > 0) {
         _sq.setFromAxisAngle(EARTH_AXIS, -0.06 * dt * idle * Math.min(1, (spin.dist - 1) / 0.6));
-        spin.q.premultiply(_sq);
+        spin.qT.premultiply(_sq);
       }
     }
-    spin.dist += (spin.target - spin.dist) * (1 - Math.exp(-dt * 8));
+    // the view glides after the target: smooth however unevenly touch events arrive
+    spin.q.slerp(spin.qT, 1 - Math.exp(-dt * (spin.dragging ? 26 : 16))).normalize();
+    spin.dist += (spin.target - spin.dist) * (1 - Math.exp(-dt * 7));
     if (spin.dist < 1.1) { // stay above the ground
-      _sv.set(0, 0, 1).applyQuaternion(spin.q);
+      _sv.set(0, 0, 1).applyQuaternion(spin.qT);
       const floor = surfaceRadius(_sv) + GROUND_CLEAR;
       if (spin.dist < floor) spin.dist = floor;
       if (spin.target < floor) spin.target = floor;
@@ -2390,7 +2393,8 @@ function addLabel(html, cls, getPos, onClick, opts = {}) {
   el.className = `label ${cls}`;
   el.innerHTML = html;
   el.type = 'button';
-  el.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+  el.addEventListener('click', (e) => { e.stopPropagation(); if (e.detail === 0) onClick(); }); // keyboard
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); pointerDown(e, onClick); }); // drags pass through to the world
   labelLayer.appendChild(el);
   labels.push({ el, getPos, surface: opts.surface !== false, layer: opts.layer || 'world' });
   return el;
@@ -2632,7 +2636,7 @@ function stepGround(inVR) {
 
 /* ------------------------------------------------------------------ spatial movement: phone tilt, mouse, and breathing */
 
-const parallax = { x: 0, y: 0, tx: 0, ty: 0, mx: 0, my: 0, base: null, shakeAt: 0, motionOn: false };
+const parallax = { amp: 1, x: 0, y: 0, tx: 0, ty: 0, mx: 0, my: 0, base: null, shakeAt: 0, motionOn: false };
 function onOrient(e) {
   if (e.beta == null || e.gamma == null) return;
   const portrait = !screen.orientation || Math.abs(screen.orientation.angle || 0) !== 90;
@@ -2681,8 +2685,11 @@ addEventListener('pointermove', (e) => {
 });
 function applyParallax(t) {
   if (reduceMotion || !introDone) return; // the opening shot frames itself
+  // while you're touching (and a moment after), nothing else moves the view
+  const hands = spin.dragging || spin.pointers.size > 0 || flight || performance.now() - lastInteract < 1800;
+  parallax.amp += ((hands ? 0 : 1) - parallax.amp) * (hands ? 0.2 : 0.015);
   const breathX = Math.sin(t * 0.23) * 0.18, breathY = Math.sin(t * 0.17 + 1) * 0.14;
-  const tx = parallax.tx + parallax.mx * 0.35 + breathX, ty = parallax.ty + parallax.my * 0.25 + breathY;
+  const tx = (parallax.tx * 0.5 + parallax.mx * 0.35 + breathX) * parallax.amp, ty = (parallax.ty * 0.5 + parallax.my * 0.25 + breathY) * parallax.amp;
   parallax.x += (tx - parallax.x) * 0.07;
   parallax.y += (ty - parallax.y) * 0.07;
   camera.updateMatrixWorld();
@@ -3247,11 +3254,11 @@ function activate(h) {
 const cv = renderer.domElement;
 cv.addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY, type: e.pointerType }; });
 cv.addEventListener('pointerleave', () => { pointer = null; });
-cv.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now(), wasSpinning: spin.w.length() > 1.5 || spin.energy > 0.2 }; lastInteract = performance.now(); $('#intro').classList.add('gone'); });
 cv.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
-  if (moved < 7 && performance.now() - downAt.t < 600 && !downAt.wasSpinning) {
+  if (moved < 9 && performance.now() - downAt.t < 600 && !downAt.wasSpinning) {
+    if (downAt.label) { downAt.label(); downAt = null; return; } // a tap on a label
     const h = pick(e.clientX, e.clientY);
     if (h && h.dir) {
       const col = h.kind === 'ocean' ? OCEAN.color : (h.index === UNCH ? UNCHARTED.color : REGIONS[h.index].color);
@@ -3275,11 +3282,21 @@ const pinchDist = () => { const p = [...spin.pointers.values()]; return Math.hyp
 const pinchAngle = () => { const p = [...spin.pointers.values()]; return Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x); };
 const pinchMid = () => { const p = [...spin.pointers.values()]; return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2 }; };
 const _gr = new THREE.Raycaster(), _gn = new THREE.Vector2(), _gR = new THREE.Quaternion(), _gA = new THREE.Vector3(), _gW = new THREE.Vector3(), _gQi = new THREE.Quaternion();
+// A stand-in camera at the target pose: hits are measured against where the view is going, not where it is mid-glide.
+const ghost = new THREE.PerspectiveCamera();
+function syncGhost() {
+  ghost.quaternion.copy(spin.qT);
+  ghost.position.set(0, 0, spin.dist).applyQuaternion(spin.qT);
+  ghost.rotateX(landK(spin.dist) * LAND_TILT);
+  ghost.updateMatrixWorld();
+  ghost.projectionMatrix.copy(camera.projectionMatrix);
+  ghost.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+}
 // Where the ray under screen point (px, py) meets a sphere of radius r around the world's centre.
-function sphereHit(px, py, r, out) {
-  camera.updateMatrixWorld();
+function sphereHit(px, py, r, out, cam = camera) {
+  cam.updateMatrixWorld();
   _gn.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
-  _gr.setFromCamera(_gn, camera);
+  _gr.setFromCamera(_gn, cam);
   const o = _gr.ray.origin, d = _gr.ray.direction;
   const b = o.dot(d), c = o.lengthSq() - r * r, disc = b * b - c;
   if (disc < 0) return null;
@@ -3287,100 +3304,122 @@ function sphereHit(px, py, r, out) {
   if (t < 0) return null;
   return out.copy(o).addScaledVector(d, t);
 }
-const grabState = { anchor: null, r: 1, last: 0, twist: 0, right: false };
+const grabState = { anchor: null, r: 1, twist: 0, right: false, samples: [] };
 function grabAt(px, py) {
-  // grab at the ground's real height under the finger, so it sticks when you're low over hills
+  syncGhost();
   let r = 1;
-  if (spin.dist < 1.2 && sphereHit(px, py, 1.01, _gA)) r = surfaceRadius(_gA.clone().normalize());
+  if (spin.dist < 1.2 && sphereHit(px, py, 1.01, _gA, ghost)) r = surfaceRadius(_gA.clone().normalize());
   grabState.r = r;
-  grabState.anchor = sphereHit(px, py, r, _gA) ? _gA.clone().normalize() : null;
+  grabState.anchor = sphereHit(px, py, r, _gA, ghost) ? _gA.clone().normalize() : null;
 }
-// Turn the world by R about its centre (we move the camera the opposite way) and feed the fling.
-function applyWorldTurn(R, dt) {
-  spin.q.premultiply(R).normalize();
-  placeCamera();
-  // angular velocity in the camera's own axes, for momentum after you let go
-  const ang = 2 * Math.acos(Math.min(1, Math.abs(R.w)));
-  if (ang > 1e-7 && dt > 0) {
-    _gW.set(R.x, R.y, R.z).normalize().multiplyScalar((R.w < 0 ? -ang : ang) / dt);
-    _gW.applyQuaternion(_gQi.copy(spin.q).invert());
-    spin.w.lerp(_gW, 0.55);
-    if (spin.w.length() > 28) spin.w.setLength(28);
-  }
+function noteMotion(now) { // remember the last tenth of a second of movement, for an honest fling
+  grabState.samples.push({ t: now, q: spin.qT.clone() });
+  while (grabState.samples.length > 2 && now - grabState.samples[0].t > 110) grabState.samples.shift();
 }
-function twistBy(angle, dt) { // turn around the line from you to the centre: your heading, on the ground
-  _gR.setFromAxisAngle(_gA.copy(camera.position).normalize(), angle);
-  applyWorldTurn(_gR, dt);
+function flingVelocity(now) { // the world's spin rate from recent movement, in the camera's own axes
+  const s0 = grabState.samples[0];
+  if (!s0 || now - s0.t < 8) return _gW.set(0, 0, 0);
+  _gR.copy(spin.qT).multiply(_gQi.copy(s0.q).invert()); // rotation from then to now
+  const ang = 2 * Math.acos(Math.min(1, Math.abs(_gR.w)));
+  if (ang < 1e-6) return _gW.set(0, 0, 0);
+  _gW.set(_gR.x, _gR.y, _gR.z).normalize().multiplyScalar(((_gR.w < 0 ? -ang : ang) * 1000) / (now - s0.t));
+  _gW.applyQuaternion(_gQi.copy(spin.qT).invert());
+  if (_gW.length() > 24) _gW.setLength(24);
+  return _gW;
 }
-cv.addEventListener('contextmenu', (e) => e.preventDefault());
-cv.addEventListener('pointerdown', (e) => {
+function turnWorld(R) { spin.qT.premultiply(R).normalize(); }
+function twistBy(angle) { // turn around the line from you to the centre: your heading, on the ground
+  _gR.setFromAxisAngle(_gA.set(0, 0, 1).applyQuaternion(spin.qT), angle);
+  turnWorld(_gR);
+}
+// Down low: drag slides you across the land at a pace set by your height, steady and predictable.
+function groundPan(dx, dy) {
+  const s = (Math.max(0.004, spin.dist - 1) * 2.4) / Math.min(innerWidth, innerHeight);
+  const right = _gA.set(1, 0, 0).applyQuaternion(spin.qT);
+  _gR.setFromAxisAngle(right, -dy * s);
+  turnWorld(_gR);
+  const upT = _gA.set(0, 1, 0).applyQuaternion(spin.qT);
+  _gR.setFromAxisAngle(upT, -dx * s);
+  turnWorld(_gR);
+}
+function pointerDown(e, label) {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
+  const now = performance.now();
+  downAt = { x: e.clientX, y: e.clientY, t: now, label, wasSpinning: spin.w.length() > 1.5 || spin.energy > 0.2 };
+  lastInteract = now;
+  $('#intro').classList.add('gone');
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!introDone) cine.skip = true;
   enableMotion();
-  spin.w.set(0, 0, 0); // catching the world stops it
+  grab(); // catching the world stops it
+  spin.qT.copy(spin.q); // and it stays exactly where you caught it
+  grabState.samples.length = 0;
   if (spin.pointers.size === 1) {
-    grab();
     spin.dragging = true;
-    spin.lastMove = performance.now();
+    spin.lastMove = now;
     grabState.right = e.button === 2 || e.shiftKey; // right-drag or shift-drag turns you around
     if (!grabState.right) grabAt(e.clientX, e.clientY);
   } else if (spin.pointers.size === 2) {
-    spin.dragging = false;
+    spin.dragging = true;
     spin.pinch = pinchDist();
     grabState.twist = pinchAngle();
+    downAt = null; // two fingers is never a tap
   }
-});
+}
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+cv.addEventListener('pointerdown', (e) => pointerDown(e, null));
 cv.addEventListener('pointermove', (e) => {
   const prev = spin.pointers.get(e.pointerId);
   if (!prev) return;
   const now = performance.now();
-  const dt = Math.max(1 / 240, (now - spin.lastMove) / 1000);
   if (spin.pointers.size === 2) { // pinch to zoom toward your fingers, twist to turn
     prev.x = e.clientX; prev.y = e.clientY;
     const d = pinchDist(), a = pinchAngle(), m = pinchMid();
-    if (spin.enabled && spin.pinch > 0) zoomAt(Math.pow(spin.pinch / d, 1.5), m.x, m.y);
+    if (spin.enabled && spin.pinch > 0) zoomAt(spin.pinch / d, m.x, m.y);
     let da = a - grabState.twist;
     da = Math.atan2(Math.sin(da), Math.cos(da));
-    if (spin.enabled && Math.abs(da) < 0.5) twistBy(-da, dt);
+    if (spin.enabled && Math.abs(da) < 0.5) twistBy(-da);
     spin.pinch = d;
     grabState.twist = a;
-    spin.lastMove = now;
-    lastInteract = now;
+    noteMotion(now);
+    spin.lastMove = lastInteract = now;
     return;
   }
   const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
   prev.x = e.clientX; prev.y = e.clientY;
-  if (!spin.dragging || !spin.enabled) return;
-  if (grabState.right) {
-    twistBy(dx * 0.006, dt);
-  } else if (grabState.anchor && sphereHit(e.clientX, e.clientY, grabState.r, _gA)) {
-    _gR.setFromUnitVectors(_gA.normalize(), grabState.anchor);
-    // near the horizon a tiny finger move is a huge distance: keep it calm
-    const maxA = 0.02 + 0.5 * (1 - landK(spin.dist));
-    const ang = 2 * Math.acos(Math.min(1, Math.abs(_gR.w)));
-    if (ang > maxA) _gR.slerp(new THREE.Quaternion(), 1 - maxA / ang);
-    applyWorldTurn(_gR, dt);
-  } else { // off the edge of the world: turn it the old way
-    const k = 0.0052 * Math.max(0.0035, (spin.dist - 1) / 2.4);
-    turnCamera(-dy * k, -dx * k, 0);
-    _sv.set(-dy * k / dt, -dx * k / dt, 0);
-    spin.w.lerp(_sv, 0.6);
+  if (!spin.dragging || !spin.enabled || (dx === 0 && dy === 0)) return;
+  if (grabState.right) twistBy(dx * 0.005);
+  else if (landK(spin.dist) > 0.35) groundPan(dx, dy);
+  else {
+    syncGhost();
+    if (grabState.anchor && sphereHit(e.clientX, e.clientY, grabState.r, _gA, ghost)) {
+      _gR.setFromUnitVectors(_gA.normalize(), grabState.anchor);
+      turnWorld(_gR);
+    } else { // off the edge of the world: turn it by the drag
+      const k = 0.0052 * Math.max(0.0035, (spin.dist - 1) / 2.4);
+      turnCamera(-dy * k, -dx * k, 0);
+    }
   }
-  spin.lastMove = now;
-  lastInteract = now;
+  noteMotion(now);
+  spin.w.copy(flingVelocity(now)); // live spin rate (the ocean feels a wild spin)
+  spin.lastMove = lastInteract = now;
 });
 const release = (e) => {
+  if (!spin.pointers.has(e.pointerId)) return;
   spin.pointers.delete(e.pointerId);
-  if (spin.pointers.size === 1) { // lifted one finger of two: carry on dragging with the other
+  const now = performance.now();
+  if (spin.pointers.size === 1) { // lifted one finger of two: carry on with the other
     const p = [...spin.pointers.values()][0];
-    spin.dragging = true;
     grabState.right = false;
+    grabState.samples.length = 0;
     grabAt(p.x, p.y);
+    return;
   }
   if (spin.pointers.size === 0) {
     spin.dragging = false;
-    if (reduceMotion || performance.now() - spin.lastMove > 80) spin.w.set(0, 0, 0); // held still before letting go
+    // let go while moving and it glides on; stop first and it stays put
+    if (reduceMotion || now - spin.lastMove > 70) spin.w.set(0, 0, 0);
+    else spin.w.copy(flingVelocity(now)).multiplyScalar(0.9);
   }
 };
 cv.addEventListener('pointerup', release);
