@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="world/style.css">
   <script type="importmap">
-    { "imports": { "three": "./world/vendor/three.module.min.js", "three/addons/": "./world/vendor/" } }
+    { "imports": { "three": "./world/vendor/three.module.min.js", "three/addons/": "./world/vendor/addons/" } }
   </script>
 </head>
 <body>
@@ -50,6 +50,12 @@
     <button id="panel-close" type="button" aria-label="Close">×</button>
     <div id="panel-body"></div>
   </aside>
+
+  <div id="cine" aria-hidden="true">
+    <i class="bar t"></i><i class="bar b"></i>
+    <div class="title"><b>TD1<span>.WORLD</span></b><p>A living world of intelligence</p></div>
+    <button id="skip" type="button">Skip intro</button>
+  </div>
 
   <div id="edge" aria-hidden="true"><i class="l"></i><i class="r"></i></div>
 

@@ -380,6 +380,33 @@ button.cta { cursor: pointer; }
   background: radial-gradient(closest-side, transparent 55%, rgba(79, 140, 255, 0.26) 80%, rgba(3, 4, 10, 0.88) 100%);
 }
 
+/* ---------------------------------------------------------------- opening shot */
+#cine { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+#cine .bar { position: absolute; left: 0; right: 0; height: 11vh; background: #000; transition: transform 1.3s cubic-bezier(.7,0,.2,1); }
+#cine .bar.t { top: 0; transform: translateY(-101%); }
+#cine .bar.b { bottom: 0; transform: translateY(101%); }
+body.cine #cine .bar { transform: none; }
+#cine .title { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; opacity: 0; letter-spacing: 0.7em; transition: opacity 1.4s ease, letter-spacing 3s cubic-bezier(.2,.8,.2,1); }
+body.cine-title #cine .title { opacity: 1; letter-spacing: 0.3em; }
+#cine .title b { display: block; font: 700 clamp(30px, 6.4vw, 72px)/1 var(--display); letter-spacing: inherit; margin-right: -0.3em; text-shadow: 0 0 40px rgba(193, 162, 255, 0.45); }
+#cine .title b span { color: var(--lilac); font-weight: 500; }
+#cine .title p { margin-top: 18px; font: 500 11px var(--data); letter-spacing: 0.42em; text-transform: uppercase; color: var(--signal); }
+#skip { position: absolute; right: 22px; bottom: calc(11vh + 18px); pointer-events: auto; padding: 10px 14px; font: 600 10.5px var(--display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair-2); clip-path: var(--chamfer-s); opacity: 0; transition: opacity 0.6s; }
+body.cine #skip { opacity: 1; }
+body:not(.cine) #skip { pointer-events: none; }
+.top, #hud, #edge, #menu-btn, #labels { transition: opacity 1.2s ease; }
+body.cine .top, body.cine #intro, body.cine #hud, body.cine #edge, body.cine #menu-btn, body.cine #labels { opacity: 0 !important; pointer-events: none; }
+
+/* ---------------------------------------------------------------- lens flare */
+#flare { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+#flare i { position: absolute; left: 0; top: 0; border-radius: 50%; will-change: transform; }
+#flare .core { width: 240px; height: 240px; background: radial-gradient(closest-side, rgba(255, 252, 240, 0.95), rgba(255, 214, 160, 0.4) 22%, rgba(255, 170, 90, 0.08) 55%, transparent); }
+#flare .streak { width: min(1400px, 160vw); height: 10px; border-radius: 0; background: linear-gradient(90deg, transparent, rgba(120, 170, 255, 0.0) 10%, rgba(150, 195, 255, 0.55) 48%, rgba(255, 255, 255, 0.9) 50%, rgba(150, 195, 255, 0.55) 52%, rgba(120, 170, 255, 0) 90%, transparent); filter: blur(2px); }
+#flare .g1 { width: 70px; height: 70px; background: radial-gradient(closest-side, rgba(127, 216, 255, 0.22), rgba(127, 216, 255, 0.05) 70%, transparent); }
+#flare .g2 { width: 140px; height: 140px; background: radial-gradient(closest-side, transparent 60%, rgba(193, 162, 255, 0.16) 75%, transparent); }
+#flare .g3 { width: 44px; height: 44px; background: radial-gradient(closest-side, rgba(255, 210, 122, 0.3), transparent); }
+#flare .g4 { width: 210px; height: 210px; background: radial-gradient(closest-side, rgba(124, 255, 196, 0.06), rgba(127, 216, 255, 0.1) 80%, transparent); }
+
 /* ---------------------------------------------------------------- phone: bottom sheet */
 @media (max-width: 759px) {
   .top { padding: max(12px, env(safe-area-inset-top)) 14px 12px; }

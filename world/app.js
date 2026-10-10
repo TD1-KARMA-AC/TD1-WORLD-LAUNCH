@@ -2,6 +2,11 @@
 // One sphere, five impossible continents, an ocean of data, cities of light, and two moons.
 
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   REGIONS, OCEAN, UNCHARTED, HISTORY, PEAKS, HORIZONS, NOTES, MINDALOO_URL, REALM_URL, CORE, STRATA, AC_PATH, SHOP, ENQUIRY, EGGS,
 } from './data.js';
@@ -37,6 +42,30 @@ const rig = new THREE.Group(); // in VR the headset moves the camera inside this
 scene.add(rig);
 rig.add(camera);
 const camWorld = new THREE.Vector3(), camWorldQ = new THREE.Quaternion();
+
+/* Film pipeline: render → bloom → lens (vignette, grain, fringing) → filmic grade. VR renders directly. */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomScale = isSmall() || isTouch ? 0.5 : 0.75;
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
+composer.addPass(bloom);
+const lens = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0.014 }, uVignette: { value: 1 }, uCA: { value: 0.0022 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVignette; uniform float uCA; varying vec2 vUv;
+    float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + fract(uTime) * 61.0) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5;
+      float r2 = dot(d, d);
+      vec2 off = d * uCA * r2 * 6.0;
+      vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      col *= mix(1.0, smoothstep(0.62, 0.05, r2 * 1.45), 0.55 * uVignette);
+      col += (rnd(vUv * 1371.0) - 0.5) * uGrain * (0.35 + col);
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }`,
+});
+composer.addPass(lens);
+composer.addPass(new OutputPass());
 // distance at which a sphere of radius r fits the narrower side of the screen
 function fitDist(r, min) {
   const tv = Math.tan((camera.fov * DEG) / 2);
@@ -85,7 +114,7 @@ rim.position.set(0.8, -0.2, -1).multiplyScalar(10);
 scene.add(rim);
 
 const clock = new THREE.Clock();
-const U = { uTime: { value: 0 } }; // shared time uniform
+const U = { uTime: { value: 0 }, uLin: { value: 1 } }; // shared time uniform; uLin: shaders write linear light for the film pipeline
 
 /* ------------------------------------------------------------------ noise */
 
@@ -450,7 +479,7 @@ const atmosphere = new THREE.Mesh(
         float day = smoothstep(-0.32, 0.2, sunUp);
         float dusk = smoothstep(-0.3, 0.02, sunUp) * (1.0 - smoothstep(0.02, 0.32, sunUp));
         vec3 col = vec3(0.3, 0.58, 1.0) * day + vec3(1.0, 0.42, 0.18) * dusk * 0.9;
-        gl_FragColor = vec4(col * glow * 1.5, 1.0);
+        gl_FragColor = vec4(col * glow * 1.2, 1.0);
       }`,
   }),
 );
@@ -879,7 +908,9 @@ const mindaloo = new THREE.Group();
   grad.addColorStop(1, 'rgba(193,162,255,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const haloTex = new THREE.CanvasTexture(c);
+  haloTex.colorSpace = THREE.SRGBColorSpace;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   halo.scale.setScalar(1.15);
   const light = new THREE.PointLight(0xc9d4ff, 1.4, 4, 2);
   mindaloo.add(halo, body, light);
@@ -1017,7 +1048,9 @@ function glowTexture(stops) {
   stops.forEach(([o, col]) => grad.addColorStop(o, col));
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
-  return new THREE.CanvasTexture(c);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 const coreWorld = new THREE.Group();
@@ -1628,7 +1661,7 @@ addEventListener('pointermove', (e) => {
   parallax.my = (e.clientY / innerHeight) * 2 - 1;
 });
 function applyParallax(t) {
-  if (reduceMotion) return;
+  if (reduceMotion || !introDone) return; // the opening shot frames itself
   const breathX = Math.sin(t * 0.23) * 0.18, breathY = Math.sin(t * 0.17 + 1) * 0.14;
   const tx = parallax.tx + parallax.mx * 0.35 + breathX, ty = parallax.ty + parallax.my * 0.25 + breathY;
   parallax.x += (tx - parallax.x) * 0.07;
@@ -2157,7 +2190,7 @@ const pinchDist = () => { const p = [...spin.pointers.values()]; return Math.hyp
 cv.addEventListener('pointerdown', (e) => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (!introDone) { introDone = true; syncSpin(); }
+  if (!introDone) { cine.skip = true; }
   enableMotion();
   if (spin.pointers.size === 1) { grab(); spin.dragging = true; spin.lastMove = performance.now(); }
   else if (spin.pointers.size === 2) { spin.dragging = false; spin.pinch = pinchDist(); }
@@ -2545,7 +2578,7 @@ function frame() {
   const open = panel.classList.contains('open');
   const small = isSmall();
   const peek = panel.classList.contains('peek');
-  const introOn = !$('#intro').classList.contains('gone');
+  const introOn = !$('#intro').classList.contains('gone') && !document.body.classList.contains('cine');
   const tx = open && !small ? Math.min(440, innerWidth * 0.4) / 2 : (introOn && !small ? -Math.min(220, innerWidth * 0.12) : 0);
   const introUp = introOn && small ? innerHeight * 0.1 : 0;
   const ty = open && small ? (peek ? 70 : innerHeight * 0.3) : introUp;
@@ -2597,9 +2630,88 @@ function updateLabels() {
 }
 
 let introDone = false;
-const introStart = performance.now();
-const introFrom = camera.position.clone();
 const introTo = latLon(22, -95).multiplyScalar(fitDist(1.32, 3.4));
+
+/* The opening shot: skim low over the night side as the sun rises over the horizon, then pull back to reveal the world. */
+const cine = { start: 0, S: new THREE.Vector3(), N: new THREE.Vector3(), titled: false, skip: false };
+const CINE_R = 1.32;
+const cinePose = (theta) => cine.N.clone().multiplyScalar(Math.cos(theta)).addScaledVector(cine.S, -Math.sin(theta)).multiplyScalar(CINE_R);
+const CINE_A = 4200, CINE_B = 4600;
+// Aim so the planet's edge sits in the lower third with the sun climbing over it.
+function cineAim(pos) {
+  const u = pos.clone().normalize().negate(); // towards the planet's centre
+  const w = cine.S.clone().addScaledVector(u, -cine.S.dot(u)).normalize();
+  const edge = Math.asin(1 / pos.length()); // angular radius of the planet from here
+  const a = edge + 0.12;
+  return { dir: u.clone().multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)), up: w.clone().multiplyScalar(Math.cos(a)).addScaledVector(u, -Math.sin(a)) };
+}
+function stepIntro(now) {
+  if (!cine.start) {
+    cine.start = now;
+    cine.S.copy(sunDir).normalize();
+    const f = introTo.clone().normalize();
+    cine.N.copy(f).addScaledVector(cine.S, -f.dot(cine.S)).normalize();
+    if (!reduceMotion) document.body.classList.add('cine');
+  }
+  const hold = /^#cine=(\d+)$/.exec(location.hash); // td1.world/#cine=2000 freezes the opening at 2 s (for framing)
+  const T = reduceMotion || cine.skip ? 1e9 : hold ? +hold[1] : now - cine.start;
+  if (T < CINE_A) { // sunrise over the limb
+    const k = T / CINE_A;
+    const pos = cinePose(THREE.MathUtils.lerp(0.86, 0.5, ease(k))); // the sun starts hidden behind the planet's edge
+    camera.position.copy(pos);
+    const aim = cineAim(pos);
+    camera.up.copy(aim.up);
+    camera.lookAt(pos.clone().add(aim.dir));
+  } else if (T < CINE_A + CINE_B) { // pull back and swing round to face the world
+    const k = ease((T - CINE_A) / CINE_B);
+    const p0 = cinePose(0.5);
+    const q = new THREE.Quaternion().setFromUnitVectors(p0.clone().normalize(), introTo.clone().normalize());
+    const dir = p0.clone().normalize().applyQuaternion(new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(), q, k));
+    camera.position.copy(dir.multiplyScalar(THREE.MathUtils.lerp(p0.length(), introTo.length(), k)));
+    const aim = cineAim(p0);
+    camera.up.copy(aim.up).lerp(new THREE.Vector3(0, 1, 0), k).normalize();
+    camera.lookAt(p0.clone().addScaledVector(aim.dir, 6).lerp(new THREE.Vector3(), Math.min(1, k * 1.2)));
+    if (!cine.titled && T > CINE_A + 500) { cine.titled = true; document.body.classList.add('cine-title'); }
+  } else {
+    camera.position.copy(introTo);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    introDone = true;
+    syncSpin();
+    document.body.classList.remove('cine');
+    setTimeout(() => document.body.classList.remove('cine-title'), 1400);
+  }
+}
+const skipIntro = () => { if (!introDone) cine.skip = true; };
+addEventListener('keydown', skipIntro);
+$('#skip').addEventListener('click', skipIntro);
+
+/* Lens flare: a starburst and anamorphic streak on the sun, ghosts across the lens, hidden when the planet blocks the sun. */
+const flareEl = document.createElement('div');
+flareEl.id = 'flare';
+flareEl.setAttribute('aria-hidden', 'true');
+flareEl.innerHTML = '<i class="core"></i><i class="streak"></i><i class="g g1"></i><i class="g g2"></i><i class="g g3"></i><i class="g g4"></i>';
+document.body.appendChild(flareEl);
+const flareParts = [...flareEl.children];
+const FLARE_K = [0, 0, 0.55, 1.0, 1.4, 1.85];
+function updateFlare() {
+  const S = sunGlow.position;
+  const toSun = S.clone().sub(camWorld).normalize();
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camWorldQ);
+  const p = S.clone().project(camera);
+  const tca = -camWorld.dot(toSun);
+  const closest = camWorld.clone().addScaledVector(toSun, Math.max(0, tca)).length();
+  const clear = tca > 0 ? sstep(closest, 1.005, 1.08) : 1;
+  const vis = clear * sstep(toSun.dot(fwd), 0.5, 0.8) * (1 - sstep(Math.max(Math.abs(p.x), Math.abs(p.y)), 0.95, 1.3));
+  flareEl.style.opacity = vis.toFixed(3);
+  if (vis < 0.005) return;
+  const sx = (p.x * 0.5 + 0.5) * innerWidth, sy = (-p.y * 0.5 + 0.5) * innerHeight;
+  const cx = innerWidth / 2, cy = innerHeight / 2;
+  flareParts.forEach((el, i) => {
+    const k = FLARE_K[i];
+    el.style.transform = `translate(${sx + (cx - sx) * k * 2}px, ${sy + (cy - sy) * k * 2}px) translate(-50%, -50%)`;
+  });
+}
 
 function loop() {
   const now = performance.now();
@@ -2612,12 +2724,8 @@ function loop() {
   camera.getWorldQuaternion(camWorldQ);
 
   if (inVR) stepVR(dtFrame, t);
-  else if (!introDone) {
-    const k = reduceMotion ? 1 : Math.min(1, (now - introStart) / 2800);
-    camera.position.lerpVectors(introFrom, introTo, ease(k));
-    camera.lookAt(0, 0, 0);
-    if (k >= 1) { introDone = true; syncSpin(); }
-  } else if (flight) stepFlight(now);
+  else if (!introDone) stepIntro(now);
+  else if (flight) stepFlight(now);
   else stepSpin(dtFrame, t, now);
 
   if (!reduceMotion) { // the sun circles the world: day and night
@@ -2681,18 +2789,36 @@ function loop() {
     frame();
     updateHover();
     updateLabels();
-  }
-  renderer.render(scene, camera); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
+    updateFlare();
+  } else flareEl.style.opacity = '0';
+  U.uLin.value = inVR ? 0 : 1;
+  lens.uniforms.uTime.value = t;
+  if (inVR) renderer.render(scene, camera);
+  else composer.render(); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
 }
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.resolution.set(innerWidth * bloomScale, innerHeight * bloomScale);
 });
 
 document.body.classList.add('ready');
 if (location.hash === '#spill') setTimeout(() => startSpill(0.9), 3600); // td1.world/#spill shows the ocean spill straight away
+// Custom shaders were written in display colours; in the film pipeline they convert to linear light so
+// bloom and grading treat everything alike. In VR (rendered directly) they stay as written.
+scene.traverse((o) => {
+  const m = o.material;
+  if (!m || !m.isShaderMaterial || m.userData.linearized) return;
+  m.userData.linearized = true;
+  m.uniforms.uLin = U.uLin;
+  m.fragmentShader = `uniform float uLin;\n${m.fragmentShader}`;
+  const end = m.fragmentShader.lastIndexOf('}');
+  m.fragmentShader = `${m.fragmentShader.slice(0, end)}  gl_FragColor.rgb = mix(gl_FragColor.rgb, pow(max(gl_FragColor.rgb, vec3(0.0)), vec3(2.2)), uLin);\n}`;
+  m.needsUpdate = true;
+});
 renderer.setAnimationLoop(loop);
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
