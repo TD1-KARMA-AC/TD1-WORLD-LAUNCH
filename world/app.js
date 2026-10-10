@@ -26,10 +26,15 @@ try {
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.xr.enabled = true;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 200);
 camera.position.set(0, 2.4, 11);
+const rig = new THREE.Group(); // in VR the headset moves the camera inside this rig
+scene.add(rig);
+rig.add(camera);
+const camWorld = new THREE.Vector3(), camWorldQ = new THREE.Quaternion();
 // distance at which a sphere of radius r fits the narrower side of the screen
 function fitDist(r, min) {
   const tv = Math.tan((camera.fov * DEG) / 2);
@@ -1083,7 +1088,7 @@ function applyCore(m, t) {
   coreHalo.material.opacity = ss(m, 0.2, 0.8);
   coreLight.intensity = ss(m, 0.3, 1) * (1.2 + beat * 0.8);
   knot.material.opacity = ss(m, 0.5, 1) * 0.55;
-  knot.quaternion.copy(camera.quaternion);
+  knot.quaternion.copy(camWorldQ);
   knot.rotateZ(t * 0.12);
   forces.forEach((f) => { f.spin.rotation.y = t * f.speed; f.orb.material.opacity = 1; f.ring.material.opacity = 0.22 * ss(m, 0.5, 1); f.orb.visible = m > 0.4; });
   threads.material.uniforms.uAlpha.value = ss(m, 0.55, 1);
@@ -1177,8 +1182,9 @@ function startSpill(strength) {
   if (reduceMotion) return;
   const oc = ocean.material.uniforms;
   // the water keeps moving the way the surface was moving when the world stopped
-  const camDir = camera.position.clone().normalize();
-  const dir = new THREE.Vector3().crossVectors(spin.axisWorld, camDir);
+  const toLocal = planet.quaternion.clone().invert();
+  const camDir = camWorld.clone().normalize().applyQuaternion(toLocal);
+  const dir = new THREE.Vector3().crossVectors(spin.axisWorld.clone().applyQuaternion(toLocal), camDir);
   if (dir.lengthSq() < 1e-4) dir.set(1, 0, 0);
   dir.normalize();
   oc.uSloshDir.value.copy(dir);
@@ -1343,14 +1349,15 @@ addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonl
 
 // Far: a nebula dome with a Milky Way band and dust lanes.
 const BAND_N = new THREE.Vector3(0.3, 0.9, 0.35).normalize();
-const nebula = new THREE.Mesh(new THREE.SphereGeometry(95, 64, 48), new THREE.ShaderMaterial({
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(95, 160, 120), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false,
   uniforms: { uTime: U.uTime, uBand: { value: BAND_N } },
-  vertexShader: `varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform float uTime; uniform vec3 uBand; varying vec3 vD;
+  fragmentShader: `varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }`,
+  vertexShader: `uniform float uTime; uniform vec3 uBand; varying vec3 vCol;
     ${GLSL_NOISE}
     void main(){
-      vec3 d = normalize(vD);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      vec3 d = normalize(position);
       float b = dot(d, uBand);
       float band = exp(-b * b * 26.0);
       float n = fbm(d * 2.6 + vec3(0.0, uTime * 0.004, 0.0));
@@ -1360,7 +1367,7 @@ const nebula = new THREE.Mesh(new THREE.SphereGeometry(95, 64, 48), new THREE.Sh
       col += vec3(0.08, 0.42, 0.52) * smoothstep(0.55, 0.9, n3) * 0.22;
       col += vec3(0.72, 0.66, 0.95) * band * (0.2 + n2 * 0.55) * 0.3;
       col *= 1.0 - band * smoothstep(0.52, 0.7, n2) * 0.65; // dark dust lanes
-      gl_FragColor = vec4(max(col, 0.0), 1.0);
+      vCol = max(col, 0.0);
     }`,
 }));
 nebula.renderOrder = -2;
@@ -1474,7 +1481,7 @@ const meteor = (() => {
 function stepMeteor(t) {
   if (t - meteor.t0 > 7 + Math.random() * 40 && Math.random() < 0.02 && !reduceMotion) {
     meteor.t0 = t;
-    const camDir = camera.position.clone().normalize().negate(); // somewhere in front, far away
+    const camDir = camWorld.clone().normalize().negate(); // somewhere in front, far away
     meteor.from.copy(camDir).add(new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.5, Math.random() - 0.5)).normalize().multiplyScalar(60);
     meteor.dir.set(Math.random() - 0.5, -Math.random() * 0.6, Math.random() - 0.5).normalize();
   }
@@ -1604,7 +1611,7 @@ function citiesHtml(ri) {
     <ul class="cities">${list.map((c) => `
       <li><button type="button" class="city" data-city="${c.i}">
         <span class="cn">${esc(c.product.name)}</span><span class="cd">${esc(c.product.desc)}</span></button>
-        ${c.product.demo ? `<a class="demo" href="/${c.product.demo}" target="_blank" rel="noopener">Demo ↗</a>` : ''}
+        ${c.product.demo ? `<a class="demo" href="${c.product.demo}" target="_blank" rel="noopener">Demo ↗</a>` : ''}
       </li>`).join('')}</ul></section>`;
 }
 function peaksHtml(ri) {
@@ -2108,6 +2115,314 @@ function updateHover() {
   } else { tip.classList.remove('on'); cv.style.cursor = 'grab'; }
 }
 
+/* ------------------------------------------------------------------ VR: stand in space beside the world (WebXR, Meta Quest) */
+
+const vr = {
+  supported: false, active: false,
+  rigDist: 2.6, rigTarget: 2.6,
+  w: new THREE.Vector3(), // planet angular velocity, world axis × rad/s
+  grab: null, // { ctrl, prev: Vector3, t0, moved }
+  turn: null, // { from, to, t0 } auto-turn to show a selected place
+  card: null, cardFor: '',
+  btnPrev: [{}, {}],
+  labels: [],
+};
+const vrCtrls = [];
+const vrRay = new THREE.Raycaster();
+const _m4 = new THREE.Matrix4(), _vq = new THREE.Quaternion(), _va = new THREE.Vector3(), _vb = new THREE.Vector3();
+
+function vrCanvasCard(o) {
+  const W = 1024, H = 600, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const cut = 36;
+  g.beginPath(); g.moveTo(cut, 0); g.lineTo(W, 0); g.lineTo(W, H - cut); g.lineTo(W - cut, H); g.lineTo(0, H); g.lineTo(0, cut); g.closePath();
+  g.fillStyle = 'rgba(5,7,16,0.92)'; g.fill();
+  g.strokeStyle = 'rgba(150,180,255,0.35)'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = o.color || '#C1A2FF'; g.fillRect(cut, 0, W - cut, 6);
+  g.fillStyle = o.color || '#C1A2FF';
+  g.font = '500 30px "IBM Plex Mono", monospace';
+  g.fillText(`// ${String(o.era || '').toUpperCase()}`, 56, 82);
+  g.fillStyle = '#ffffff';
+  g.font = '700 74px "Chakra Petch", sans-serif';
+  g.fillText(o.name, 52, 168);
+  g.fillStyle = '#e8ecf6';
+  g.font = '500 36px "IBM Plex Sans", sans-serif';
+  g.fillText(o.tagline || '', 56, 224);
+  g.fillStyle = '#9aa3bd';
+  g.font = '400 32px "IBM Plex Sans", sans-serif';
+  const words = String(o.intro || '').split(' ');
+  let line = '', y = 290;
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (g.measureText(test).width > W - 112) { g.fillText(line, 56, y); line = w; y += 44; if (y > H - 70) { line += '…'; break; } }
+    else line = test;
+  }
+  if (line && y <= H - 30) g.fillText(line, 56, y);
+  g.fillStyle = '#5f6884';
+  g.font = '500 24px "IBM Plex Mono", monospace';
+  g.fillText(o.foot || 'TRIGGER: SELECT  ·  GRIP OR PINCH: SPIN  ·  B/Y: KARMA CORE  ·  A/X: CLOSE', 56, H - 34);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+function vrShowCard(o, key) {
+  if (vr.cardFor === key && vr.card) return;
+  vrHideCard();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.586), new THREE.MeshBasicMaterial({ map: vrCanvasCard(o), transparent: true, depthWrite: false }));
+  m.renderOrder = 20;
+  scene.add(m);
+  vr.card = m;
+  vr.cardFor = key;
+}
+function vrHideCard() {
+  if (!vr.card) return;
+  scene.remove(vr.card);
+  vr.card.material.map.dispose();
+  vr.card.material.dispose();
+  vr.card.geometry.dispose();
+  vr.card = null;
+  vr.cardFor = '';
+}
+function vrTextSprite(text, sub, color) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const g = c.getContext('2d');
+  g.textAlign = 'center';
+  g.fillStyle = color;
+  g.font = '500 26px "IBM Plex Mono", monospace';
+  g.fillText(sub.toUpperCase(), 256, 44);
+  g.fillStyle = '#ffffff';
+  g.font = '700 48px "Chakra Petch", sans-serif';
+  g.fillText(text.toUpperCase(), 256, 98);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(0.36, 0.09, 1);
+  sp.renderOrder = 15;
+  sp.visible = false;
+  return sp;
+}
+function vrBuildLabels() {
+  if (vr.labels.length) return;
+  REGIONS.forEach((r) => {
+    const sp = vrTextSprite(r.name, r.era, r.color);
+    sp.position.copy(r.dir).multiplyScalar(1.2);
+    planet.add(sp);
+    vr.labels.push(sp);
+  });
+}
+
+// pointing: what is this controller aiming at?
+function vrAim(ctrl) {
+  _m4.identity().extractRotation(ctrl.matrixWorld);
+  vrRay.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  vrRay.ray.direction.set(0, 0, -1).applyMatrix4(_m4);
+  const eggs = eggMeshes.filter((m) => m.visible).map((m) => m.userData.gem);
+  const hits = vrRay.intersectObjects([...eggs, coreBall, realm, mindaloo.userData.body, ...exchange.userData.pick, pickSphere], false);
+  return hits[0] || null;
+}
+function vrTurnTo(dirLocal) { // rotate the world so a place faces you
+  const world = dirLocal.clone().applyQuaternion(planet.quaternion);
+  const toViewer = camWorld.clone().normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(world, toViewer);
+  vr.turn = { from: planet.quaternion.clone(), to: q.multiply(planet.quaternion.clone()), t0: performance.now() };
+  vr.w.set(0, 0, 0);
+}
+function vrSelect(hit) {
+  if (!hit) { vrHideCard(); return; }
+  const o = hit.object;
+  const egg = eggMeshes.find((m) => m.userData.gem === o);
+  if (egg) {
+    const e = egg.userData.egg;
+    if (!eggsFound.has(e.id)) { eggsFound.add(e.id); saveEggs(); }
+    spill.holdUntil = Math.max(spill.holdUntil, performance.now() + 15000);
+    vrShowCard({ name: e.title, era: `Easter egg · ${eggsFound.size} of ${EGGS.length} found`, color: '#FFD27A', tagline: 'Washed up when the ocean spilled.', intro: e.text }, `egg-${e.id}`);
+    return;
+  }
+  if (o === coreBall) { coreTarget = 1; vrShowCard({ ...CORE, intro: `${CORE.formula}. ${CORE.intro}` }, 'core'); return; }
+  if (o === realm) { vrShowCard({ name: 'Realm', era: 'A connected world', color: '#7FD8FF', tagline: 'The Conscious Network.', intro: 'Realm orbits TD1.WORLD as its own moon: a separate world with its own rules, linked to this one.' }, 'realm'); return; }
+  if (o === mindaloo.userData.body) { vrShowCard({ name: 'Mindaloo AC', era: 'Moonlight · TD1 flagship', color: '#D9CCFF', tagline: 'Autonomous Consciousness, powered by Karma Core.', intro: 'Mindaloo means moonlight, and AC stands for Autonomous Consciousness. A sovereign AI with its own lasting identity and memory. Visit www.mindaloo.ac.' }, 'mindaloo'); return; }
+  if (exchange.userData.pick.includes(o)) { vrShowCard({ name: 'The Exchange', era: 'Shop', color: SHOP_COLOR, tagline: 'Courses, documents and TD1 clothing.', intro: 'A trading station in orbit around the world. Open td1.world on your phone or computer to browse and buy.' }, 'shop'); return; }
+  // the planet itself
+  const local = planet.worldToLocal(hit.point.clone()).normalize();
+  const tr = terrain(local.x, local.y, local.z);
+  coreTarget = 0;
+  if (tr.h > 0 && tr.region !== UNCH) {
+    const r = REGIONS[tr.region];
+    land.material.userData.uHi.value = tr.region;
+    vrTurnTo(r.dir);
+    vrShowCard(r, `region-${r.id}`);
+  } else if (tr.h > 0) {
+    vrTurnTo(local);
+    vrShowCard(UNCHARTED, 'uncharted');
+  } else {
+    land.material.userData.uHi.value = -10;
+    vrShowCard(OCEAN, 'ocean');
+  }
+}
+
+function vrSetup() {
+  for (let i = 0; i < 2; i++) {
+    const ctrl = renderer.xr.getController(i);
+    const ray = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]),
+      new THREE.LineBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending }),
+    );
+    ray.scale.z = 4;
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    dot.visible = false;
+    scene.add(dot);
+    ctrl.add(ray);
+    ctrl.userData = { ray, dot, gamepad: null };
+    ctrl.addEventListener('connected', (e) => { ctrl.userData.gamepad = e.data.gamepad || null; ray.visible = e.data.targetRayMode !== 'gaze'; });
+    ctrl.addEventListener('disconnected', () => { ctrl.userData.gamepad = null; });
+    const start = () => {
+      const speed = vr.w.length();
+      if (spin.energy > 0.45 && speed > 3) { startSpill(spin.energy); spin.energy = 0; } // catching it mid-spin stops it dead
+      vr.w.set(0, 0, 0);
+      vr.turn = null;
+      _va.setFromMatrixPosition(ctrl.matrixWorld);
+      vr.grab = { ctrl, prev: _va.clone(), t0: performance.now(), moved: 0, hit: vrAim(ctrl) };
+    };
+    const end = (isSelect) => {
+      if (!vr.grab || vr.grab.ctrl !== ctrl) return;
+      const g = vr.grab;
+      vr.grab = null;
+      if (isSelect && g.moved < 0.06 && performance.now() - g.t0 < 450) { vr.w.set(0, 0, 0); vrSelect(g.hit); }
+    };
+    ctrl.addEventListener('selectstart', start);
+    ctrl.addEventListener('selectend', () => end(true));
+    ctrl.addEventListener('squeezestart', start);
+    ctrl.addEventListener('squeezeend', () => end(false));
+    rig.add(ctrl);
+    vrCtrls.push(ctrl);
+  }
+}
+
+function vrRotatePlanet(q) {
+  planet.quaternion.premultiply(q);
+  coreWorld.quaternion.copy(planet.quaternion);
+}
+function stepVR(dt, t) {
+  // stand back from the world; thumbsticks move you closer or further
+  vrCtrls.forEach((ctrl, i) => {
+    const gp = ctrl.userData.gamepad;
+    if (!gp) return;
+    const ay = gp.axes[3] || 0;
+    if (Math.abs(ay) > 0.2) vr.rigTarget = THREE.MathUtils.clamp(vr.rigTarget + ay * dt * 1.4, 1.35, 7);
+    const pressed = (n) => Boolean(gp.buttons[n] && gp.buttons[n].pressed);
+    const prev = vr.btnPrev[i];
+    if (pressed(5) && !prev.b) { // B / Y: Karma Core
+      coreTarget = coreTarget ? 0 : 1;
+      if (coreTarget) vrShowCard({ ...CORE, intro: `${CORE.formula}. ${CORE.intro}` }, 'core'); else vrHideCard();
+    }
+    if (pressed(4) && !prev.a) { vrHideCard(); coreTarget = 0; land.material.userData.uHi.value = -10; } // A / X: close
+    prev.a = pressed(4); prev.b = pressed(5);
+  });
+  vr.rigDist += (vr.rigTarget - vr.rigDist) * (1 - Math.exp(-dt * 5));
+  rig.position.set(0, -1.6, vr.rigDist);
+
+  // grabbing turns the world under your hand
+  if (vr.grab) {
+    _va.setFromMatrixPosition(vr.grab.ctrl.matrixWorld);
+    const a = vr.grab.prev.clone().normalize(), b = _va.clone().normalize();
+    const ang = a.angleTo(b);
+    vr.grab.moved += _va.distanceTo(vr.grab.prev);
+    if (ang > 1e-5) {
+      const axis = _vb.crossVectors(a, b).normalize();
+      const gain = 2.6;
+      vrRotatePlanet(_vq.setFromAxisAngle(axis, ang * gain));
+      vr.w.lerp(axis.clone().multiplyScalar((ang * gain) / Math.max(dt, 1 / 120)), 0.5);
+    }
+    vr.grab.prev.copy(_va);
+  } else if (vr.turn) {
+    const k = Math.min(1, (performance.now() - vr.turn.t0) / 1300);
+    planet.quaternion.slerpQuaternions(vr.turn.from, vr.turn.to, ease(k));
+    coreWorld.quaternion.copy(planet.quaternion);
+    if (k >= 1) vr.turn = null;
+  } else {
+    const sp = vr.w.length();
+    if (sp > 1e-4) {
+      vrRotatePlanet(_vq.setFromAxisAngle(_va.copy(vr.w).normalize(), sp * dt));
+      vr.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.45 : 1.1)));
+    } else if (!vr.card) vrRotatePlanet(_vq.setFromAxisAngle(EARTH_AXIS, 0.05 * dt)); // turning like Earth
+  }
+
+  // spin-out works in VR too
+  const speed = vr.w.length();
+  if (speed > 0.01) spin.axisWorld.copy(vr.w).normalize();
+  if (speed > 5.5) spin.energy = Math.min(1, spin.energy + dt * 0.55);
+  else spin.energy = Math.max(0, spin.energy - dt * (speed > 3 ? 0.08 : 0.3));
+  if (spin.energy > 0.6 && speed < 2.2 && !vr.grab) { startSpill(spin.energy * 0.75); spin.energy = 0; }
+
+  // lasers, aim dots, labels and the floating card
+  vrCtrls.forEach((ctrl) => {
+    const hit = ctrl.userData.ray.visible ? vrAim(ctrl) : null;
+    ctrl.userData.ray.scale.z = hit ? hit.distance : 4;
+    ctrl.userData.dot.visible = Boolean(hit);
+    if (hit) ctrl.userData.dot.position.copy(hit.point);
+  });
+  vr.labels.forEach((sp) => {
+    const w = sp.getWorldPosition(_va);
+    sp.visible = coreMix < 0.5 && w.clone().normalize().dot(camWorld.clone().normalize()) > 0.25;
+  });
+  if (vr.card) {
+    const toViewer = camWorld.clone().normalize();
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), toViewer).normalize();
+    vr.card.position.copy(toViewer.multiplyScalar(1.45)).addScaledVector(right, -1.25).add(new THREE.Vector3(0, 0.12, 0));
+    vr.card.lookAt(camWorld);
+  }
+}
+
+async function enterVR() {
+  if (!navigator.xr) return;
+  try {
+    const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] });
+    renderer.xr.setReferenceSpaceType('local-floor');
+    await renderer.xr.setSession(session);
+  } catch (e) {
+    toast('VR couldn’t start. Check the headset allows this site to use VR.', 4200);
+  }
+}
+renderer.xr.addEventListener('sessionstart', () => {
+  vr.active = true;
+  if (!vrCtrls.length) vrSetup();
+  vrBuildLabels();
+  closePanel();
+  flight = null;
+  camera.clearViewOffset();
+  camera.position.set(0, 1.6, 0);
+  camera.quaternion.identity();
+  vr.rigDist = vr.rigTarget = 2.6;
+  document.body.classList.add('in-vr');
+  try { renderer.xr.setFoveation(1); } catch (e) { /* older runtimes */ }
+});
+renderer.xr.addEventListener('sessionend', () => {
+  vr.active = false;
+  vrHideCard();
+  vr.grab = null;
+  rig.position.set(0, 0, 0);
+  planet.quaternion.identity();
+  coreWorld.quaternion.identity();
+  vr.labels.forEach((sp) => { sp.visible = false; });
+  vrCtrls.forEach((c) => { c.userData.dot.visible = false; });
+  coreTarget = 0;
+  document.body.classList.remove('in-vr');
+  camera.position.set(0, 0, 3.4);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(0, 0, 0);
+  syncSpin();
+});
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported('immersive-vr').then((ok) => {
+    vr.supported = ok;
+    const btn = $('#nav-vr');
+    if (ok && btn) { btn.hidden = false; btn.addEventListener('click', enterVR); }
+  }).catch(() => {});
+}
+
 /* ------------------------------------------------------------------ framing around the panel */
 
 let offX = 0, offY = 0;
@@ -2177,8 +2492,12 @@ function loop() {
   const dtFrame = Math.min(0.05, t - (loop.prevT ?? t));
   loop.prevT = t;
   U.uTime.value = t;
+  const inVR = renderer.xr.isPresenting;
+  camera.getWorldPosition(camWorld);
+  camera.getWorldQuaternion(camWorldQ);
 
-  if (!introDone) {
+  if (inVR) stepVR(dtFrame, t);
+  else if (!introDone) {
     const k = reduceMotion ? 1 : Math.min(1, (now - introStart) / 2800);
     camera.position.lerpVectors(introFrom, introTo, ease(k));
     camera.lookAt(0, 0, 0);
@@ -2217,13 +2536,13 @@ function loop() {
     exchangePivot.rotation.y = exchange.userData.angle || 0;
   }
   exchange.userData.habitat.rotation.y = t * 0.5;
-  exchange.lookAt(camera.position); // always shown three-quarter on: ring, dome and wings all visible
+  exchange.lookAt(camWorld); // always shown three-quarter on: ring, dome and wings all visible
   exchange.userData.station.rotation.set(0.8, 0.5 + Math.sin(t * 0.25) * 0.5, 0.18);
   exchange.userData.shuttlePath.rotation.y = -t * 0.9;
   exchange.userData.navLights.forEach((n, i) => { n.visible = Math.sin(t * 4 + i * Math.PI) > 0.3; });
   exchange.userData.dome.material.emissiveIntensity = 0.7 + Math.sin(t * 1.6) * 0.25;
   {
-    const d = exchange.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+    const d = exchange.getWorldPosition(new THREE.Vector3()).distanceTo(camWorld);
     exchange.scale.setScalar(1.5 * THREE.MathUtils.clamp((d - 0.3) / 0.8, 0.05, 1));
   }
   beacon.userData.sweep.rotation.y = t * 1.4;
@@ -2233,21 +2552,22 @@ function loop() {
   mindaloo.userData.body.rotation.y = t * 0.05;
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
-    const d = mindaloo.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+    const d = mindaloo.getWorldPosition(new THREE.Vector3()).distanceTo(camWorld);
     mindaloo.scale.setScalar(THREE.MathUtils.clamp((d - 0.45) / 1.0, 0.05, 1));
   }
   peaks.forEach((p, i) => { p.gem.rotation.y = t * 1.2 + i; p.gem.position.y = 0.21 + Math.sin(t * 1.5 + i) * 0.008; });
   monoliths.forEach((m, i) => { m.cap.material.color.setHSL(0.11, 1, 0.55 + Math.sin(t * 2 + i) * 0.12); });
 
-  if ((loop.hudTick = (loop.hudTick || 0) + 1) % 6 === 0) updateHud();
+  if (!inVR && (loop.hudTick = (loop.hudTick || 0) + 1) % 6 === 0) updateHud();
   stepMeteor(t);
   dust.rotation.y = t * 0.004;
-  applyParallax(t);
-  frame();
-  updateHover();
-  updateLabels();
+  if (!inVR) {
+    applyParallax(t);
+    frame();
+    updateHover();
+    updateLabels();
+  }
   renderer.render(scene, camera); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
-  requestAnimationFrame(loop);
 }
 
 addEventListener('resize', () => {
@@ -2258,7 +2578,7 @@ addEventListener('resize', () => {
 
 document.body.classList.add('ready');
 if (location.hash === '#spill') setTimeout(() => startSpill(0.9), 3600); // td1.world/#spill shows the ocean spill straight away
-loop();
+renderer.setAnimationLoop(loop);
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
 

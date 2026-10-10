@@ -6,7 +6,7 @@
 export const MINDALOO_URL = 'https://www.mindaloo.ac';
 
 // Realm is a connected world of its own, served from /realm/.
-export const REALM_URL = '/realm/';
+export const REALM_URL = 'realm/';
 
 // Continents. lat/lon place the heart of each landmass; radius is its reach in degrees.
 export const REGIONS = [

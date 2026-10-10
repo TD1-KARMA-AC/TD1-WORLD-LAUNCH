@@ -13,9 +13,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/world/style.css">
+  <link rel="stylesheet" href="world/style.css">
   <script type="importmap">
-    { "imports": { "three": "/world/vendor/three.module.min.js", "three/addons/": "/world/vendor/" } }
+    { "imports": { "three": "./world/vendor/three.module.min.js", "three/addons/": "./world/vendor/" } }
   </script>
 </head>
 <body>
@@ -24,11 +24,11 @@
   <div id="tip" role="status" aria-live="polite"></div>
 
   <header class="top">
-    <a class="brand" href="/" aria-label="TD1.WORLD home">
+    <a class="brand" href="./" aria-label="TD1.WORLD home">
       <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="rgba(193,162,255,0.16)" stroke="#C1A2FF" stroke-width="6" stroke-linejoin="round"/></svg>
       <b>TD1<span>.WORLD</span></b>
     </a>
-    <nav><button type="button" id="nav-shop">Shop</button><button type="button" id="nav-contact">Contact</button><a href="/Neuroblock/" class="nav-market">Marketplace</a></nav>
+    <nav><button type="button" id="nav-vr" hidden>Enter VR</button><button type="button" id="nav-shop">Shop</button><button type="button" id="nav-contact">Contact</button><a href="Neuroblock/" class="nav-market">Marketplace</a></nav>
   </header>
 
   <div id="intro">
@@ -60,9 +60,9 @@
   </form>
 
   <div id="fallback"></div>
-  <noscript><div class="noscript">TD1.WORLD is a 3D world and needs JavaScript. <a href="/Neuroblock/">Visit the marketplace</a> or <a href="/realm/">enter Realm</a>.</div></noscript>
+  <noscript><div class="noscript">TD1.WORLD is a 3D world and needs JavaScript. <a href="Neuroblock/">Visit the marketplace</a> or <a href="realm/">enter Realm</a>.</div></noscript>
 
-  <script type="module" src="/world/app.js"></script>
+  <script type="module" src="world/app.js"></script>
   <script>
     // Retire the old site's service worker so returning visitors see the new world, not a cached page.
     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});

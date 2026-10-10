@@ -21,6 +21,8 @@ The 50 TD1 products appear as **cities of light** on the continent that fits the
 
 Grab the world and spin it any way you like; left alone it turns on a tilted axis like Earth, under a visible sun. Spin it hard enough and the Ocean of Data spills: it surges against the coasts and drains in places to reveal Easter eggs on the seabed (`EGGS` in `world/data.js`). Add `#spill` to the address to see it straight away.
 
+**VR:** on a Meta Quest (or any WebXR headset) an **Enter VR** button appears. You stand in space beside the world: grab it (grip or pinch) to spin it, point and pull the trigger to select places and read floating cards, use the thumbstick to move closer, B/Y for Karma Core and A/X to close. Spin it hard and the ocean spills in VR too.
+
 TD1’s direction runs AI → AGI → **AC (Autonomous Consciousness)**, shown on The Future and on the Mindaloo AC moon.
 
 ## How it's built
