@@ -1551,9 +1551,12 @@ const panelBody = $('#panel-body');
 let selected = null; // { kind, index }
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const fmtLat = (v) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? 'N' : 'S'}`;
+const fmtLon = (v) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? 'E' : 'W'}`;
 function header(o, kicker) {
   return `<header class="ph" style="--c:${o.color}">
     <p class="kicker">${esc(kicker || o.era)}</p>
+    ${o.lat != null ? `<p class="coords">${fmtLat(o.lat)} · ${fmtLon(o.lon)} · R ${o.radius}°</p>` : ''}
     <h2>${esc(o.name)}</h2>
     <p class="tag">${esc(o.tagline)}</p>
   </header><p class="intro">${esc(o.intro)}</p>`;
@@ -2089,6 +2092,18 @@ function frame() {
 
 /* ------------------------------------------------------------------ loop */
 
+const hudEls = { pos: $('#hud-pos'), alt: $('#hud-alt'), over: $('#hud-over'), sun: $('#hud-sun') };
+function updateHud() {
+  if (!hudEls.pos) return;
+  const d = camera.position.clone().normalize();
+  const lat = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)) / DEG;
+  const lon = Math.atan2(-d.z, d.x) / DEG;
+  hudEls.pos.textContent = `${fmtLat(lat)} ${fmtLon(lon)}`;
+  hudEls.alt.textContent = `${Math.round((camera.position.length() - 1) * 6371).toLocaleString('en-AU')} km`;
+  const tr = terrain(d.x, d.y, d.z);
+  hudEls.over.textContent = tr.h > 0 ? (tr.region === UNCH ? UNCHARTED.name : REGIONS[tr.region].name) : OCEAN.name;
+  hudEls.sun.textContent = spin.energy > 0.3 ? 'Spin warning' : (d.dot(sunDir) > 0 ? 'Day side' : 'Night side');
+}
 function updateLabels() {
   const camDir = camera.position.clone().normalize();
   const camDist = camera.position.length();
@@ -2184,6 +2199,7 @@ function loop() {
   peaks.forEach((p, i) => { p.gem.rotation.y = t * 1.2 + i; p.gem.position.y = 0.21 + Math.sin(t * 1.5 + i) * 0.008; });
   monoliths.forEach((m, i) => { m.cap.material.color.setHSL(0.11, 1, 0.55 + Math.sin(t * 2 + i) * 0.12); });
 
+  if ((loop.hudTick = (loop.hudTick || 0) + 1) % 6 === 0) updateHud();
   stepMeteor(t);
   dust.rotation.y = t * 0.004;
   applyParallax(t);
