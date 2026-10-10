@@ -727,46 +727,81 @@ mindalooPivot.rotation.set(-0.55, 0, -0.3);
 scene.add(mindalooPivot);
 const mindaloo = new THREE.Group();
 {
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(0.105, 48, 32),
-    new THREE.ShaderMaterial({
-      uniforms: { uTime: U.uTime, uSun: { value: sunDir } },
-      vertexShader: `varying vec3 vN; varying vec3 vP; varying vec3 vV;
-        void main(){ vP = position; vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal);
-          vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }`,
-      fragmentShader: `uniform float uTime; uniform vec3 uSun; varying vec3 vN; varying vec3 vP; varying vec3 vV;
-        ${GLSL_NOISE}
-        void main(){
-          float n = fbm(vP * 26.0);
-          float maria = smoothstep(0.42, 0.62, fbm(vP * 7.0 + 3.0));
-          vec3 silver = vec3(0.93, 0.94, 1.0);
-          vec3 shade = vec3(0.62, 0.62, 0.78);
-          vec3 col = mix(silver, shade, maria * 0.7) * (0.85 + n * 0.25);
-          float lit = 0.45 + 0.55 * max(dot(vN, uSun), 0.0);
-          float fres = pow(1.0 - max(dot(vN, vV), 0.0), 2.2);
-          float breathe = 0.5 + 0.5 * sin(uTime * 0.8);
-          gl_FragColor = vec4(col * lit + vec3(0.78, 0.7, 1.0) * fres * (0.7 + breathe * 0.4), 1.0);
-        }`,
-    }),
-  );
+  // A real moon surface: maria, highlands, bowl craters with raised rims, and bright rays from young impacts.
+  const MOON_R = 0.2;
+  const body = (() => {
+    const ico = new THREE.IcosahedronGeometry(1, isSmall() || isTouch ? 40 : 56);
+    const src = ico.attributes.position;
+    const r = rng(4242);
+    const craters = [];
+    for (let i = 0; i < 230; i++) {
+      const c = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1).normalize();
+      const size = 0.025 + Math.pow(r(), 3.2) * 0.32; // many small, a few big
+      craters.push({ c, size, depth: size * (0.35 + r() * 0.25), young: size > 0.12 && r() < 0.35, seed: r() * 100 });
+    }
+    const map = new Map(), pos = [], col = [], index = [];
+    const tmp = new THREE.Vector3(), cc = new THREE.Color();
+    const vert = (i) => {
+      const x = src.getX(i), y = src.getY(i), z = src.getZ(i);
+      const key = `${Math.round(x * 1e5)},${Math.round(y * 1e5)},${Math.round(z * 1e5)}`;
+      let idx = map.get(key);
+      if (idx !== undefined) return idx;
+      tmp.set(x, y, z);
+      const mare = sstep(fbm(x * 1.6 + 9, y * 1.6 + 2, z * 1.6 + 5, 4), 0.02, 0.16); // dark basalt plains
+      let h = fbm(x * 9, y * 9, z * 9, 4) * 0.007 * (1 - mare * 0.7);
+      let bright = 0, floor = 0;
+      for (const k of craters) {
+        const d = Math.acos(Math.min(1, Math.max(-1, tmp.dot(k.c))));
+        if (d > k.size * 3.2) continue;
+        const t = d / k.size;
+        if (t < 1) { h += k.depth * (t * t - 1) * (1 - mare * 0.4); floor = Math.max(floor, 1 - t); }
+        h += k.depth * 0.45 * Math.exp(-Math.pow((t - 1) / 0.22, 2)); // raised rim
+        if (t > 0.9 && t < 1.15) bright = Math.max(bright, 0.35);
+        if (k.young && t < 3.2) { // ejecta rays
+          const tangent = new THREE.Vector3().crossVectors(k.c, tmp);
+          const ang = Math.atan2(tangent.dot(new THREE.Vector3(0, 1, 0)), tangent.dot(new THREE.Vector3(1, 0, 0)));
+          const ray = Math.pow(Math.max(0, Math.sin(ang * 9 + k.seed) * Math.sin(ang * 5.3 + k.seed * 2)), 3);
+          bright = Math.max(bright, ray * (1 - t / 3.2) * 0.8 + (t < 1.6 ? 0.25 : 0));
+        }
+      }
+      const rad = 1 + h * 0.24;
+      pos.push(x * rad, y * rad, z * rad);
+      const g = 0.72 - mare * 0.36 - floor * 0.06 + bright * 0.22 + fbm(x * 20, y * 20, z * 20, 2) * 0.06;
+      cc.setRGB(g, g * 0.98, g * 1.04); // the faintest cool tint
+      col.push(cc.r, cc.g, cc.b);
+      idx = pos.length / 3 - 1;
+      map.set(key, idx);
+      return idx;
+    };
+    for (let i = 0; i < src.count; i += 3) index.push(vert(i), vert(i + 1), vert(i + 2));
+    ico.dispose();
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(index);
+    g.computeVertexNormals();
+    g.scale(MOON_R, MOON_R, MOON_R);
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, emissive: 0x1a1430, emissiveIntensity: 0.35 }));
+    return m;
+  })();
   // soft halo of moonlight
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(225,220,255,0.55)');
+  grad.addColorStop(0, 'rgba(225,220,255,0.32)');
   grad.addColorStop(0.35, 'rgba(193,162,255,0.18)');
   grad.addColorStop(1, 'rgba(193,162,255,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  halo.scale.setScalar(0.62);
+  halo.scale.setScalar(1.15);
   const light = new THREE.PointLight(0xc9d4ff, 1.4, 4, 2);
   mindaloo.add(halo, body, light);
   mindaloo.userData.body = body;
   mindaloo.userData.halo = halo;
 }
-mindaloo.position.set(-1.85, 0, 0);
+mindaloo.position.set(-2.05, 0, 0);
 mindalooPivot.add(mindaloo);
 
 /* ------------------------------------------------------------------ The Exchange: the shop, a trading station in orbit */
@@ -1302,7 +1337,7 @@ CORE.forces.forEach(([k, , , color], i) => {
 });
 addLabel('<span class="nm">The Exchange</span><span class="era">Shop</span>', 'moon shop', () => exchange.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(0.2)), () => openShop(), { surface: false });
 addLabel('<span class="era">Contact &amp; bookings</span><span class="nm">The Beacon</span>', 'beacon', () => beaconPos.clone().add(beaconPos.clone().normalize().multiplyScalar(0.05)), () => openContact(), {});
-addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
+addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(0.32)), () => openSpecial('mindaloo'), { surface: false });
 
 /* ------------------------------------------------------------------ deep space: a sky with real depth */
 
@@ -1824,7 +1859,7 @@ function openSpecial(kind) {
   selected = { kind };
   land.material.userData.uHi.value = -10;
   const obj = kind === 'realm' ? realm : mindaloo;
-  flyTo(obj.getWorldPosition(new THREE.Vector3()), kind === 'realm' ? fitDist(1.6, 4.4) : fitDist(1.4, 3.6));
+  flyTo(obj.getWorldPosition(new THREE.Vector3()), kind === 'realm' ? fitDist(1.6, 4.4) : fitDist(1.5, 3.9));
   openPanel(specialHtml(kind), kind === 'realm' ? '#7FD8FF' : '#D9CCFF');
   setDock(kind);
 }
@@ -2169,7 +2204,12 @@ function loop() {
   sunGlow.position.copy(sunDir).multiplyScalar(60);
   realmPivot.rotation.y = t * 0.06;
   realm.rotation.y = t * 0.2;
-  mindalooPivot.rotation.y = -t * 0.09;
+  { // the moon holds still while its panel is open
+    const dt = Math.min(0.05, t - (mindaloo.userData.lastT ?? t));
+    mindaloo.userData.lastT = t;
+    if (!(selected && selected.kind === 'mindaloo')) mindaloo.userData.angle = (mindaloo.userData.angle || 0) - dt * 0.09;
+    mindalooPivot.rotation.y = mindaloo.userData.angle || 0;
+  }
   { // the station holds still while its shop is open, so it stays in view
     const dt = Math.min(0.05, t - (exchange.userData.lastT ?? t));
     exchange.userData.lastT = t;
@@ -2194,7 +2234,7 @@ function loop() {
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
     const d = mindaloo.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
-    mindaloo.scale.setScalar(THREE.MathUtils.clamp((d - 0.35) / 0.9, 0.05, 1));
+    mindaloo.scale.setScalar(THREE.MathUtils.clamp((d - 0.45) / 1.0, 0.05, 1));
   }
   peaks.forEach((p, i) => { p.gem.rotation.y = t * 1.2 + i; p.gem.position.y = 0.21 + Math.sin(t * 1.5 + i) * 0.008; });
   monoliths.forEach((m, i) => { m.cap.material.color.setHSL(0.11, 1, 0.55 + Math.sin(t * 2 + i) * 0.12); });
