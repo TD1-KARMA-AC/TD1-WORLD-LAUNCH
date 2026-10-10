@@ -13,7 +13,7 @@ import {
 import { PRODUCTS } from './products.js';
 import { createScore } from './sound.js';
 import { STARS, LINES } from './stars.js';
-import { robotBody, robotWalker, robotHover, SHOULDERS, robotArm, robotTool, dataCube, drone, bird, ship, tree, satellite, modelMaterial, merge } from './models.js';
+import { building, buildingMaterial, robotBody, robotWalker, robotHover, SHOULDERS, robotArm, robotTool, dataCube, drone, bird, ship, tree, satellite, modelMaterial, merge } from './models.js';
 
 const score = createScore();
 
@@ -49,13 +49,14 @@ rig.add(camera);
 const camWorld = new THREE.Vector3(), camWorldQ = new THREE.Quaternion();
 
 /* Film pipeline: render → bloom → lens (vignette, grain, fringing) → filmic grade. VR renders directly. */
-const composer = new EffectComposer(renderer);
+// Multisampled (anti-aliased) render target, so edges stay crisp through the film pipeline.
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 }));
 composer.addPass(new RenderPass(scene, camera));
 const bloomScale = isSmall() || isTouch ? 0.5 : 0.75;
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
 composer.addPass(bloom);
 const lens = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0.014 }, uVignette: { value: 1 }, uCA: { value: 0.0022 }, uDof: { value: 0 }, uAspect: { value: innerWidth / innerHeight } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: isTouch ? 0.006 : 0.01 }, uVignette: { value: 1 }, uCA: { value: isTouch ? 0.0008 : 0.0014 }, uDof: { value: 0 }, uAspect: { value: innerWidth / innerHeight } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVignette; uniform float uCA; uniform float uDof; uniform float uAspect; varying vec2 vUv;
     float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + fract(uTime) * 61.0) * 43758.5453); }
@@ -99,6 +100,17 @@ const landK = (dist) => THREE.MathUtils.smoothstep(0.42 - (dist - 1), 0, 0.42 - 
 function zoomBy(k) { // k > 1 zooms out; works in height above the ground, so it slows as you near the surface
   const alt = Math.max(ALT_MIN, spin.target - 1);
   spin.target = 1 + THREE.MathUtils.clamp(alt * k, ALT_MIN, MAX_D - 1);
+}
+// Zoom toward a point on screen, the way a map does: what's under the cursor or your fingers comes to meet you.
+const _zH = new THREE.Vector3(), _zC = new THREE.Vector3(), _zR = new THREE.Quaternion(), _zI = new THREE.Quaternion();
+function zoomAt(k, px, py) {
+  zoomBy(k);
+  if (k >= 1 || !sphereHit(px, py, 1, _zH)) return;
+  const L = landK(spin.dist);
+  _zC.copy(camera.position).normalize();
+  _zR.setFromUnitVectors(_zC, _zH.normalize());
+  // rotate part of the way toward it, more the harder you zoom; barely at all once you're down low
+  spin.q.premultiply(_zI.identity().slerp(_zR, (1 - k) * 0.9 * (1 - L))).normalize();
 }
 const spin = {
   q: new THREE.Quaternion(),
@@ -193,6 +205,13 @@ const WEATHER = {
   uSunLocal: { value: new THREE.Vector3() }, // the sun in the planet's own frame
   uCloudRot: { value: new THREE.Matrix3() }, // planet frame → cloud frame (the clouds drift round)
   uShadow: { value: isSmall() || isTouch ? 0 : 1 },
+};
+// Town street grids, shared by the ground shader and the building layout so buildings stand in the blocks.
+const TOWN_GRID = 0.0034;
+const TOWN_U = { towns: { value: Array.from({ length: 64 }, () => new THREE.Vector3()) }, n: { value: 0 } };
+const townFrame = (c) => { // the same east/north axes the shader uses
+  const t1 = new THREE.Vector3().crossVectors(c, Math.abs(c.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
+  return { t1, t2: new THREE.Vector3().crossVectors(c, t1) };
 };
 const WEATHER_GLSL = `
   uniform sampler2D uNight; uniform vec3 uSunLocal; uniform mat3 uCloudRot; uniform float uShadow;
@@ -292,7 +311,7 @@ const landFaces = []; // per land face: { c: centroid (unit), r: radius, region,
 const byRegion = Array.from({ length: REGIONS.length + 1 }, () => []);
 
 function buildLand() {
-  const detail = isSmall() || isTouch ? 72 : 110;
+  const detail = isSmall() || isTouch ? 88 : 136; // finer land: smoother hills up close
   const ico = new THREE.IcosahedronGeometry(1, detail);
   const src = ico.attributes.position;
   const cache = new Map();
@@ -376,6 +395,8 @@ function buildLand() {
     sh.uniforms.uHi = mat.userData.uHi;
     sh.uniforms.uSun = { value: sunDir };
     Object.assign(sh.uniforms, WEATHER);
+    sh.uniforms.uTowns = TOWN_U.towns;
+    sh.uniforms.uTownN = TOWN_U.n;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;\nvarying vec3 vLP;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvLP = position;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -383,7 +404,47 @@ function buildLand() {
       .replace('#include <common>', `#include <common>
         uniform float uTime; uniform float uHi; uniform vec3 uSun;
         varying float vRegion; varying vec3 vWP; varying vec3 vLP;
-        ${WEATHER_GLSL}`)
+        ${WEATHER_GLSL}
+        uniform vec3 uTowns[64]; uniform int uTownN;
+        // Every town sits on a street grid: pale blocks, dark streets with kerbs. Buildings stand in the blocks.
+        void townFloor(vec3 ld, out float pave, out float street, out float lamp){
+          pave = 0.0; street = 0.0; lamp = 0.0;
+          for (int i = 0; i < 64; i++) {
+            if (i >= uTownN) break;
+            vec3 c = uTowns[i];
+            if (dot(ld, c) < 0.99983) continue;
+            vec3 t1 = normalize(cross(c, abs(c.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+            vec3 t2 = cross(c, t1);
+            vec2 uv = vec2(dot(ld - c, t1), dot(ld - c, t2));
+            float fade = 1.0 - smoothstep(0.0095, 0.0125, length(uv));
+            vec2 q = uv / ${TOWN_GRID.toFixed(5)};
+            vec2 gd = abs(fract(q) - 0.5);           // 0.5 on a street line, 0 mid-block
+            vec2 g = (0.5 - gd) * ${TOWN_GRID.toFixed(5)};  // distance from the nearest street line
+            float m = min(g.x, g.y);
+            float aa = fwidth(m) + 1e-6;
+            float st = 1.0 - smoothstep(0.00028 - aa, 0.00028 + aa, m);
+            pave = max(pave, fade);
+            street = max(street, st * fade);
+            // street lamps every so often along the kerb
+            vec2 lq = fract(uv / 0.0009) - 0.5;
+            lamp = max(lamp, st * fade * smoothstep(0.12, 0.03, length(lq)));
+          }
+        }`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        vec3 ld = normalize(vLP);
+        float camD = distance(vWP, cameraPosition);
+        float pave = 0.0, street = 0.0, lamp = 0.0;
+        if (camD < 0.45) townFloor(ld, pave, street, lamp);
+        if (camD < 0.3) { // up close the ground gets real texture: little rises, ruts and stones catch the light
+          float kb = smoothstep(0.3, 0.04, camD) * (1.0 - pave * 0.85);
+          float hgt = fbm3(ld * 1500.0) + fbm3(ld * 5600.0) * 0.4 + fbm3(ld * 16000.0) * 0.12;
+          vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition);
+          float hx = dFdx(hgt), hy = dFdy(hgt);
+          vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
+          float det = dot(dpx, r1);
+          vec3 grad = sign(det) * (hx * r1 + hy * r2) * 0.00032 * kb;
+          normal = normalize(abs(det) * normal - grad);
+        }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         float sel = 1.0 - step(0.5, abs(vRegion - uHi));
         totalEmissiveRadiance += vColor.rgb * (0.015 + sel * (0.07 + 0.04 * sin(uTime * 2.6)));
@@ -392,18 +453,20 @@ function buildLand() {
         float night = smoothstep(0.05, -0.25, sunUp);
         totalEmissiveRadiance += vColor.rgb * night * 0.02;
         // city lights: towns, suburbs and the roads between them glow on the night side
-        vec3 ld = normalize(vLP);
-        float camD = distance(vWP, cameraPosition);
-        float lights = nightLights(ld, camD) * smoothstep(0.004, 0.02, camD);
+        float lights = nightLights(ld, camD) * smoothstep(0.004, 0.02, camD) * (1.0 - pave); // inside town the streets and windows take over
         float twinkle = 0.85 + 0.15 * sin(uTime * 3.0 + dot(ld, vec3(913.0, 517.0, 731.0)));
         totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * lights * night * twinkle * 1.6;
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.4, 0.38), smoothstep(0.05, 0.6, texture2D(uNight, vec2(atan(-ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r) * 0.22); // by day, towns read as grey-brown patches
         float shade = cloudShadow(ld);
-        if (camD < 0.25) { // close to the ground: soil, grass and stone in fine detail
-          float k = smoothstep(0.25, 0.04, camD);
-          float n1 = fbm3(ld * 900.0), n2 = fbm3(ld * 3600.0);
-          diffuseColor.rgb *= mix(1.0, 0.72 + n1 * 0.42 + n2 * 0.26, k);
-        }`)
+        if (camD < 0.3) { // close to the ground: soil, grass and stone in fine, crisp detail
+          float k = smoothstep(0.3, 0.04, camD);
+          float n1 = fbm3(ld * 1100.0), n2 = fbm3(ld * 4200.0), n3 = hh(floor(ld * 30000.0));
+          diffuseColor.rgb *= mix(1.0, 0.7 + n1 * 0.4 + n2 * 0.3 + (n3 - 0.5) * 0.12, k);
+        }
+        // the town floor: paved blocks and dark streets, with lamps at night
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.52, 0.51, 0.49), pave * 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.09, 0.095, 0.105), street);
+        totalEmissiveRadiance += vec3(1.0, 0.75, 0.45) * (lamp * 0.9 + street * 0.05) * night;`)
       .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
         reflectedLight.directDiffuse *= 1.0 - shade;
         reflectedLight.directSpecular *= 1.0 - shade;
@@ -793,67 +856,81 @@ function nearDir(d, ang, r) {
 const onLand = (d, min = 0.01) => { const t = terrain(d.x, d.y, d.z); return t.h > min && t.region !== UNCH && t.region >= 0; };
 const gauss = (r) => (r() + r() + r() + r() - 2) * 0.87;
 
-// Windows that light up at night, rooftop lights, glass by day.
-function townMaterial() {
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.25 });
-  mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uSun = { value: sunDir };
-    sh.uniforms.uTime = U.uTime;
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 aDims; attribute float aSeed; varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBox = position * aDims; vNl = normal; vSeed = aSeed;\nvWorld = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uSun; uniform float uTime; varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld;\nfloat wh(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 15731.7); }')
-      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        float night = smoothstep(0.08, -0.2, dot(normalize(vWorld), uSun));
-        if (abs(vNl.y) < 0.5) {
-          vec2 f = abs(vNl.x) > 0.5 ? vec2(vBox.z, vBox.y) : vec2(vBox.x, vBox.y);
-          vec2 cell = floor(f / vec2(0.00055, 0.00062));
-          vec2 w = fract(f / vec2(0.00055, 0.00062));
-          float win = step(0.22, w.x) * step(w.x, 0.78) * step(0.3, w.y) * step(w.y, 0.8);
-          float on = step(0.42, wh(cell + vSeed * 17.0));
-          vec3 warm = mix(vec3(1.0, 0.72, 0.4), vec3(0.75, 0.88, 1.0), step(0.8, wh(cell + 3.1)));
-          totalEmissiveRadiance += warm * win * on * (0.04 + night * 1.4);
-          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.45, win * 0.6); // glass
-        } else if (vNl.y > 0.5) {
-          totalEmissiveRadiance += vec3(1.0, 0.25, 0.2) * night * step(0.94, fract(uTime * 0.5 + vSeed)) * step(0.006, vBox.y); // aircraft warning light on tall roofs
-        }`);
-  };
-  return mat;
-}
-
-const towns = { boxes: null, spires: null, lightsDots: [] };
+// Towns: buildings stand in the blocks of a street grid, tallest at the heart around the product's landmark tower.
+// Each sits on the lowest point of its footprint, so nothing floats on a hillside.
+const towns = { meshes: [], lightsDots: [], parkTrees: [] };
 {
   const r = rng(4242);
-  const boxes = [], spires = [];
-  const TOWER = [ // per continent: [base colours], height range, footprint
-    { cols: ['#c9a774', '#b88f5c', '#d8c39a'], h: [0.0016, 0.0045], w: [0.0016, 0.0028] }, // The Origins: low sandstone blocks
-    { cols: ['#8f86b8', '#b9b2d6', '#6f6796'], h: [0.002, 0.0075], w: [0.0014, 0.0024] }, // Memory: lavender stone and glass
-    { cols: ['#a8c9c4', '#dfe9e8', '#6f9792'], h: [0.003, 0.011], w: [0.0012, 0.002] }, // Intelligence: tall glass towers
-    { cols: ['#e07b6a', '#f2c46d', '#7ec4cf', '#b48ad8'], h: [0.0018, 0.006], w: [0.0016, 0.0026] }, // Creation: colourful blocks
-    { cols: ['#eef4ef', '#cfe7d6', '#ffffff'], h: [0.003, 0.012], w: [0.0011, 0.0019] }, // The Future: white spires
+  const PAINT_T = [ // per continent: wall paint, and how tall the heart of town gets
+    { cols: ['#cdb08a', '#bf9a6a', '#e0cba6'], top: 0.005 }, // The Origins: sandstone
+    { cols: ['#b9b3cf', '#d6d1e6', '#9d96b8'], top: 0.0075 }, // Memory: lavender stone
+    { cols: ['#c8d6d4', '#e6ecec', '#9fb3b0'], top: 0.0105 }, // Intelligence: pale glass and steel
+    { cols: ['#e3a090', '#efd29a', '#a9cfd6', '#c9b0e0'], top: 0.0065 }, // Creation: warm colour
+    { cols: ['#f2f5f2', '#dfeee4', '#ffffff'], top: 0.012 }, // The Future: white towers
   ];
+  const lists = { tower: [], setback: [], block: [], house: [], landmark: [] };
+  const _q = new THREE.Quaternion(), _y = new THREE.Quaternion(), _x = new THREE.Vector3();
+  // ground radius under a footprint: the lowest of its corners and centre
+  const baseR = (d, t1, t2, hw, hd) => {
+    let m = surfaceRadius(d);
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([i, j]) => {
+      m = Math.min(m, surfaceRadius(d.clone().addScaledVector(t1, i * hw).addScaledVector(t2, j * hd).normalize()));
+    });
+    return m;
+  };
+  const place = (kind, d, t1, t2, dims, col) => {
+    const R = baseR(d, t1, t2, dims.x / 2, dims.z / 2) - 0.00012;
+    _q.setFromUnitVectors(up, d);
+    _x.set(1, 0, 0).applyQuaternion(_q);
+    const yaw = Math.atan2(_x.clone().cross(t1).dot(d), _x.dot(t1)); // line the walls up with the streets
+    const tryQ = (a) => _q.clone().multiply(_y.setFromAxisAngle(up, a));
+    const qa = tryQ(yaw), qb = tryQ(-yaw);
+    _q.copy(new THREE.Vector3(1, 0, 0).applyQuaternion(qa).dot(t1) > new THREE.Vector3(1, 0, 0).applyQuaternion(qb).dot(t1) ? qa : qb);
+    lists[kind].push({ m: new THREE.Matrix4().compose(d.clone().multiplyScalar(R), _q.clone(), dims), col });
+  };
   cities.forEach((ct, ci) => {
-    const kind = TOWER[ct.region];
+    const P = PAINT_T[ct.region];
     const c = ct.face.c.clone().normalize();
     ct.dir = c;
-    const n = isSmall() || isTouch ? 12 : 22;
-    const placed = [];
-    for (let k = 1; k < n; k++) {
-      const d = nearDir(c, 0.003 + Math.pow(r(), 0.7) * 0.011, r);
-      if (!onLand(d, 0.004)) continue;
-      const centre = 1 - d.angleTo(c) / 0.014;
-      const h = THREE.MathUtils.lerp(kind.h[0], kind.h[1], Math.max(0, centre) * (0.5 + r() * 0.5));
-      const w = THREE.MathUtils.lerp(kind.w[0], kind.w[1], r());
-      // keep buildings apart so their walls never cut through each other (or the landmark spire)
-      if (d.angleTo(c) < 0.0022 + w * 0.8 && k > 0) continue;
-      if (placed.some((p) => p.d.angleTo(d) < (p.w + w) * 0.85)) continue;
-      placed.push({ d, w });
-      boxes.push({ d, yaw: r() * Math.PI, dims: new THREE.Vector3(w, h, w * (0.7 + r() * 0.6)), col: new THREE.Color(kind.cols[Math.floor(r() * kind.cols.length)]), seed: r() });
+    const { t1, t2 } = townFrame(c);
+    const G = TOWN_GRID, inner = G - 0.00075;
+    const at = (u, v) => c.clone().addScaledVector(t1, u).addScaledVector(t2, v).normalize();
+    for (let i = -3; i < 3; i++) {
+      for (let j = -3; j < 3; j++) {
+        const u = (i + 0.5) * G, v = (j + 0.5) * G, rad = Math.hypot(u, v);
+        if (rad > 0.0105) continue;
+        const d = at(u, v);
+        if (!onLand(d, 0.003)) continue;
+        const col = () => new THREE.Color(P.cols[Math.floor(r() * P.cols.length)]);
+        if (i === 0 && j === 0) { // the heart of town: the product's landmark
+          place('landmark', d, t1, t2, new THREE.Vector3(inner * 0.85, P.top * 1.35, inner * 0.85), ct.color.clone());
+          continue;
+        }
+        const k = 1 - rad / 0.0105; // 1 at the centre, 0 at the edge
+        const roll = r();
+        if (k < 0.3 && roll < 0.35) { // a little park
+          for (let t = 0; t < 3; t++) towns.parkTrees.push(at(u + (r() - 0.5) * inner * 0.7, v + (r() - 0.5) * inner * 0.7));
+          continue;
+        }
+        if (k < 0.35) { // houses on the edge of town: a few per block
+          for (let hx = -1; hx <= 1; hx += 2) for (let hz = -1; hz <= 1; hz += 2) {
+            if (r() < 0.25) continue;
+            const s = inner * 0.32;
+            place('house', at(u + hx * inner * 0.24, v + hz * inner * 0.24), t1, t2, new THREE.Vector3(s, s * (0.75 + r() * 0.3), s), col());
+          }
+          continue;
+        }
+        const h = P.top * (0.25 + k * k * 0.75) * (0.7 + r() * 0.45);
+        const kind = k > 0.7 ? (roll < 0.6 ? 'tower' : 'setback') : (roll < 0.45 ? 'block' : roll < 0.75 ? 'setback' : 'tower');
+        const w = inner * (0.72 + r() * 0.2), dd = inner * (0.72 + r() * 0.2);
+        place(kind, d, t1, t2, new THREE.Vector3(w, Math.max(0.0014, h), dd), col());
+      }
     }
-    // a landmark spire at the heart of every town: this is the product
-    spires.push({ d: c, yaw: 0, dims: new THREE.Vector3(0.0016, 0.012 + (ci % 3) * 0.003, 0.0016), col: ct.color.clone().lerp(new THREE.Color('#ffffff'), 0.3), seed: r() });
   });
+  if (cities.length) {
+    cities.slice(0, 64).forEach((ct, i) => TOWN_U.towns.value[i].copy(ct.dir));
+    TOWN_U.n.value = Math.min(64, cities.length);
+  }
   // villages scattered across the land, between the towns
   for (let k = 0, made = 0; k < 900 && made < (isSmall() || isTouch ? 70 : 140); k++) {
     const f = landFaces[Math.floor(r() * landFaces.length)];
@@ -861,38 +938,25 @@ const towns = { boxes: null, spires: null, lightsDots: [] };
     made++;
     const c = f.c.clone().normalize();
     towns.lightsDots.push({ d: c, n: 18, spread: 0.004, b: 0.5 });
-    for (let j = 0; j < 3; j++) {
-      const d = nearDir(c, r() * 0.004, r);
+    const { t1, t2 } = townFrame(c);
+    for (let j = 0; j < 4; j++) {
+      const d = c.clone().addScaledVector(t1, (r() - 0.5) * 0.006).addScaledVector(t2, (r() - 0.5) * 0.006).normalize();
       if (!onLand(d, 0.004)) continue;
-      boxes.push({ d, yaw: r() * Math.PI, dims: new THREE.Vector3(0.0012, 0.0012 + r() * 0.0012, 0.0014), col: new THREE.Color(TOWER[f.region].cols[0]).multiplyScalar(0.9), seed: r() });
+      const s = 0.0009 + r() * 0.0003;
+      place('house', d, t1, t2, new THREE.Vector3(s, s * 0.9, s * 1.2), new THREE.Color(PAINT_T[f.region].cols[Math.floor(r() * 3)]));
     }
   }
-  const build = (list, geo) => {
-    geo.translate(0, 0.5, 0);
-    const dims = new Float32Array(list.length * 3), seeds = new Float32Array(list.length);
-    const mesh = new THREE.InstancedMesh(geo, townMaterial(), list.length);
-    const m4 = new THREE.Matrix4(), sc = new THREE.Vector3();
-    list.forEach((b, i) => {
-      sc.copy(b.dims);
-      mesh.setMatrixAt(i, groundMatrix(b.d, b.yaw, sc, -0.0022, m4)); // footings sunk into the hillside
-      mesh.setColorAt(i, b.col);
-      dims.set([b.dims.x, b.dims.y, b.dims.z], i * 3);
-      seeds[i] = b.seed;
-    });
-    geo.setAttribute('aDims', new THREE.InstancedBufferAttribute(dims, 3));
-    geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
+  const mat = buildingMaterial({ sunDir, timeUniform: U.uTime });
+  Object.keys(lists).forEach((kind) => {
+    const list = lists[kind];
+    if (!list.length) return;
+    const mesh = new THREE.InstancedMesh(building(kind), mat, list.length);
+    list.forEach((b, i) => { mesh.setMatrixAt(i, b.m); mesh.setColorAt(i, b.col); });
     mesh.renderOrder = 2;
     mesh.computeBoundingSphere();
     planet.add(mesh);
-    return mesh;
-  };
-  // vertex colours must exist for the instance colours to show
-  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-  boxGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Array(boxGeo.attributes.position.count * 3).fill(1), 3));
-  towns.boxes = build(boxes, boxGeo);
-  const spireGeo = new THREE.CylinderGeometry(0.18, 0.5, 1, 6);
-  spireGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Array(spireGeo.attributes.position.count * 3).fill(1), 3));
-  towns.spires = build(spires, spireGeo);
+    towns.meshes.push(mesh);
+  });
 }
 
 // The night-lights map: dense lit cores, suburbs, roads between neighbouring towns, scattered villages.
@@ -964,7 +1028,7 @@ const towns = { boxes: null, spires: null, lightsDots: [] };
 
 const forestMeshes = []; // trimmed on slower devices
 const flora = []; // everything that stands on the surface (hidden while you're down in Karma Core)
-flora.push(towns.boxes, towns.spires);
+flora.push(...towns.meshes);
 const MODEL_MAT = modelMaterial();
 // Face the direction T (a tangent at d): returns the yaw for groundMatrix.
 const _fx = new THREE.Vector3(), _fz = new THREE.Vector3();
@@ -1015,6 +1079,13 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
       made++;
     }
   });
+  // the little parks inside the towns
+  towns.parkTrees.forEach((d) => {
+    const t = terrain(d.x, d.y, d.z);
+    if (t.h <= 0.003 || t.region < 0 || t.region === UNCH) return;
+    const F = FOREST[t.region];
+    (lists.round = lists.round || []).push({ d, yaw: r() * 6.28, s: 0.0016 + r() * 0.0008, c: new THREE.Color(F.cols[Math.floor(r() * F.cols.length)]).lerp(new THREE.Color('#4f8a4a'), 0.5) });
+  });
   Object.keys(lists).forEach((k) => { geos[k] = tree(k); const m = scatterMesh(geos[k], lists[k]); if (m) forestMeshes.push({ m, full: m.count }); });
 }
 
@@ -1050,7 +1121,7 @@ const robotParts = (() => {
     for (let i = 0; i < nWork && sites.length; i++) {
       const home = sites[i % sites.length];
       let d = null;
-      for (let k = 0; k < 20 && !d; k++) { const c = nearDir(home.dir, 0.006 + r() * 0.008, r); if (onLand(c, 0.01)) d = c; }
+      for (let k = 0; k < 20 && !d; k++) { const c = nearDir(home.dir, 0.0125 + r() * 0.006, r); if (onLand(c, 0.01)) d = c; } // just outside town
       if (!d) continue;
       // something to work on, just in front
       const at = nearDir(d, 0.0008, r);
@@ -1069,7 +1140,7 @@ const robotParts = (() => {
     const home = cities[Math.floor(r() * cities.length)];
     const type = r() < 0.4 ? 'hover' : (r() < 0.5 ? 'walker' : 'tracked');
     robots.push({ kind: 'walk', job: 'walk', type, from: home, to: home, t: 1, wait: r() * 3, speed: (type === 'hover' ? 0.018 : 0.012) + r() * 0.008, phase: r() * 10, q: null, angle: 1,
-      carry: r() < 0.65, d: nearDir(home.dir, 0.003 + r() * 0.004, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
+      carry: r() < 0.65, d: nearDir(home.dir, 0.0115 + r() * 0.0015, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
   }
   if (props.rock.length) scatterMesh(tree('rock'), props.rock);
   if (props.round.length) scatterMesh(tree('round'), props.round);
@@ -1141,7 +1212,7 @@ function stepRobots(dt, t) {
           rb.from = rb.to;
           rb.to = pool[Math.floor(Math.random() * pool.length)];
           rb.start = rb.d.clone();
-          rb.goal = nearDir(rb.to.dir, 0.003 + Math.random() * 0.004, Math.random);
+          rb.goal = nearDir(rb.to.dir, 0.0115 + Math.random() * 0.0015, Math.random); // the edge of the next town
           rb.angle = Math.max(0.002, rb.start.angleTo(rb.goal));
           rb.q = new THREE.Quaternion().setFromUnitVectors(rb.start, rb.goal);
           rb.t = 0;
@@ -2554,7 +2625,7 @@ function stepGround(inVR) {
   // a word of help the first times you get close
   if (!inVR && introDone && !flight && performance.now() - lastInteract < 1500) {
     if (landedHint === 0 && alt < 0.6 && alt > 0.2) { landedHint = 1; toast(isTouch ? 'Keep pinching to fly down to the surface' : 'Keep zooming in to fly down to the surface', 3000); }
-    if (landedHint === 1 && alt < 0.03) { landedHint = 2; toast(isTouch ? 'Drag up and down to fly, side to side to turn' : 'Drag up and down to fly, side to side to turn. Scroll out to climb.', 4200); }
+    if (landedHint === 1 && alt < 0.03) { landedHint = 2; toast(isTouch ? 'Drag to move · Twist two fingers to turn · Pinch to climb' : 'Drag to move · Right-drag to turn · Scroll to climb', 4200); }
   }
   return L;
 }
@@ -2959,6 +3030,7 @@ function landAt(ri) {
   const town = cities.filter((c) => c.region === ri)[0];
   if (!town) return;
   closePanel();
+  $('#intro').classList.add('gone');
   const camUp = camera.up.clone();
   const tangent = camUp.addScaledVector(town.dir, -camUp.dot(town.dir)).normalize();
   let spot = town.dir.clone().addScaledVector(tangent, -0.022).normalize();
@@ -3195,51 +3267,120 @@ cv.addEventListener('wheel', (e) => {
   lastInteract = performance.now();
   $('#intro').classList.add('gone');
   if (!spin.enabled) return;
-  zoomBy(Math.exp(e.deltaY * 0.0016));
+  zoomAt(Math.exp(e.deltaY * 0.0016), e.clientX, e.clientY);
 }, { passive: false });
 
-/* grabbing and flinging */
+/* grabbing and flinging: like Google Earth, the spot you grab stays under your finger */
 const pinchDist = () => { const p = [...spin.pointers.values()]; return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); };
+const pinchAngle = () => { const p = [...spin.pointers.values()]; return Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x); };
+const pinchMid = () => { const p = [...spin.pointers.values()]; return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2 }; };
+const _gr = new THREE.Raycaster(), _gn = new THREE.Vector2(), _gR = new THREE.Quaternion(), _gA = new THREE.Vector3(), _gW = new THREE.Vector3(), _gQi = new THREE.Quaternion();
+// Where the ray under screen point (px, py) meets a sphere of radius r around the world's centre.
+function sphereHit(px, py, r, out) {
+  camera.updateMatrixWorld();
+  _gn.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1);
+  _gr.setFromCamera(_gn, camera);
+  const o = _gr.ray.origin, d = _gr.ray.direction;
+  const b = o.dot(d), c = o.lengthSq() - r * r, disc = b * b - c;
+  if (disc < 0) return null;
+  const t = -b - Math.sqrt(disc);
+  if (t < 0) return null;
+  return out.copy(o).addScaledVector(d, t);
+}
+const grabState = { anchor: null, r: 1, last: 0, twist: 0, right: false };
+function grabAt(px, py) {
+  // grab at the ground's real height under the finger, so it sticks when you're low over hills
+  let r = 1;
+  if (spin.dist < 1.2 && sphereHit(px, py, 1.01, _gA)) r = surfaceRadius(_gA.clone().normalize());
+  grabState.r = r;
+  grabState.anchor = sphereHit(px, py, r, _gA) ? _gA.clone().normalize() : null;
+}
+// Turn the world by R about its centre (we move the camera the opposite way) and feed the fling.
+function applyWorldTurn(R, dt) {
+  spin.q.premultiply(R).normalize();
+  placeCamera();
+  // angular velocity in the camera's own axes, for momentum after you let go
+  const ang = 2 * Math.acos(Math.min(1, Math.abs(R.w)));
+  if (ang > 1e-7 && dt > 0) {
+    _gW.set(R.x, R.y, R.z).normalize().multiplyScalar((R.w < 0 ? -ang : ang) / dt);
+    _gW.applyQuaternion(_gQi.copy(spin.q).invert());
+    spin.w.lerp(_gW, 0.55);
+    if (spin.w.length() > 28) spin.w.setLength(28);
+  }
+}
+function twistBy(angle, dt) { // turn around the line from you to the centre: your heading, on the ground
+  _gR.setFromAxisAngle(_gA.copy(camera.position).normalize(), angle);
+  applyWorldTurn(_gR, dt);
+}
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
 cv.addEventListener('pointerdown', (e) => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (!introDone) {
-    cine.skip = true;
-  }
+  if (!introDone) cine.skip = true;
   enableMotion();
-  if (spin.pointers.size === 1) { grab(); spin.dragging = true; spin.lastMove = performance.now(); }
-  else if (spin.pointers.size === 2) { spin.dragging = false; spin.pinch = pinchDist(); }
+  spin.w.set(0, 0, 0); // catching the world stops it
+  if (spin.pointers.size === 1) {
+    grab();
+    spin.dragging = true;
+    spin.lastMove = performance.now();
+    grabState.right = e.button === 2 || e.shiftKey; // right-drag or shift-drag turns you around
+    if (!grabState.right) grabAt(e.clientX, e.clientY);
+  } else if (spin.pointers.size === 2) {
+    spin.dragging = false;
+    spin.pinch = pinchDist();
+    grabState.twist = pinchAngle();
+  }
 });
 cv.addEventListener('pointermove', (e) => {
   const prev = spin.pointers.get(e.pointerId);
   if (!prev) return;
   const now = performance.now();
-  if (spin.pointers.size === 2) {
+  const dt = Math.max(1 / 240, (now - spin.lastMove) / 1000);
+  if (spin.pointers.size === 2) { // pinch to zoom toward your fingers, twist to turn
     prev.x = e.clientX; prev.y = e.clientY;
-    const d = pinchDist();
-    if (spin.enabled && spin.pinch > 0) zoomBy(Math.pow(spin.pinch / d, 1.6));
+    const d = pinchDist(), a = pinchAngle(), m = pinchMid();
+    if (spin.enabled && spin.pinch > 0) zoomAt(Math.pow(spin.pinch / d, 1.5), m.x, m.y);
+    let da = a - grabState.twist;
+    da = Math.atan2(Math.sin(da), Math.cos(da));
+    if (spin.enabled && Math.abs(da) < 0.5) twistBy(-da, dt);
     spin.pinch = d;
+    grabState.twist = a;
+    spin.lastMove = now;
+    lastInteract = now;
     return;
   }
   const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
   prev.x = e.clientX; prev.y = e.clientY;
   if (!spin.dragging || !spin.enabled) return;
-  const L = landK(spin.dist);
-  const k = 0.0052 * Math.max(0.0035, (spin.dist - 1) / 2.4);
-  const turn = 0.004 * L; // on the ground, side to side turns you around
-  turnCamera(-dy * k, -dx * k * (1 - L), dx * turn);
-  const dt = Math.max(1 / 240, (now - spin.lastMove) / 1000);
-  _sv.set(-dy * k / dt, -dx * k * (1 - L) / dt, dx * turn / dt);
-  spin.w.lerp(_sv, 0.6);
-  if (spin.w.length() > 28) spin.w.setLength(28);
+  if (grabState.right) {
+    twistBy(dx * 0.006, dt);
+  } else if (grabState.anchor && sphereHit(e.clientX, e.clientY, grabState.r, _gA)) {
+    _gR.setFromUnitVectors(_gA.normalize(), grabState.anchor);
+    // near the horizon a tiny finger move is a huge distance: keep it calm
+    const maxA = 0.02 + 0.5 * (1 - landK(spin.dist));
+    const ang = 2 * Math.acos(Math.min(1, Math.abs(_gR.w)));
+    if (ang > maxA) _gR.slerp(new THREE.Quaternion(), 1 - maxA / ang);
+    applyWorldTurn(_gR, dt);
+  } else { // off the edge of the world: turn it the old way
+    const k = 0.0052 * Math.max(0.0035, (spin.dist - 1) / 2.4);
+    turnCamera(-dy * k, -dx * k, 0);
+    _sv.set(-dy * k / dt, -dx * k / dt, 0);
+    spin.w.lerp(_sv, 0.6);
+  }
   spin.lastMove = now;
   lastInteract = now;
 });
 const release = (e) => {
   spin.pointers.delete(e.pointerId);
+  if (spin.pointers.size === 1) { // lifted one finger of two: carry on dragging with the other
+    const p = [...spin.pointers.values()][0];
+    spin.dragging = true;
+    grabState.right = false;
+    grabAt(p.x, p.y);
+  }
   if (spin.pointers.size === 0) {
     spin.dragging = false;
-    if (reduceMotion || performance.now() - spin.lastMove > 90) spin.w.set(0, 0, 0); // held still before letting go
+    if (reduceMotion || performance.now() - spin.lastMove > 80) spin.w.set(0, 0, 0); // held still before letting go
   }
 };
 cv.addEventListener('pointerup', release);
@@ -3617,7 +3758,7 @@ function setQuality(level) {
   level = THREE.MathUtils.clamp(level, 0, 2);
   if (level === quality.level) return;
   quality.level = level;
-  const dpr = Math.min(devicePixelRatio, [1, 1.5, 2][level]);
+  const dpr = Math.min(devicePixelRatio, [1.5, 1.75, 2][level]); // sharpness is the last thing to give
   renderer.setPixelRatio(dpr);
   renderer.setSize(innerWidth, innerHeight);
   composer.setPixelRatio(dpr);
@@ -3657,7 +3798,7 @@ const nearEl = document.createElement('aside');
 nearEl.id = 'near-card';
 nearEl.setAttribute('aria-live', 'polite');
 document.body.appendChild(nearEl);
-let nearCity = -1, nearTick = 0;
+let nearCity = -1, nearTick = 0, nearDismissed = -1;
 function stepNearCard() {
   if ((nearTick = (nearTick + 1) % 8) !== 0) return;
   const dist = camera.position.length();
@@ -3665,8 +3806,10 @@ function stepNearCard() {
   if (introDone && !flight && !panel.classList.contains('open') && coreMix < 0.05 && spin.energy < 0.2 && dist < 2.05) {
     const cx = innerWidth / 2, cy = innerHeight / 2;
     let bd = Math.min(innerWidth, innerHeight) * (dist < 1.1 ? 0.45 : 0.2);
+    const camDir = camera.position.clone().normalize();
     cities.forEach((c, i) => {
       if (!facing(c.pos)) return;
+      if (dist < 1.15 && c.dir.angleTo(camDir) > 0.05) return; // down low, only the towns actually around you
       const sp = toScreen(c.pos);
       if (sp.z > 1) return;
       const d = Math.hypot(sp.x - cx, sp.y - cy);
@@ -3678,12 +3821,14 @@ function stepNearCard() {
   if (best < 0) { nearEl.classList.remove('on'); return; }
   const c = cities[best], p = c.product, reg = REGIONS[c.region];
   nearEl.style.setProperty('--c', reg.color);
-  nearEl.innerHTML = `<p class="kicker">${esc(reg.name)} · Product town</p><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
+  if (nearDismissed === best) { nearEl.classList.remove('on'); return; }
+  nearEl.innerHTML = `<button type="button" class="x" aria-label="Hide">×</button><p class="kicker">${esc(reg.name)} · Product town</p><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
     <div class="acts">${p.demo ? `<a class="cta" href="${esc(p.demo)}" target="_blank" rel="noopener">Try the demo ↗</a>` : ''}
     <button type="button" class="cta ghost" data-ask="${best}">Ask about it</button></div>`;
   nearEl.classList.add('on');
 }
 nearEl.addEventListener('click', (e) => {
+  if (e.target.closest('.x')) { nearDismissed = nearCity; nearEl.classList.remove('on'); return; }
   const ask = e.target.closest('[data-ask]');
   if (!ask) return;
   const p = cities[+ask.dataset.ask].product;

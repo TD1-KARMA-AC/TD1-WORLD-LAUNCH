@@ -19,7 +19,7 @@ A living 3D world of intelligence. Visitors land on a planet they can spin, zoom
 
 The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data. Little beings hop between them, and each continent has its own landform and flora.
 
-Grab the world and spin it any way you like; left alone it turns on a tilted axis like Earth, under a visible sun. Spin it hard enough and the Ocean of Data spills: it surges against the coasts and drains in places to reveal Easter eggs on the seabed (`EGGS` in `world/data.js`). Add `#spill` to the address to see it straight away.
+Grab the world and spin it any way you like. Controls work like Google Earth: the spot you grab stays under your finger, pinch or scroll zooms toward where you're pointing, and two fingers (or right-drag) turn your heading; left alone it turns on a tilted axis like Earth, under a visible sun. Spin it hard enough and the Ocean of Data spills: it surges against the coasts and drains in places to reveal Easter eggs on the seabed (`EGGS` in `world/data.js`). Add `#spill` to the address to see it straight away.
 
 **VR:** on a Meta Quest (or any WebXR headset) an **Enter VR** button appears. You stand in space beside the world: grab it (grip or pinch) to spin it, point and pull the trigger to select places and read floating cards, use the thumbstick to move closer, B/Y for Karma Core and A/X to close. Spin it hard and the ocean spills in VR too.
 
@@ -27,7 +27,7 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
 
 **Alive and real:**
 - **Night side:** as the world turns away from the sun its towns light up, with suburbs and winding roads glowing between them, and a golden-hour band runs along the line between day and night.
-- **Towns:** every product is a real town of modelled buildings, with windows that light up at night and a landmark spire at its heart.
+- **Towns:** every product is a real town laid out on a street grid: glass office towers and stepped towers at the heart, mid-rise blocks, houses with roofs on the edges and little parks. The product's landmark tower stands in the centre with light bands in its continent's colour. Windows reflect the sky by day and light up at night, and street lamps line the roads.
 - **Weather:** clouds cast shadows on the land and sea. Thunderstorms flash with lightning (you hear the thunder) and aurora curtains ripple over both poles at night.
 - **Life:**
   - Forests grow on every continent, and little robots work:

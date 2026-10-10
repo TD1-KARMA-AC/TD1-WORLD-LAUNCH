@@ -322,6 +322,126 @@ export function satellite() {
   return g;
 }
 
+/* ---------------------------------------------------------------- buildings */
+
+// Buildings are 1 x 1 in plan and 1 tall; each instance is stretched to its real size. Extra attributes:
+//   aWin  1 on walls that get windows      aTint 1 where the instance's paint applies (0 keeps the baked colour)
+function bpart(geo, color, { at = [0, 0, 0], scale = [1, 1, 1], rot = [0, 0, 0], win = 0, tint = 1, glow = 0 } = {}) {
+  const g = part(geo, color, { at, scale, rot, glow });
+  const n = g.attributes.position.count;
+  g.setAttribute('aWin', new THREE.BufferAttribute(new Float32Array(n).fill(win), 1));
+  g.setAttribute('aTint', new THREE.BufferAttribute(new Float32Array(n).fill(tint), 1));
+  return g;
+}
+function mergeB(parts) {
+  const g = merge(parts);
+  ['aWin', 'aTint'].forEach((name) => {
+    const total = g.attributes.position.count, arr = new Float32Array(total);
+    let o = 0;
+    parts.forEach((p) => { arr.set(p.attributes[name].array, o); o += p.attributes.position.count; });
+    g.setAttribute(name, new THREE.BufferAttribute(arr, 1));
+  });
+  return g;
+}
+const slab = (w, h, d, y0, opts = {}) => bpart(box(w, h, d), opts.color || '#ffffff', { at: [opts.x || 0, y0 + h / 2, opts.z || 0], ...opts });
+const CONCRETE = '#bfc2c6', ROOF = '#55595f', GLASS_TRIM = '#e8ecf0';
+export function building(kind) {
+  switch (kind) {
+    case 'tower': return mergeB([ // glass office tower on a stone podium
+      slab(1, 0.12, 1, 0, { color: CONCRETE, tint: 0.4, win: 0 }),
+      slab(0.8, 0.8, 0.8, 0.12, { win: 1 }),
+      slab(0.84, 0.025, 0.84, 0.92, { color: GLASS_TRIM, tint: 0.3 }),
+      slab(0.38, 0.06, 0.32, 0.945, { color: ROOF, tint: 0, x: 0.1 }),
+      bpart(cyl(0.008, 0.01, 0.12, 5), '#c9ccd2', { at: [-0.22, 1.0, -0.2], tint: 0 }),
+    ]);
+    case 'setback': return mergeB([ // stepped tower: wide base, narrower upper floors
+      slab(1, 0.5, 1, 0, { win: 1 }),
+      slab(1.03, 0.02, 1.03, 0.5, { color: GLASS_TRIM, tint: 0.3 }),
+      slab(0.72, 0.3, 0.72, 0.52, { win: 1 }),
+      slab(0.75, 0.02, 0.75, 0.82, { color: GLASS_TRIM, tint: 0.3 }),
+      slab(0.46, 0.15, 0.46, 0.84, { win: 1 }),
+      slab(0.3, 0.02, 0.3, 0.99, { color: ROOF, tint: 0 }),
+    ]);
+    case 'block': return mergeB([ // mid-rise with a parapet and a rooftop tank
+      slab(1, 0.9, 1, 0, { win: 1 }),
+      slab(1.04, 0.05, 1.04, 0.9, { color: CONCRETE, tint: 0.5 }),
+      slab(0.92, 0.012, 0.92, 0.95, { color: ROOF, tint: 0 }),
+      bpart(cyl(0.11, 0.11, 0.08, 10), '#8a8f96', { at: [0.22, 0.99, 0.2], tint: 0 }),
+      slab(0.22, 0.05, 0.16, 0.95, { color: '#8a8f96', tint: 0, x: -0.25, z: -0.2 }),
+    ]);
+    case 'house': return mergeB([ // a small house with a hip roof
+      slab(1, 0.6, 1, 0, { win: 1 }),
+      bpart(new THREE.CylinderGeometry(0, 0.76, 0.42, 4, 1), '#7a4a3a', { at: [0, 0.81, 0], rot: [0, Math.PI / 4, 0], tint: 0.15 }),
+    ]);
+    case 'landmark': default: return mergeB([ // the product's landmark: a tapering glass tower with light bands and a lit spire
+      slab(1, 0.06, 1, 0, { color: CONCRETE, tint: 0 }),
+      slab(0.62, 0.34, 0.62, 0.06, { color: '#dfe6ee', tint: 0, win: 1 }),
+      slab(0.66, 0.014, 0.66, 0.4, { color: '#ffffff', tint: 1, glow: 1 }),
+      slab(0.5, 0.26, 0.5, 0.414, { color: '#dfe6ee', tint: 0, win: 1 }),
+      slab(0.54, 0.014, 0.54, 0.674, { color: '#ffffff', tint: 1, glow: 1 }),
+      slab(0.38, 0.17, 0.38, 0.688, { color: '#dfe6ee', tint: 0, win: 1 }),
+      slab(0.42, 0.014, 0.42, 0.858, { color: '#ffffff', tint: 1, glow: 1 }),
+      bpart(cyl(0.01, 0.045, 0.13, 6), '#e8ecf0', { at: [0, 0.937, 0], tint: 0 }),
+      bpart(ball(0.035, 8, 6), '#ffffff', { at: [0, 1.0, 0], tint: 1, glow: 1 }),
+    ]);
+  }
+}
+
+// Buildings: walls take their paint, windows are drawn crisply at any distance (and averaged out when tiny),
+// glass reflects the sky by day and lights up at night.
+export function buildingMaterial({ sunDir, timeUniform }) {
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.08 });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSun = { value: sunDir };
+    sh.uniforms.uTime = timeUniform;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+        attribute float aWin; attribute float aTint; attribute float aGlow;
+        varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld; varying float vWin; varying float vGlow;`)
+      .replace('#include <color_vertex>', `#include <color_vertex>
+        #ifdef USE_INSTANCING_COLOR
+          vColor.rgb = mix(color.rgb, color.rgb * instanceColor.rgb, aTint);
+        #endif`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec3 isc = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
+        vBox = position * isc; vNl = normal; vWin = aWin; vGlow = aGlow;
+        vSeed = fract(dot(floor(instanceMatrix[3].xyz * 20000.0), vec3(0.1031, 0.1030, 0.0973)));
+        vWorld = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 uSun; uniform float uTime;
+        varying vec3 vBox; varying vec3 vNl; varying float vSeed; varying vec3 vWorld; varying float vWin; varying float vGlow;
+        float wh(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); } // stable hash: no speckle`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+        float night = smoothstep(0.08, -0.2, dot(normalize(vWorld), uSun));
+        float glass = 0.0, lit = 0.0; vec3 warm = vec3(1.0, 0.74, 0.42);
+        if (vWin > 0.5 && abs(vNl.y) < 0.5) {
+          vec2 f = abs(vNl.x) > 0.5 ? vec2(vBox.z, vBox.y) : vec2(vBox.x, vBox.y);
+          vec2 q = f / vec2(0.00042, 0.0005);
+          vec2 cell = floor(q), w = fract(q), aa = fwidth(q);
+          float wx = smoothstep(0.16 - aa.x, 0.16 + aa.x, w.x) * (1.0 - smoothstep(0.84 - aa.x, 0.84 + aa.x, w.x));
+          float wy = smoothstep(0.24 - aa.y, 0.24 + aa.y, w.y) * (1.0 - smoothstep(0.88 - aa.y, 0.88 + aa.y, w.y));
+          float detail = 1.0 - smoothstep(0.3, 0.6, max(aa.x, aa.y)); // windows smaller than a pixel blend into an even tone
+          glass = mix(0.5, wx * wy, detail);
+          lit = mix(0.4, step(0.58, wh(cell + floor(vSeed * 97.0 + 0.5) * 7.0)), detail);
+          warm = mix(warm, vec3(0.78, 0.9, 1.0), step(0.82, wh(cell + 3.1)) * detail);
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.13, 0.17, 0.22), glass * 0.8);
+          roughnessFactor = mix(roughnessFactor, 0.14, glass);
+          metalnessFactor = mix(metalnessFactor, 0.4, glass);
+        }`)
+      .replace('#include <metalnessmap_fragment>', '')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float dayL = 1.0 - night;
+        float fres = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0);
+        totalEmissiveRadiance += vec3(0.5, 0.66, 0.86) * glass * (0.05 + fres * 0.35) * dayL; // the sky in the glass
+        totalEmissiveRadiance += warm * glass * lit * (0.02 + night * 0.75);
+        totalEmissiveRadiance += vColor.rgb * vGlow * (0.6 + night * 1.0);`);
+    // metalness is set above alongside the glass, so declare it before use
+    sh.fragmentShader = sh.fragmentShader.replace('float glass = 0.0, lit = 0.0;', 'float metalnessFactor = metalness; float glass = 0.0, lit = 0.0;');
+  };
+  return mat;
+}
+
 /* ---------------------------------------------------------------- material */
 
 // Standard lit material that also makes the parts marked with aGlow shine. Optional bird flapping.

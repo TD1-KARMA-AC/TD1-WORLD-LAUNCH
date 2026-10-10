@@ -521,3 +521,14 @@ body:not(.entered) .top, body:not(.entered) #intro, body:not(.entered) #hud, bod
 body.cine #near-card, body:not(.entered) #near-card { display: none; }
 .work { border-top: 1px solid var(--hair); }
 #panel.open ~ #near-card { opacity: 0; pointer-events: none; }
+
+#near-card .x { position: absolute; right: 8px; top: 6px; width: 28px; height: 28px; font-size: 18px; color: var(--ink-3); }
+#near-card h3 { padding-right: 28px; }
+@media (max-width: 759px) {
+  #near-card { padding: 11px 13px 12px; width: calc(100vw - 120px); left: 16px; transform: translate(0, 16px); bottom: 20px; }
+  #near-card.on { transform: none; }
+  #near-card h3 { font-size: 14px; }
+  #near-card p:not(.kicker) { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #near-card .acts { gap: 6px; margin-top: 8px; }
+  #near-card .cta { padding: 8px 11px; font-size: 10px; }
+}
