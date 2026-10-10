@@ -1908,26 +1908,60 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 
 /* ------------------------------------------------------------------ dock */
 
+/* The Explore menu: one glowing orb opens a clean, ordered menu. Talk first, then products, then the world. */
 const dock = $('#dock');
-[...REGIONS.map((r, i) => ({ id: r.id, name: r.name, color: r.color, go: () => selectRegion(i) })),
-  { id: 'core', name: 'Karma Core', color: CORE.color, go: () => enterCore() },
-  { id: 'shop', name: 'Shop', color: SHOP_COLOR, go: () => openShop() },
-  { id: 'contact', name: 'Contact', color: BEACON_COLOR, go: () => openContact() },
-  { id: 'ocean', name: 'Ocean of Data', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
-  { id: 'realm', name: 'Realm', color: '#7FD8FF', go: () => openSpecial('realm') },
-  { id: 'mindaloo', name: 'Mindaloo AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
-].forEach((d) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'chip';
-  b.dataset.id = d.id;
-  b.style.setProperty('--c', d.color);
-  b.innerHTML = `<i></i>${esc(d.name)}`;
-  b.addEventListener('click', d.go);
-  dock.appendChild(b);
+const menuBtn = $('#menu-btn');
+const MENU = [
+  { title: 'Talk to TD1', items: [
+    { id: 'contact', name: 'Get in touch', sub: 'Questions, projects, partnerships', color: BEACON_COLOR, go: () => openContact() },
+    { id: 'book', name: 'Book expertise', sub: 'Strategy sessions, builds, workshops', color: BEACON_COLOR, go: () => openContact({ type: 'Book expertise' }) },
+  ] },
+  { title: 'Products', items: [
+    { id: 'shop', name: 'Shop', sub: 'Courses, documents, clothing', color: SHOP_COLOR, go: () => openShop() },
+    { id: 'market', name: 'Marketplace', sub: 'NeuroBlocks: ready-made AI building blocks', color: '#B38DFF', href: 'Neuroblock/' },
+    { id: 'mindaloo', name: 'Mindaloo AC', sub: 'Our flagship Autonomous Consciousness', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
+  ] },
+  { title: 'Explore the world', items: [
+    ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, sub: r.era, color: r.color, go: () => selectRegion(i) })),
+    { id: 'core', name: 'Karma Core', sub: 'The heart of the world', color: CORE.color, go: () => enterCore() },
+    { id: 'ocean', name: 'Ocean of Data', sub: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
+    { id: 'realm', name: 'Realm', sub: 'A connected world', color: '#7FD8FF', go: () => openSpecial('realm') },
+  ] },
+];
+MENU.forEach((group, gi) => {
+  const sec = document.createElement('section');
+  sec.innerHTML = `<h4><span>0${gi + 1}</span>${esc(group.title)}</h4>`;
+  const list = document.createElement('div');
+  list.className = `mgroup${gi === 2 ? ' grid' : ''}`;
+  group.items.forEach((d) => {
+    const b = document.createElement(d.href ? 'a' : 'button');
+    if (d.href) b.href = d.href; else b.type = 'button';
+    b.className = 'chip';
+    b.dataset.id = d.id;
+    b.style.setProperty('--c', d.color);
+    b.innerHTML = `<i></i><span><b>${esc(d.name)}</b><small>${esc(d.sub)}</small></span>`;
+    if (d.go) b.addEventListener('click', () => { closeMenu(); d.go(); });
+    list.appendChild(b);
+  });
+  sec.appendChild(list);
+  dock.appendChild(sec);
 });
-$('#nav-shop').addEventListener('click', () => openShop());
-$('#nav-contact').addEventListener('click', () => openContact());
+function openMenu() {
+  closePanel();
+  dock.hidden = false;
+  requestAnimationFrame(() => document.body.classList.add('menu-open'));
+  menuBtn.setAttribute('aria-expanded', 'true');
+  $('#intro').classList.add('gone');
+}
+function closeMenu() {
+  document.body.classList.remove('menu-open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+  setTimeout(() => { if (!document.body.classList.contains('menu-open')) dock.hidden = true; }, 350);
+}
+menuBtn.addEventListener('click', () => (document.body.classList.contains('menu-open') ? closeMenu() : openMenu()));
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+renderer.domElement.addEventListener('pointerdown', () => { if (document.body.classList.contains('menu-open')) closeMenu(); });
+$('#nav-contact').addEventListener('click', () => { closeMenu(); openContact(); });
 function setDock(id) { dock.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.id === id)); }
 
 $('#begin').addEventListener('click', () => selectRegion(0));

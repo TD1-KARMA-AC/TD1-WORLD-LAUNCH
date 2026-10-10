@@ -28,7 +28,7 @@
       <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="rgba(193,162,255,0.16)" stroke="#C1A2FF" stroke-width="6" stroke-linejoin="round"/></svg>
       <b>TD1<span>.WORLD</span></b>
     </a>
-    <nav><button type="button" id="nav-vr" hidden>Enter VR</button><button type="button" id="nav-shop">Shop</button><button type="button" id="nav-contact">Contact</button><a href="Neuroblock/" class="nav-market">Marketplace</a></nav>
+    <nav><button type="button" id="nav-vr" hidden>Enter VR</button><button type="button" id="nav-contact">Get in touch</button></nav>
   </header>
 
   <div id="intro">
@@ -51,7 +51,13 @@
     <div id="panel-body"></div>
   </aside>
 
-  <nav id="dock" aria-label="Fly to"></nav>
+  <div id="edge" aria-hidden="true"><i class="l"></i><i class="r"></i></div>
+
+  <button id="menu-btn" type="button" aria-expanded="false" aria-controls="dock">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/></svg>
+    <span>Explore</span>
+  </button>
+  <nav id="dock" aria-label="Explore TD1.WORLD" hidden></nav>
 
   <!-- Netlify reads this at deploy time so it can accept enquiries sent from The Beacon. -->
   <form name="enquiry" data-netlify="true" netlify-honeypot="bot-field" hidden>
