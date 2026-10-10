@@ -2826,8 +2826,13 @@ async function sendEnquiry(form) {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = 'Send signal';
-    err.textContent = 'That didn’t send. Check your connection and try again.';
     err.hidden = false;
+    if (ENQUIRY.email) { // no form service here (or it failed): hand it to their email app, already written
+      const body = ['type', 'expertise', 'date', 'time', 'name', 'email', 'company', 'timezone', 'message']
+        .filter((k) => data.get(k)).map((k) => `${k[0].toUpperCase()}${k.slice(1)}: ${data.get(k)}`).join('\n');
+      const href = `mailto:${ENQUIRY.email}?subject=${encodeURIComponent(`TD1.WORLD: ${data.get('type') || 'Enquiry'}`)}&body=${encodeURIComponent(body)}`;
+      err.innerHTML = `That didn’t send from here. <a href="${href}">Send it by email instead</a>, it’s all filled in.`;
+    } else err.textContent = 'That didn’t send. Check your connection and try again.';
   }
 }
 let beaconFlash = 0;

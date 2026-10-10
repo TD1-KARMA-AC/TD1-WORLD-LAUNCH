@@ -207,6 +207,7 @@ export const SHOP = {
 
 // The Beacon: enquiries and bookings. Submissions arrive in Netlify → Forms → "enquiry".
 export const ENQUIRY = {
+  email: '', // optional: where enquiries go if the form can't send (for example while the site is on GitHub Pages, which has no form service)
   bookingUrl: '', // optional: a Calendly or Cal.com link so people can pick a time straight away
   types: ['Book expertise', 'General enquiry', 'Custom build', 'Partnership', 'Press or speaking'],
   expertise: ['AI strategy session', 'Agents and automation', 'Mindaloo AC for your business', 'Product build or audit', 'Workshop or talk'],
