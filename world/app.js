@@ -27,6 +27,8 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.xr.enabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 200);
@@ -146,8 +148,13 @@ function terrain(x, y, z) {
 }
 const sstep = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 // Each continent has its own landform.
+const RELIEF = 0.22; // real planets are smooth: land rises only a little, mountains read through light and shadow
 function elevation(x, y, z, h, region) {
-  if (h <= 0) return -0.01 + 0.0125 * sstep(h, -0.05, -0.032); // lagoon shelf, just above the sea near shore
+  if (h <= 0) return -0.006; // the sea floor sits under the water
+  return 0.0015 + relief(x, y, z, h, region) * RELIEF;
+}
+function relief(x, y, z, h, region) {
+  if (h <= 0) return -0.01;
   const hh = Math.min(h, 0.9);
   const soft = fbm(x * 9 + 1, y * 9 + 5, z * 9 + 2, 3);
   switch (region) {
@@ -173,77 +180,84 @@ const landFaces = []; // per land face: { c: centroid (unit), r: radius, region,
 const byRegion = Array.from({ length: REGIONS.length + 1 }, () => []);
 
 function buildLand() {
-  const detail = isSmall() || isTouch ? 64 : 96;
+  const detail = isSmall() || isTouch ? 72 : 110;
   const ico = new THREE.IcosahedronGeometry(1, detail);
   const src = ico.attributes.position;
   const cache = new Map();
-  const pos = [], col = [], reg = [], index = [];
-  const c = new THREE.Color();
-  const uncharted = new THREE.Color(UNCHARTED.color);
-  const deepSea = new THREE.Color('#0b1b52'), lagoon = new THREE.Color('#4fd4e6'), sand = new THREE.Color('#f3e6cf');
-  const peakTints = REGIONS.map((r) => r.col.clone().lerp(new THREE.Color(1, 1, 1), 0.7));
-  const altTints = REGIONS.map((r) => r.col.clone().offsetHSL(-0.07, 0.08, -0.16)); // second biome colour per continent
-  function colorOf(v) {
-    const base = v.region === UNCH ? uncharted : REGIONS[v.near].col;
-    if (v.h <= 0) { // glowing lagoon fading out to the deep
-      const k = sstep(v.h, -0.05, 0);
-      return c.copy(deepSea).lerp(lagoon, k * 0.85).lerp(base, k * 0.3);
-    }
-    const t = Math.min(1, v.h / 0.75);
-    c.copy(base);
-    if (v.region !== UNCH) c.lerp(altTints[v.region], sstep(fbm(v.x * 3.3 + 5, v.y * 3.3 + 1, v.z * 3.3 + 8, 3), -0.12, 0.22) * 0.7);
-    c.multiplyScalar(0.5 + 0.5 * t);
-    c.offsetHSL(t * 0.03, 0, 0);
-    if (v.h < 0.035) c.lerp(sand, 0.6 * (1 - v.h / 0.035)); // beaches
-    if (t > 0.78 && v.region !== UNCH) c.lerp(peakTints[v.region], Math.min(1, (t - 0.78) * 3));
-    const grain = fbm(v.x * 22 + 7, v.y * 22 + 3, v.z * 22 + 9, 2);
-    return c.multiplyScalar(0.9 + grain * 0.25);
-  }
+  const verts = [], index = [];
   const sample = (i) => {
     const x = src.getX(i), y = src.getY(i), z = src.getZ(i);
     const key = `${Math.round(x * 1e5)},${Math.round(y * 1e5)},${Math.round(z * 1e5)}`;
     let v = cache.get(key);
     if (!v) {
       const t = terrain(x, y, z);
-      v = { x, y, z, h: t.h, region: t.region, near: t.near, e: elevation(x, y, z, t.h, t.region), idx: -1 };
+      const bump = relief(x, y, z, t.h, t.region);
+      v = { x, y, z, h: t.h, region: t.region, near: t.near, bump, e: t.h > 0 ? 0.0015 + bump * RELIEF : -0.006, idx: -1 };
       cache.set(key, v);
     }
     return v;
   };
-  const use = (v) => {
-    if (v.idx < 0) {
-      v.idx = pos.length / 3;
-      const r = 1 + v.e;
-      pos.push(v.x * r, v.y * r, v.z * r);
-      colorOf(v);
-      col.push(c.r, c.g, c.b);
-      reg.push(v.region === UNCH ? UNCH : v.near);
-    }
-    return v.idx;
-  };
+  const use = (v) => { if (v.idx < 0) { v.idx = verts.length; verts.push(v); } return v.idx; };
 
   for (let f = 0; f < src.count / 3; f++) {
     const v = [sample(f * 3), sample(f * 3 + 1), sample(f * 3 + 2)];
     const top = v.reduce((a, b) => (b.h > a.h ? b : a));
-    if (top.h <= -0.05) continue; // open ocean: the data sea covers it
+    if (top.h <= 0) continue; // open water: the ocean draws it
     index.push(use(v[0]), use(v[1]), use(v[2]));
-    if (top.h <= 0) continue; // lagoon shelf, not land
-    const region = top.region;
     const hAvg = (v[0].h + v[1].h + v[2].h) / 3;
     const cx = (v[0].x + v[1].x + v[2].x) / 3, cy = (v[0].y + v[1].y + v[2].y) / 3, cz = (v[0].z + v[1].z + v[2].z) / 3;
-    const face = { c: new THREE.Vector3(cx, cy, cz).normalize(), r: 1 + (v[0].e + v[1].e + v[2].e) / 3, region, h: hAvg };
-    if (hAvg > 0) { landFaces.push(face); byRegion[region].push(face); }
+    const face = { c: new THREE.Vector3(cx, cy, cz).normalize(), r: 1 + Math.max(0, (v[0].e + v[1].e + v[2].e) / 3), region: top.region, h: hAvg };
+    if (hAvg > 0) { landFaces.push(face); byRegion[top.region].push(face); }
   }
   ico.dispose();
 
+  // Light the land as if its mountains were full height, then lay it almost flat: real relief, no cliffs.
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  g.setAttribute('aRegion', new THREE.Float32BufferAttribute(reg, 1));
+  const bumpPos = new Float32Array(verts.length * 3), pos = new Float32Array(verts.length * 3);
+  verts.forEach((v, i) => {
+    const rb = 1 + Math.max(-0.02, v.bump) * 0.9, r = 1 + v.e;
+    bumpPos.set([v.x * rb, v.y * rb, v.z * rb], i * 3);
+    pos.set([v.x * r, v.y * r, v.z * r], i * 3);
+  });
+  g.setAttribute('position', new THREE.BufferAttribute(bumpPos, 3));
   g.setIndex(index);
   g.computeVertexNormals();
+  const normals = g.attributes.normal;
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
 
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.04, transparent: true });
+  // Natural palettes that keep each continent's identity.
+  const P = (lo, mid, hi, rock, snow) => ({ lo: new THREE.Color(lo), mid: new THREE.Color(mid), hi: new THREE.Color(hi), rock: new THREE.Color(rock), snow: snow ? new THREE.Color(snow) : null });
+  const PAL = [
+    P('#6e4a24', '#a7773f', '#d2b07a', '#7a4a32', null), // The Origins: ochre desert, sandstone, rust
+    P('#2f2a4c', '#544a82', '#9a8fc4', '#4a4458', '#eeeaf8'), // Memory: violet forest, lavender highlands
+    P('#123f3a', '#1f6a5c', '#6aa596', '#3d4f4c', '#f2f7f6'), // Intelligence: deep teal forest, glacial ridges
+    P('#5a1f28', '#94403f', '#d08a72', '#5e3a36', null), // Creation: rose-red mesas and dunes
+    P('#163f24', '#2f7a42', '#8cc48e', '#3e4c3e', '#f4fbf4'), // The Future: emerald plains, bright plateaus
+  ];
+  const ICE = P('#9aa7b8', '#c8d2df', '#eef3f8', '#8a96a6', '#ffffff');
+  const sand = new THREE.Color('#d9c7a0'), c = new THREE.Color(), radial = new THREE.Vector3(), nrm = new THREE.Vector3();
+  const col = new Float32Array(verts.length * 3), reg = new Float32Array(verts.length);
+  verts.forEach((v, i) => {
+    const pal = v.region === UNCH ? ICE : PAL[v.region >= 0 ? v.region : v.near];
+    const t = Math.min(1, Math.max(0, v.h) / 0.75);
+    c.copy(pal.lo).lerp(pal.mid, sstep(t, 0.02, 0.4)).lerp(pal.hi, sstep(t, 0.45, 0.85));
+    const patch = fbm(v.x * 3.4 + 5, v.y * 3.4 + 1, v.z * 3.4 + 8, 4);
+    c.multiplyScalar(0.82 + patch * 0.5); // biome patches
+    nrm.fromBufferAttribute(normals, i);
+    radial.set(v.x, v.y, v.z);
+    const slope = 1 - Math.max(0, nrm.dot(radial));
+    c.lerp(pal.rock, Math.min(0.75, slope * 3.2)); // bare rock on steep ground
+    if (v.h < 0.012) c.lerp(sand, 0.55 * (1 - Math.max(0, v.h) / 0.012)); // beaches, right at the waterline
+    if (pal.snow && t > 0.72) c.lerp(pal.snow, Math.min(0.9, (t - 0.72) * 3.5 * (1 - slope)));
+    const grain = fbm(v.x * 26 + 7, v.y * 26 + 3, v.z * 26 + 9, 2);
+    c.multiplyScalar(0.94 + grain * 0.16);
+    col.set([c.r, c.g, c.b], i * 3);
+    reg[i] = v.region === UNCH ? UNCH : v.near;
+  });
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setAttribute('aRegion', new THREE.BufferAttribute(reg, 1));
+
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.0, transparent: true });
   mat.userData.uHi = { value: -10 };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = U.uTime;
@@ -256,9 +270,9 @@ function buildLand() {
       .replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHi;\nuniform vec3 uSun;\nvarying float vRegion;\nvarying vec3 vWP;')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         float sel = 1.0 - step(0.5, abs(vRegion - uHi));
-        totalEmissiveRadiance += vColor.rgb * (0.05 + sel * (0.05 + 0.035 * sin(uTime * 2.6)));
+        totalEmissiveRadiance += vColor.rgb * (0.015 + sel * (0.07 + 0.04 * sin(uTime * 2.6)));
         float night = smoothstep(0.1, -0.35, dot(normalize(vWP), uSun));
-        totalEmissiveRadiance += vColor.rgb * night * 0.07;`);
+        totalEmissiveRadiance += vColor.rgb * night * 0.025;`);
   };
   const land = new THREE.Mesh(g, mat);
   land.renderOrder = 2;
@@ -269,8 +283,19 @@ const land = buildLand();
 
 /* ------------------------------------------------------------------ the ocean of data */
 
+const oceanGeo = (() => {
+  // each vertex knows how deep the water is there, so shallows glow turquoise and the open sea runs deep
+  const g = new THREE.SphereGeometry(1, isSmall() || isTouch ? 160 : 220, isSmall() || isTouch ? 120 : 160);
+  const p = g.attributes.position, depth = new Float32Array(p.count);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    depth[i] = terrain(x, y, z).h;
+  }
+  g.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
+  return g;
+})();
 const ocean = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 128, 96),
+  oceanGeo,
   new THREE.ShaderMaterial({
     uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uHi: { value: 0 }, uAlpha: { value: 1 },
       uSlosh: { value: 0 }, uSloshAge: { value: 99 }, uSloshDir: { value: new THREE.Vector3(1, 0, 0) },
@@ -279,9 +304,11 @@ const ocean = new THREE.Mesh(
     transparent: true,
     vertexShader: `
       uniform float uSlosh; uniform float uSloshAge; uniform vec3 uSloshDir; uniform float uSpin; uniform vec3 uSpinAxis;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge;
+      attribute float aDepth;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth;
       void main(){
         vPos = position;
+        vDepth = aDepth;
         vec3 n = normalize(position);
         // after a sudden stop the water keeps going: it piles up on one side and rolls back in waves
         float side = dot(n, uSloshDir);
@@ -290,7 +317,7 @@ const ocean = new THREE.Mesh(
         float wave = sin(side * 10.0 - uSloshAge * 6.5) * exp(-uSloshAge * 0.4);
         // spinning hard flings water toward the equator of the spin
         float bulge = uSpin * (1.0 - abs(dot(n, uSpinAxis)));
-        float lift = uSlosh * (0.04 * pile + 0.012 * wave) + bulge * 0.02;
+        float lift = uSlosh * (0.03 * pile + 0.01 * wave) + bulge * 0.016;
         vSurge = clamp(uSlosh * pile * 2.0 + bulge * 0.6, 0.0, 1.0);
         vec4 wp = modelMatrix * vec4(position * (1.0 + lift), 1.0);
         vN = normalize(mat3(modelMatrix) * normal);
@@ -300,47 +327,67 @@ const ocean = new THREE.Mesh(
     fragmentShader: `
       uniform float uTime; uniform vec3 uSun; uniform float uHi; uniform float uAlpha;
       uniform float uDrain; uniform vec3 uHoles[3]; uniform float uSpin;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vView; varying float vSurge; varying float vDepth;
       float h1(float n){ return fract(sin(n * 127.1) * 43758.5453); }
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main(){
         // drained patches of seabed, with foam around their rims
         vec3 un = normalize(vPos);
-        float foam = 0.0;
+        float holeFoam = 0.0;
         for (int i = 0; i < 3; i++) {
           float d = dot(un, uHoles[i]);
           float wob = 0.012 * sin(atan(un.z - uHoles[i].z, un.x - uHoles[i].x) * 7.0 + uTime * 2.0);
           float r = cos(0.15 * uDrain + wob * uDrain);
           if (uDrain > 0.001 && d > r) discard;
-          foam = max(foam, smoothstep(r - 0.006, r, d) * uDrain);
+          holeFoam = max(holeFoam, smoothstep(r - 0.006, r, d) * uDrain);
         }
+
+        // colour by depth: turquoise shallows, blue shelf, deep navy ocean
+        float depth = clamp(-vDepth, 0.0, 1.0);
+        vec3 deep = vec3(0.004, 0.022, 0.075);
+        vec3 shelf = vec3(0.012, 0.085, 0.2);
+        vec3 shallow = vec3(0.05, 0.36, 0.46);
+        vec3 water = mix(shelf, deep, smoothstep(0.08, 0.45, depth));
+        water = mix(water, shallow, pow(1.0 - smoothstep(0.0, 0.11, depth), 1.6));
+
+        // small rolling waves catch the light
+        vec3 n = vN;
+        float t = uTime * 0.6;
+        n += 0.022 * vec3(sin(un.y * 230.0 + t * 1.3) + sin(un.z * 170.0 - t), sin(un.z * 210.0 + t) + sin(un.x * 190.0 + t * 0.7), sin(un.x * 250.0 - t * 1.1) + sin(un.y * 160.0 + t));
+        n = normalize(n);
+        float sunUp = dot(vN, uSun);
+        float lit = smoothstep(-0.15, 0.35, sunUp);
+        vec3 col = water * (0.12 + 0.88 * lit);
+        vec3 hv = normalize(uSun + vView);
+        float spec = pow(max(dot(n, hv), 0.0), 380.0) * 2.2 + pow(max(dot(vN, hv), 0.0), 40.0) * 0.18;
+        col += vec3(1.0, 0.94, 0.82) * spec * lit;
+        float fres = pow(1.0 - max(dot(vN, vView), 0.0), 4.0);
+        col += vec3(0.32, 0.55, 0.95) * fres * 0.45 * lit;
+
+        // surf along the coasts
+        float coast = smoothstep(0.035, 0.0, depth) * (0.55 + 0.45 * sin(uTime * 1.6 + un.x * 90.0 + un.z * 70.0));
+        col += vec3(0.85, 0.95, 1.0) * coast * 0.35 * (0.3 + 0.7 * lit);
+
+        // the Ocean of Data: faint streams of bits, brighter at night and when selected
         float lat = asin(clamp(vPos.y, -1.0, 1.0));
         float lon = atan(vPos.z, vPos.x);
         float rows = 70.0;
         float band = floor(lat * rows);
-        float dir = mod(band, 2.0) > 0.5 ? 1.0 : -1.0;
-        float speed = (0.25 + h1(band) * 0.9) * dir;
+        float dirB = mod(band, 2.0) > 0.5 ? 1.0 : -1.0;
+        float speed = (0.25 + h1(band) * 0.9) * dirB;
         float density = cos(lat) * 34.0 + 6.0;
         float x = lon * density + uTime * speed * 1.6;
         float cell = floor(x);
         float r = h2(vec2(cell, band));
-        float bit = step(0.78, r) * smoothstep(0.0, 0.12, fract(x)) * smoothstep(0.95, 0.55, fract(x));
+        float bit = step(0.8, r) * smoothstep(0.0, 0.12, fract(x)) * smoothstep(0.95, 0.55, fract(x));
         float line = smoothstep(0.16, 0.0, abs(fract(lat * rows) - 0.5));
         float flick = 0.55 + 0.45 * sin(uTime * 3.0 + r * 40.0);
-        float lit = max(dot(vN, uSun), 0.0);
-        vec3 deep = vec3(0.012, 0.02, 0.07);
-        vec3 mid = vec3(0.04, 0.09, 0.28);
-        vec3 col = mix(deep, mid, 0.15 + lit * 0.85);
-        vec3 bitCol = mix(vec3(0.25, 0.55, 1.0), vec3(0.75, 0.6, 1.0), h1(cell));
-        float night = smoothstep(0.15, -0.3, dot(vN, uSun));
-        col += bitCol * bit * line * flick * (0.55 + uHi * 0.6 + night * 0.7);
-        col += vec3(0.1, 0.2, 0.55) * line * 0.05;
-        float fres = pow(1.0 - max(dot(vN, vView), 0.0), 3.0);
-        col += vec3(0.25, 0.45, 1.0) * fres * 0.55;
-        vec3 hv = normalize(uSun + vView);
-        col += vec3(1.0, 0.95, 0.85) * pow(max(dot(vN, hv), 0.0), 70.0) * 0.6;
-        col += vec3(0.75, 0.9, 1.0) * (foam * 0.9 + vSurge * 0.22);
-        col += vec3(0.3, 0.55, 1.0) * uSpin * line * 0.35;
+        float night = 1.0 - lit;
+        vec3 bitCol = mix(vec3(0.25, 0.6, 1.0), vec3(0.75, 0.6, 1.0), h1(cell));
+        col += bitCol * bit * line * flick * (0.07 + uHi * 0.6 + night * 0.35) * smoothstep(0.02, 0.15, depth);
+
+        col += vec3(0.75, 0.9, 1.0) * (holeFoam * 0.9 + vSurge * 0.2);
+        col += vec3(0.3, 0.55, 1.0) * uSpin * line * 0.3;
         gl_FragColor = vec4(col, uAlpha + bit * line * (1.0 - uAlpha) * 0.5);
       }`,
   }),
@@ -358,7 +405,7 @@ const GLSL_NOISE = `
   float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++){ s += a * nz(p); p *= 2.02; a *= 0.5; } return s; }`;
 
 const clouds = new THREE.Mesh(
-  new THREE.SphereGeometry(1.085, 96, 64),
+  new THREE.SphereGeometry(1.03, 128, 96),
   new THREE.ShaderMaterial({
     uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uFade: { value: 1 } },
     transparent: true,
@@ -367,34 +414,66 @@ const clouds = new THREE.Mesh(
       void main(){ vPos = position; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `uniform float uTime; uniform vec3 uSun; uniform float uFade; varying vec3 vPos; varying vec3 vN;
       ${GLSL_NOISE}
+      float fbm3(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++){ s += a * nz(p); p *= 2.03; a *= 0.5; } return s; }
       void main(){
-        float n = fbm(vPos * 3.2 + vec3(uTime * 0.015, 0.0, uTime * 0.01));
-        float a = smoothstep(0.56, 0.78, n) * 0.38 * uFade;
-        float lit = 0.25 + 0.75 * max(dot(vN, uSun), 0.0);
-        gl_FragColor = vec4(vec3(0.95, 0.96, 1.0) * lit, a);
+        vec3 p = vPos * 2.3;
+        // swirling weather systems: noise warped by noise
+        vec3 q = vec3(fbm3(p + vec3(0.0, uTime * 0.012, 0.0)), fbm3(p + vec3(5.2, 1.3, 2.8)), fbm3(p + vec3(1.7, 9.2, 3.1)));
+        float n = fbm(p * 1.5 + q * 2.0 + vec3(uTime * 0.008, 0.0, 0.0));
+        float cover = smoothstep(0.5, 0.7, n) * (0.7 + 0.6 * fbm3(vPos * 13.0));
+        float sunUp = dot(vN, uSun);
+        float lit = smoothstep(-0.22, 0.4, sunUp);
+        vec3 tint = mix(vec3(1.0, 0.68, 0.48), vec3(1.0), smoothstep(-0.02, 0.3, sunUp)); // warm at dawn and dusk
+        gl_FragColor = vec4(tint * (0.05 + 0.95 * lit), clamp(cover, 0.0, 1.0) * 0.85 * uFade);
       }`,
   }),
 );
 clouds.renderOrder = 4;
 planet.add(clouds);
 
+// The atmosphere: a thin blue limb, orange where the sun is setting, nothing on the night side.
+const ATMO_VS = `varying vec3 vN; varying vec3 vW;
+  void main(){ vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const atmosphere = new THREE.Mesh(
-  new THREE.SphereGeometry(1.13, 64, 48),
+  new THREE.SphereGeometry(1.06, 96, 64),
   new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `varying vec3 vN; void main(){
-        float d = dot(vN, vec3(0.0, 0.0, 1.0));
-        float i = pow(max(0.0, 0.62 - d), 3.0) * smoothstep(-0.78, -0.45, d); // rim only, even when the planet turns see-through
-        gl_FragColor = vec4(mix(vec3(0.35, 0.55, 1.0), vec3(0.75, 0.55, 1.0), vN.y * 0.5 + 0.5) * i * 0.9, 1.0);
+    side: THREE.BackSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    uniforms: { uSun: { value: sunDir } },
+    vertexShader: ATMO_VS,
+    fragmentShader: `uniform vec3 uSun; varying vec3 vN; varying vec3 vW;
+      void main(){
+        vec3 V = normalize(cameraPosition - vW);
+        float ndv = -dot(vN, V);                 // 0 at the outer edge, ~0.33 at the planet's limb
+        float k = clamp(ndv / 0.33, 0.0, 1.0);
+        float glow = pow(k, 2.2) * smoothstep(0.5, 0.36, ndv); // rim only, even when the planet turns see-through
+        float sunUp = dot(vN, uSun);
+        float day = smoothstep(-0.32, 0.2, sunUp);
+        float dusk = smoothstep(-0.3, 0.02, sunUp) * (1.0 - smoothstep(0.02, 0.32, sunUp));
+        vec3 col = vec3(0.3, 0.58, 1.0) * day + vec3(1.0, 0.42, 0.18) * dusk * 0.9;
+        gl_FragColor = vec4(col * glow * 1.5, 1.0);
       }`,
   }),
 );
 atmosphere.renderOrder = 5;
 scene.add(atmosphere);
+const haze = new THREE.Mesh( // soft blue haze over the surface toward the edge, like looking through air
+  new THREE.SphereGeometry(1.034, 96, 64),
+  new THREE.ShaderMaterial({
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    uniforms: { uSun: { value: sunDir }, uFade: { value: 1 } },
+    vertexShader: ATMO_VS,
+    fragmentShader: `uniform vec3 uSun; uniform float uFade; varying vec3 vN; varying vec3 vW;
+      void main(){
+        vec3 V = normalize(cameraPosition - vW);
+        float ndv = max(dot(vN, V), 0.0);
+        float day = smoothstep(-0.25, 0.3, dot(vN, uSun));
+        float h = pow(1.0 - ndv, 3.2) * day;
+        gl_FragColor = vec4(vec3(0.35, 0.6, 1.0) * h * 0.6 * uFade, 1.0);
+      }`,
+  }),
+);
+haze.renderOrder = 5;
+scene.add(haze);
 
 /* ------------------------------------------------------------------ stars */
 
@@ -529,12 +608,12 @@ const flora = [];
     const mesh = new THREE.InstancedMesh(shapes[ri](), mat, count);
     for (let i = 0; i < count; i++) {
       const f = pool[Math.floor(r() * pool.length)];
-      p.copy(f.c).multiplyScalar(f.r - 0.002);
+      p.copy(f.c).multiplyScalar(f.r - 0.001);
       q.setFromUnitVectors(up, f.c);
       if (ri === 3) spin.setFromEuler(new THREE.Euler(r() * 6, r() * 6, r() * 6)); // blocks tumble where they land
       else spin.setFromAxisAngle(up, r() * Math.PI * 2);
       q.multiply(spin);
-      sc.setScalar(0.6 + r() * 0.9);
+      sc.setScalar((0.6 + r() * 0.9) * 0.5);
       m4.compose(p, q, sc);
       mesh.setMatrixAt(i, m4);
       if (ri === 3) colr.setHSL(r(), 0.7, 0.62); // building blocks in every colour
@@ -664,6 +743,7 @@ const peaks = [];
     gem.position.y = 0.21;
     g.add(cone, gem);
     standOn(g, f, -0.004);
+    g.scale.setScalar(0.7);
     planet.add(g);
     peaks.push({ ...pk, region: ri, obj: g, gem, pos: f.c.clone().multiplyScalar(f.r + 0.16) });
   });
@@ -1075,6 +1155,7 @@ function applyCore(m, t) {
   ocean.material.uniforms.uAlpha.value = 1 - m * 0.94;
   ocean.material.depthWrite = m < 0.05;
   clouds.material.uniforms.uFade.value = 1 - m;
+  haze.material.uniforms.uFade.value = 1 - m;
   peaks.forEach((p) => { p.obj.visible = m < 0.5; });
   flora.forEach((f) => { f.visible = m < 0.5; });
   beingMesh.visible = m < 0.5;
