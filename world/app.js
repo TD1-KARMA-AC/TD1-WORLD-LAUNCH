@@ -2225,7 +2225,10 @@ const pinchDist = () => { const p = [...spin.pointers.values()]; return Math.hyp
 cv.addEventListener('pointerdown', (e) => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (!introDone) { cine.skip = true; }
+  if (!introDone) {
+    if (soundTap) { soundTap = false; enableMotion(); return; } // the first tap starts the music and lets the sunrise play on
+    cine.skip = true;
+  }
   enableMotion();
   if (spin.pointers.size === 1) { grab(); spin.dragging = true; spin.lastMove = performance.now(); }
   else if (spin.pointers.size === 2) { spin.dragging = false; spin.pinch = pinchDist(); }
@@ -2723,7 +2726,9 @@ function stepIntro(now) {
 }
 const skipIntro = () => { if (!introDone) cine.skip = true; };
 const soundBtn = $('#nav-sound');
-const soundPref = () => { try { return localStorage.getItem('td1-sound') === 'on'; } catch (e) { return false; } };
+let soundTap = false;
+// sound is on unless the visitor has turned it off before
+const soundPref = () => { try { return localStorage.getItem('td1-sound') !== 'off'; } catch (e) { return true; } };
 function setSound(onNow) {
   if (onNow) score.enable(); else score.disable();
   try { localStorage.setItem('td1-sound', onNow ? 'on' : 'off'); } catch (e) { /* fine */ }
@@ -2731,13 +2736,22 @@ function setSound(onNow) {
   soundBtn.querySelector('span').textContent = onNow ? 'Sound on' : 'Sound off';
   document.body.classList.toggle('sound-on', onNow);
 }
-soundBtn.addEventListener('click', () => setSound(!score.on));
+soundBtn.addEventListener('click', () => setSound(soundBtn.getAttribute('aria-pressed') !== 'true'));
 $('#cine-sound').addEventListener('click', (e) => { e.stopPropagation(); setSound(true); });
-// browsers only allow audio after a tap or key, so a returning visitor's "sound on" resumes on their first one
+// browsers only allow audio after a tap or key, so the score starts on the visitor's first one
+const AUDIO_GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
 if (soundPref()) {
-  const resume = () => { setSound(true); removeEventListener('pointerdown', resume); removeEventListener('keydown', resume); };
-  addEventListener('pointerdown', resume);
-  addEventListener('keydown', resume);
+  soundBtn.setAttribute('aria-pressed', 'true');
+  soundBtn.querySelector('span').textContent = 'Sound on';
+  document.body.classList.add('sound-armed');
+  const resume = (e) => {
+    AUDIO_GESTURES.forEach((ev) => removeEventListener(ev, resume, true));
+    document.body.classList.remove('sound-armed');
+    if (e.target && e.target.closest && e.target.closest('#nav-sound')) return; // they tapped the toggle: let it turn sound off
+    if (!introDone && e.type === 'pointerdown' && e.target.id === 'world') soundTap = true;
+    setSound(true);
+  };
+  AUDIO_GESTURES.forEach((ev) => addEventListener(ev, resume, true));
 }
 addEventListener('keydown', skipIntro);
 $('#skip').addEventListener('click', skipIntro);

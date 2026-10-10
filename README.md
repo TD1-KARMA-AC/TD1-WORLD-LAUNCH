@@ -23,7 +23,7 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
 
 **VR:** on a Meta Quest (or any WebXR headset) an **Enter VR** button appears. You stand in space beside the world: grab it (grip or pinch) to spin it, point and pull the trigger to select places and read floating cards, use the thumbstick to move closer, B/Y for Karma Core and A/X to close. Spin it hard and the ocean spills in VR too.
 
-**Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place: off until the visitor turns it on, then remembered.
+**Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place: on by default (it starts on the first tap, as browsers require) and remembered if the visitor turns it off.
 
 TD1’s direction runs AI → AGI → **AC (Autonomous Consciousness)**, shown on The Future and on the Mindaloo AC moon.
 
