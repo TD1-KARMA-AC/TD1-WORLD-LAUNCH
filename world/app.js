@@ -1304,6 +1304,219 @@ addLabel('<span class="nm">The Exchange</span><span class="era">Shop</span>', 'm
 addLabel('<span class="era">Contact &amp; bookings</span><span class="nm">The Beacon</span>', 'beacon', () => beaconPos.clone().add(beaconPos.clone().normalize().multiplyScalar(0.05)), () => openContact(), {});
 addLabel('<span class="nm">Mindaloo AC</span><span class="era">Flagship · Moonlight</span>', 'moon mindaloo', () => mindaloo.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.19, 0)), () => openSpecial('mindaloo'), { surface: false });
 
+/* ------------------------------------------------------------------ deep space: a sky with real depth */
+
+// Far: a nebula dome with a Milky Way band and dust lanes.
+const BAND_N = new THREE.Vector3(0.3, 0.9, 0.35).normalize();
+const nebula = new THREE.Mesh(new THREE.SphereGeometry(95, 64, 48), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false,
+  uniforms: { uTime: U.uTime, uBand: { value: BAND_N } },
+  vertexShader: `varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uTime; uniform vec3 uBand; varying vec3 vD;
+    ${GLSL_NOISE}
+    void main(){
+      vec3 d = normalize(vD);
+      float b = dot(d, uBand);
+      float band = exp(-b * b * 26.0);
+      float n = fbm(d * 2.6 + vec3(0.0, uTime * 0.004, 0.0));
+      float n2 = fbm(d * 7.0 + 11.0);
+      float n3 = fbm(d * 3.8 + 31.0);
+      vec3 col = vec3(0.32, 0.2, 0.62) * smoothstep(0.48, 0.86, n) * 0.32;
+      col += vec3(0.08, 0.42, 0.52) * smoothstep(0.55, 0.9, n3) * 0.22;
+      col += vec3(0.72, 0.66, 0.95) * band * (0.2 + n2 * 0.55) * 0.3;
+      col *= 1.0 - band * smoothstep(0.52, 0.7, n2) * 0.65; // dark dust lanes
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }`,
+}));
+nebula.renderOrder = -2;
+scene.add(nebula);
+
+// Middle: a dense river of stars along the band.
+{
+  const N = 3200, p = new Float32Array(N * 3), ph = new Float32Array(N), sz = new Float32Array(N);
+  const r = rng(1234);
+  const a = new THREE.Vector3(1, 0, 0).cross(BAND_N).normalize(), bvec = new THREE.Vector3().crossVectors(BAND_N, a);
+  for (let i = 0; i < N; i++) {
+    const ang = r() * Math.PI * 2;
+    const g = (r() + r() + r() - 1.5) * 0.22; // gaussian-ish spread off the band
+    const v = a.clone().multiplyScalar(Math.cos(ang)).add(bvec.clone().multiplyScalar(Math.sin(ang))).add(BAND_N.clone().multiplyScalar(g)).normalize().multiplyScalar(70 + r() * 15);
+    p.set([v.x, v.y, v.z], i * 3);
+    ph[i] = r() * 6.28;
+    sz[i] = 0.4 + Math.pow(r(), 8) * 2.2;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
+  g.setAttribute('aSize', new THREE.BufferAttribute(sz, 1));
+  const band = new THREE.Points(g, new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform float uTime; uniform float uPR; attribute float aPhase; attribute float aSize; varying float vA;
+      void main(){ vA = 0.45 + 0.35 * sin(uTime * 0.9 + aPhase); gl_PointSize = aSize * uPR;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
+        gl_FragColor = vec4(vec3(0.9, 0.88, 1.0), smoothstep(0.5, 0.0, d) * vA); }`,
+  }));
+  band.renderOrder = -1;
+  scene.add(band);
+}
+
+// Far off: a ringed gas giant and a distant galaxy.
+const giant = new THREE.Group();
+{
+  const body = new THREE.Mesh(new THREE.SphereGeometry(3.2, 48, 32), new THREE.ShaderMaterial({
+    uniforms: { uSun: { value: sunDir }, uTime: U.uTime },
+    vertexShader: `varying vec3 vP; varying vec3 vN; void main(){ vP = position; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 uSun; uniform float uTime; varying vec3 vP; varying vec3 vN;
+      ${GLSL_NOISE}
+      void main(){
+        float y = vP.y / 3.2;
+        float bands = sin(y * 22.0 + fbm(vP * 0.9 + vec3(uTime * 0.01, 0.0, 0.0)) * 4.0);
+        vec3 col = mix(vec3(0.85, 0.62, 0.55), vec3(0.55, 0.45, 0.85), 0.5 + 0.5 * bands);
+        float lit = 0.08 + 0.92 * max(dot(vN, uSun), 0.0);
+        gl_FragColor = vec4(col * lit * 0.75, 1.0);
+      }`,
+  }));
+  const ringGeo = new THREE.RingGeometry(4.3, 7.2, 96, 1);
+  const ring = new THREE.Mesh(ringGeo, new THREE.ShaderMaterial({
+    side: THREE.DoubleSide, transparent: true, depthWrite: false,
+    vertexShader: `varying vec2 vU; void main(){ vU = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec2 vU; void main(){ float r = length(vU); float t = (r - 4.3) / 2.9;
+        float bands = 0.55 + 0.45 * sin(r * 9.0) * sin(r * 3.1);
+        float a = smoothstep(0.0, 0.08, t) * smoothstep(1.0, 0.85, t) * bands * 0.5;
+        gl_FragColor = vec4(vec3(0.9, 0.82, 0.78) * 0.7, a); }`,
+  }));
+  ring.rotation.x = Math.PI / 2.4;
+  giant.add(body, ring);
+  giant.position.set(-0.62, 0.22, -0.75).normalize().multiplyScalar(72);
+  giant.rotation.z = 0.35;
+  scene.add(giant);
+
+  const galaxy = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture([[0, 'rgba(255,245,235,0.95)'], [0.08, 'rgba(230,200,255,0.6)'], [0.35, 'rgba(150,120,255,0.18)'], [1, 'rgba(90,60,200,0)']]),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, rotation: 0.6,
+  }));
+  galaxy.scale.set(16, 6, 1);
+  galaxy.position.set(0.7, -0.35, 0.62).normalize().multiplyScalar(85);
+  scene.add(galaxy);
+}
+
+// Near: fine space dust drifting close to the planet. It slides past the far sky as the view moves.
+const dust = (() => {
+  const N = isSmall() || isTouch ? 500 : 900, p = new Float32Array(N * 3), ph = new Float32Array(N);
+  const r = rng(77);
+  for (let i = 0; i < N; i++) {
+    const v = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1).normalize().multiplyScalar(1.5 + Math.pow(r(), 0.6) * 5.5);
+    p.set([v.x, v.y, v.z], i * 3);
+    ph[i] = r() * 6.28;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
+  const pts = new THREE.Points(g, new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uPR: { value: renderer.getPixelRatio() } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform float uTime; uniform float uPR; attribute float aPhase; varying float vA;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vA = (0.35 + 0.3 * sin(uTime * 0.7 + aPhase)) * smoothstep(0.3, 1.2, -mv.z);
+        gl_PointSize = 9.0 * uPR / -mv.z; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;
+        gl_FragColor = vec4(vec3(0.75, 0.8, 1.0) * smoothstep(0.5, 0.0, d) * vA, 1.0); }`,
+  }));
+  scene.add(pts);
+  return pts;
+})();
+
+// Shooting stars now and then.
+const meteor = (() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array([1, 1, 1, 0, 0, 0]), 3));
+  const l = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  l.frustumCulled = false;
+  scene.add(l);
+  return { l, t0: -99, from: new THREE.Vector3(), dir: new THREE.Vector3() };
+})();
+function stepMeteor(t) {
+  if (t - meteor.t0 > 7 + Math.random() * 40 && Math.random() < 0.02 && !reduceMotion) {
+    meteor.t0 = t;
+    const camDir = camera.position.clone().normalize().negate(); // somewhere in front, far away
+    meteor.from.copy(camDir).add(new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.5, Math.random() - 0.5)).normalize().multiplyScalar(60);
+    meteor.dir.set(Math.random() - 0.5, -Math.random() * 0.6, Math.random() - 0.5).normalize();
+  }
+  const k = (t - meteor.t0) / 0.9;
+  const pos = meteor.l.geometry.attributes.position;
+  if (k > 1) { meteor.l.visible = false; return; }
+  meteor.l.visible = true;
+  const head = meteor.from.clone().addScaledVector(meteor.dir, k * 30);
+  const tail = head.clone().addScaledVector(meteor.dir, -6 * Math.sin(Math.PI * k));
+  pos.setXYZ(0, head.x, head.y, head.z);
+  pos.setXYZ(1, tail.x, tail.y, tail.z);
+  pos.needsUpdate = true;
+  meteor.l.material.opacity = Math.sin(Math.PI * k);
+}
+
+/* ------------------------------------------------------------------ spatial movement: phone tilt, mouse, and breathing */
+
+const parallax = { x: 0, y: 0, tx: 0, ty: 0, mx: 0, my: 0, base: null, shakeAt: 0, motionOn: false };
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  const portrait = !screen.orientation || Math.abs(screen.orientation.angle || 0) !== 90;
+  const gx = portrait ? e.gamma : e.beta, gy = portrait ? e.beta : -e.gamma;
+  if (!parallax.base) parallax.base = { x: gx, y: gy };
+  parallax.base.x += (gx - parallax.base.x) * 0.004; // slowly re-centre so any holding angle works
+  parallax.base.y += (gy - parallax.base.y) * 0.004;
+  parallax.tx = THREE.MathUtils.clamp((gx - parallax.base.x) / 18, -1, 1);
+  parallax.ty = THREE.MathUtils.clamp((gy - parallax.base.y) / 18, -1, 1);
+}
+function onMotion(e) {
+  const a = e.acceleration;
+  if (!a || a.x == null) return;
+  const m = Math.hypot(a.x, a.y, a.z || 0);
+  const now = performance.now();
+  if (m > 24 && now - parallax.shakeAt > 15000 && !spill.active) { // a hard shake spills the ocean
+    parallax.shakeAt = now;
+    spin.axisWorld.copy(camAxis(1));
+    startSpill(0.85);
+  } else if (m > 2.2) { // small movements send ripples through the ocean
+    const oc = ocean.material.uniforms;
+    if (oc.uSloshAge.value > 1.2) {
+      oc.uSloshDir.value.copy(camAxis(0).multiplyScalar(a.x).add(camAxis(1).multiplyScalar(a.y))).normalize();
+      oc.uSlosh.value = Math.min(0.35, m * 0.025);
+      oc.uSloshAge.value = 0;
+    }
+  }
+}
+function enableMotion() {
+  if (parallax.motionOn || reduceMotion) return;
+  parallax.motionOn = true;
+  const add = () => { addEventListener('deviceorientation', onOrient); addEventListener('devicemotion', onMotion); };
+  try {
+    const DO = window.DeviceOrientationEvent, DM = window.DeviceMotionEvent;
+    if (DO && typeof DO.requestPermission === 'function') { // iPhone asks once, on a tap
+      DO.requestPermission().then((s) => { if (s === 'granted') add(); }).catch(() => {});
+      if (DM && typeof DM.requestPermission === 'function') DM.requestPermission().catch(() => {});
+    } else add();
+  } catch (e) { /* motion not available */ }
+}
+if (!(window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission === 'function')) enableMotion();
+addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  parallax.mx = (e.clientX / innerWidth) * 2 - 1;
+  parallax.my = (e.clientY / innerHeight) * 2 - 1;
+});
+function applyParallax(t) {
+  if (reduceMotion) return;
+  const breathX = Math.sin(t * 0.23) * 0.18, breathY = Math.sin(t * 0.17 + 1) * 0.14;
+  const tx = parallax.tx + parallax.mx * 0.35 + breathX, ty = parallax.ty + parallax.my * 0.25 + breathY;
+  parallax.x += (tx - parallax.x) * 0.07;
+  parallax.y += (ty - parallax.y) * 0.07;
+  camera.updateMatrixWorld();
+  const k = 0.16 * camera.position.length() / 3.4;
+  camera.position.addScaledVector(camAxis(0), parallax.x * k).addScaledVector(camAxis(1), -parallax.y * k);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+}
+
 /* ------------------------------------------------------------------ camera flights */
 
 let flight = null;
@@ -1785,6 +1998,7 @@ cv.addEventListener('pointerdown', (e) => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!introDone) { introDone = true; syncSpin(); }
+  enableMotion();
   if (spin.pointers.size === 1) { grab(); spin.dragging = true; spin.lastMove = performance.now(); }
   else if (spin.pointers.size === 2) { spin.dragging = false; spin.pinch = pinchDist(); }
 });
@@ -1970,10 +2184,13 @@ function loop() {
   peaks.forEach((p, i) => { p.gem.rotation.y = t * 1.2 + i; p.gem.position.y = 0.21 + Math.sin(t * 1.5 + i) * 0.008; });
   monoliths.forEach((m, i) => { m.cap.material.color.setHSL(0.11, 1, 0.55 + Math.sin(t * 2 + i) * 0.12); });
 
+  stepMeteor(t);
+  dust.rotation.y = t * 0.004;
+  applyParallax(t);
   frame();
   updateHover();
   updateLabels();
-  renderer.render(scene, camera);
+  renderer.render(scene, camera); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
   requestAnimationFrame(loop);
 }
 
