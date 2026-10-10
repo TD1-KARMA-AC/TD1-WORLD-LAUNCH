@@ -200,6 +200,55 @@ export function createScore() {
       src.start(t);
       tone(55, { level: 0.3, decay: 1.4, bend: 0.5 });
     },
+    open() { // the moment you enter: a deep hit, then a rising rush toward the sunrise
+      if (!ctx || !on) return;
+      tone(hz(26), { level: 0.5, attack: 0.02, decay: 4.5, bend: 0.7 });
+      tone(hz(38), { type: 'triangle', level: 0.16, attack: 0.02, decay: 3.2 });
+      const t = ctx.currentTime;
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(5);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 1.4;
+      bp.frequency.setValueAtTime(260, t);
+      bp.frequency.exponentialRampToValueAtTime(2800, t + 3.6);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.16, t + 3.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 4.6);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(sfx);
+      src.start(t);
+      src.stop(t + 5);
+    },
+    bloom() { // the sun breaks the horizon: a wide, shimmering chord
+      if (!ctx || !on) return;
+      [[62, 0.09], [69, 0.08], [74, 0.07], [78, 0.06], [81, 0.05], [86, 0.035]].forEach(([m, l], i) => {
+        setTimeout(() => tone(hz(m), { level: l, attack: 0.5 + i * 0.08, decay: 6.5 }), i * 70);
+      });
+      tone(hz(38), { level: 0.3, attack: 0.3, decay: 6 });
+    },
+    beep() { // a little robot saying hello
+      if (!ctx || !on) return;
+      const n = 3 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n; i++) {
+        const t = ctx.currentTime + i * 0.085;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const f = 700 + Math.random() * 1300;
+        o.type = i % 2 ? 'square' : 'sine';
+        o.frequency.setValueAtTime(f, t);
+        o.frequency.exponentialRampToValueAtTime(f * (0.7 + Math.random() * 0.8), t + 0.07);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(o.type === 'square' ? 0.035 : 0.08, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+        o.connect(g);
+        g.connect(sfx);
+        o.start(t);
+        o.stop(t + 0.1);
+      }
+    },
     thunder(k = 0.5) { // a distant rumble after the lightning
       if (!ctx || !on || k < 0.05) return;
       const t = ctx.currentTime + 0.3 + (1 - k) * 1.2;

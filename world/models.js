@@ -76,6 +76,41 @@ export function robotBody() {
     part(ball(0.035, 8, 6), '#ff8a5c', { at: [0.09, 1.18, -0.02], glow: 1 }),
   ]);
 }
+// A tall walker: two legs with feet, a slim torso, a squared-off head with a wide visor.
+export function robotWalker() {
+  return merge([
+    part(cyl(0.06, 0.07, 0.36, 10), GREY, { at: [-0.1, 0.2, 0] }), // legs
+    part(cyl(0.06, 0.07, 0.36, 10), GREY, { at: [0.1, 0.2, 0] }),
+    part(box(0.12, 0.05, 0.2), DARK, { at: [-0.1, 0.025, 0.03] }), // feet
+    part(box(0.12, 0.05, 0.2), DARK, { at: [0.1, 0.025, 0.03] }),
+    part(box(0.32, 0.08, 0.22), DARK, { at: [0, 0.4, 0] }), // hips
+    part(box(0.38, 0.36, 0.26), WHITE, { at: [0, 0.6, 0] }), // torso
+    part(box(0.2, 0.04, 0.02), '#7fd8ff', { at: [0, 0.66, 0.132], glow: 1 }), // chest strip
+    part(box(0.42, 0.05, 0.28), GREY, { at: [0, 0.78, 0] }), // shoulders
+    part(cyl(0.05, 0.05, 0.07, 8), GREY, { at: [0, 0.84, 0] }), // neck
+    part(box(0.3, 0.22, 0.26), WHITE, { at: [0, 0.98, 0] }), // head
+    part(box(0.26, 0.08, 0.02), VISOR, { at: [0, 0.99, 0.131] }),
+    part(box(0.2, 0.025, 0.01), EYE, { at: [0, 0.99, 0.143], glow: 1 }), // a single scanning eye-line
+    part(cyl(0.01, 0.01, 0.14, 6), GREY, { at: [-0.1, 1.15, 0] }),
+    part(ball(0.03, 8, 6), '#7affb0', { at: [-0.1, 1.23, 0], glow: 1 }),
+  ]);
+}
+// A hover bot: a round body over a glowing thruster ring, one big eye, two little fins.
+export function robotHover() {
+  return merge([
+    part(new THREE.TorusGeometry(0.17, 0.035, 8, 20), '#9fe8ff', { at: [0, 0.18, 0], rot: [Math.PI / 2, 0, 0], glow: 1 }), // thruster ring
+    part(cyl(0.12, 0.16, 0.1, 14), DARK, { at: [0, 0.24, 0] }),
+    part(ball(0.28, 18, 14), WHITE, { at: [0, 0.52, 0] }), // body
+    part(box(0.36, 0.06, 0.36), GREY, { at: [0, 0.5, 0], scale: [1, 1, 1] }), // belt
+    part(cyl(0.11, 0.11, 0.05, 16), VISOR, { at: [0, 0.6, 0.25], rot: [Math.PI / 2, 0, 0] }), // eye socket
+    part(cyl(0.07, 0.07, 0.02, 16), EYE, { at: [0, 0.6, 0.28], rot: [Math.PI / 2, 0, 0], glow: 1 }), // eye
+    part(box(0.03, 0.16, 0.12), GREY, { at: [-0.2, 0.8, -0.05], rot: [0, 0, 0.4] }), // fins
+    part(box(0.03, 0.16, 0.12), GREY, { at: [0.2, 0.8, -0.05], rot: [0, 0, -0.4] }),
+  ]);
+}
+// Where each body's shoulders are, so the arms attach in the right place.
+export const SHOULDERS = { tracked: [0.29, 0.58], walker: [0.25, 0.76], hover: [0.31, 0.55] };
+
 // One arm, hanging from the shoulder at the origin.
 export function robotArm() {
   return merge([
@@ -296,10 +331,11 @@ export function modelMaterial({ flap = false, timeUniform } = {}) {
     if (timeUniform) sh.uniforms.uTime = timeUniform;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-        attribute float aGlow; varying float vGlow;
+        attribute float aGlow; varying float vGlow; varying vec3 vGlowCol;
         ${flap ? 'attribute float aWing; uniform float uTime;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         vGlow = aGlow;
+        vGlowCol = color; // lights keep their own colour, whatever paint the body has
         ${flap ? `
         #ifdef USE_INSTANCING
           float ph = instanceMatrix[3].x * 917.0 + instanceMatrix[3].z * 613.0;
@@ -308,8 +344,8 @@ export function modelMaterial({ flap = false, timeUniform } = {}) {
         #endif
         transformed.y += aWing * sin(uTime * 11.0 + ph) * 0.42;` : ''}`);
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vGlow;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vGlow * 2.4;');
+      .replace('#include <common>', '#include <common>\nvarying float vGlow; varying vec3 vGlowCol;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vGlowCol * vGlow * 2.4;');
   };
   return mat;
 }

@@ -13,7 +13,7 @@ import {
 import { PRODUCTS } from './products.js';
 import { createScore } from './sound.js';
 import { STARS, LINES } from './stars.js';
-import { robotBody, robotArm, robotTool, dataCube, drone, bird, ship, tree, satellite, modelMaterial, merge } from './models.js';
+import { robotBody, robotWalker, robotHover, SHOULDERS, robotArm, robotTool, dataCube, drone, bird, ship, tree, satellite, modelMaterial, merge } from './models.js';
 
 const score = createScore();
 
@@ -1023,11 +1023,25 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
 // builders in Creation, welders in The Future. Couriers carry glowing blocks of data between towns.
 const ROBOT_H = 0.0013;
 const JOBS = ['pick', 'can', 'scanner', 'hammer', 'torch'];
+const ROLE = { pick: 'Miner', can: 'Gardener', scanner: 'Surveyor', hammer: 'Builder', torch: 'Welder', walk: 'Courier' };
+const CALL = { pick: 'DIG', can: 'BLOOM', scanner: 'SCAN', hammer: 'BLOK', torch: 'ARC', walk: 'POST' };
+// What they say when you tap them.
+const SAYS = {
+  pick: ['Digging up the history of AI. Every layer down is an older idea.', 'Found a bit of 1956 down here. Dartmouth, I think.', 'Careful, this rock is older than the perceptron.'],
+  can: ['Watering the memory gardens. What gets remembered, grows.', 'Every idea needs a little looking after.', 'These ones bloom when somebody recalls them.'],
+  scanner: ['Scanning for unsolved problems. Found three before lunch.', 'Reasoning signal is strong today.', 'If it is hard, it is probably on one of those crystal peaks.'],
+  hammer: ['Building tools for builders. Mind the blocks!', 'Measure twice, compile once.', 'Every block here is somebody’s next product.'],
+  torch: ['Welding the next horizon together. Nearly there.', 'AI, then AGI, then AC. I am on the AC part.', 'Safety visor down. The future is bright.'],
+  walk: ['Delivering a block of data. Do not drop it, do not drop it…', 'Express delivery between towns. No stopping. Well, for you.', 'This block is fresh. Just came out of Memory.'],
+};
+const PAINT = ['#f2f4f8', '#f2f4f8', '#ffb347', '#9fd3ff', '#c9b6ff', '#8ef0b8', '#ff9a8a', '#6a7080'];
+const TYPES = ['tracked', 'walker', 'hover'];
 const robots = [];
 const robotParts = (() => {
   const nWork = isSmall() || isTouch ? 6 : 12, nWalk = isSmall() || isTouch ? 16 : 30;
   const r = rng(808);
   const props = { rock: [], round: [], blocks: [], pylon: [] };
+  const named = (job) => `${CALL[job]}-${String(10 + Math.floor(r() * 89))}`;
   REGIONS.forEach((reg, ri) => {
     // towns to work near; The Origins has none, so its miners work the open desert
     const towns = cities.filter((c) => c.region === ri);
@@ -1040,7 +1054,9 @@ const robotParts = (() => {
       // something to work on, just in front
       const at = nearDir(d, 0.0008, r);
       const T = at.clone().sub(d).normalize();
-      robots.push({ kind: 'work', job: JOBS[ri], d, yaw: faceYaw(d, T), phase: r() * 10, col: reg.col.clone().lerp(new THREE.Color('#ffffff'), 0.7) });
+      const type = TYPES[Math.floor(r() * (JOBS[ri] === 'scanner' ? 3 : 2))]; // surveyors may hover
+      const col = r() < 0.5 ? reg.col.clone().lerp(new THREE.Color('#ffffff'), 0.65) : new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]);
+      robots.push({ kind: 'work', job: JOBS[ri], type, d, yaw: faceYaw(d, T), baseYaw: faceYaw(d, T), phase: r() * 10, col, name: named(JOBS[ri]), react: -99 });
       const prop = { d: at, yaw: r() * 6.28, s: 0.0011, c: new THREE.Color('#ffffff') };
       if (ri === 0) props.rock.push({ ...prop, c: new THREE.Color('#9a7550') });
       else if (ri === 1) props.round.push({ ...prop, s: 0.0022, c: new THREE.Color('#9a86d6') });
@@ -1050,8 +1066,9 @@ const robotParts = (() => {
   });
   for (let i = 0; i < nWalk; i++) {
     const home = cities[Math.floor(r() * cities.length)];
-    robots.push({ kind: 'walk', from: home, to: home, t: 1, wait: r() * 3, speed: 0.012 + r() * 0.008, phase: r() * 10, q: null, angle: 1,
-      off: null, carry: r() < 0.6, d: nearDir(home.dir, 0.003 + r() * 0.004, r), yaw: r() * 6, col: new THREE.Color('#ffffff') });
+    const type = r() < 0.4 ? 'hover' : (r() < 0.5 ? 'walker' : 'tracked');
+    robots.push({ kind: 'walk', job: 'walk', type, from: home, to: home, t: 1, wait: r() * 3, speed: (type === 'hover' ? 0.018 : 0.012) + r() * 0.008, phase: r() * 10, q: null, angle: 1,
+      carry: r() < 0.65, d: nearDir(home.dir, 0.003 + r() * 0.004, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
   }
   if (props.rock.length) scatterMesh(tree('rock'), props.rock);
   if (props.round.length) scatterMesh(tree('round'), props.round);
@@ -1066,13 +1083,21 @@ const robotParts = (() => {
   }
 
   const N = robots.length;
-  const mk = (geo, n) => { const m = new THREE.InstancedMesh(geo, MODEL_MAT, n); m.renderOrder = 3; m.frustumCulled = false; planet.add(m); flora.push(m); return m; };
-  const body = mk(robotBody(), N), arms = mk(robotArm(), N * 2), cube = mk(dataCube(), N);
+  const mk = (geo, n) => { const m = new THREE.InstancedMesh(geo, MODEL_MAT, Math.max(1, n)); m.renderOrder = 3; m.frustumCulled = false; planet.add(m); flora.push(m); return m; };
+  const bodies = {};
+  const builders = { tracked: robotBody, walker: robotWalker, hover: robotHover };
+  TYPES.forEach((ty) => {
+    const mine = robots.filter((rb) => rb.type === ty);
+    bodies[ty] = mk(builders[ty](), mine.length);
+    bodies[ty].count = mine.length;
+    mine.forEach((rb, k) => { rb.slot = k; bodies[ty].setColorAt(k, rb.col); });
+  });
+  const arms = mk(robotArm(), N * 2), cube = mk(dataCube(), N);
+  robots.forEach((rb, i) => { arms.setColorAt(i * 2, rb.col); arms.setColorAt(i * 2 + 1, rb.col); rb.pos = new THREE.Vector3(); });
   const tools = {};
   JOBS.forEach((j) => { tools[j] = mk(robotTool(j), N); tools[j].count = 0; });
-  robots.forEach((rb, i) => body.setColorAt(i, rb.col));
   // sparks from the hammers and torches
-  const SP = 24, sp = new Float32Array(N * 3), ss = new Float32Array(N);
+  const sp = new Float32Array(N * 3), ss = new Float32Array(N);
   const sg = new THREE.BufferGeometry();
   sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
   sg.setAttribute('aSize', new THREE.BufferAttribute(ss, 1));
@@ -1086,26 +1111,28 @@ const robotParts = (() => {
   sparks.renderOrder = 4;
   planet.add(sparks);
   flora.push(sparks);
-  void SP;
-  return { body, arms, cube, tools, sparks };
+  return { bodies, arms, cube, tools, sparks };
 })();
 
 const _rB = new THREE.Matrix4(), _rL = new THREE.Matrix4(), _rM = new THREE.Matrix4(), _rS = new THREE.Vector3(), _rV = new THREE.Vector3(), _rT = new THREE.Vector3();
 const _rQ = new THREE.Quaternion();
-function armMatrix(base, side, angle, out) { // shoulder at (±0.29, 0.58, 0) in robot units; angle swings it forward/up
-  _rL.makeRotationX(-angle).setPosition(side * 0.29, 0.58, 0);
+function armMatrix(base, side, angle, out, type = 'tracked') { // angle swings the arm forward and up from the shoulder
+  const [sx, sy] = SHOULDERS[type];
+  _rL.makeRotationX(-angle).setPosition(side * sx, sy, 0);
   return out.multiplyMatrices(base, _rL);
 }
+const REACT_S = 4.8; // how long a tapped robot stops to say hello
 function stepRobots(dt, t) {
-  const { body, arms, cube, tools, sparks } = robotParts;
+  const { bodies, arms, cube, tools, sparks } = robotParts;
   JOBS.forEach((j) => { tools[j].count = 0; });
   let nCube = 0;
   const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
   _rS.setScalar(ROBOT_H);
   robots.forEach((rb, i) => {
     let swingR = 0, swingL = 0, bob = 0, yawWobble = 0, spark = 0;
+    const greeting = t - rb.react < REACT_S;
     if (rb.kind === 'walk') {
-      if (rb.t >= 1) {
+      if (greeting) { /* stand still and say hello */ } else if (rb.t >= 1) {
         rb.wait -= dt;
         if (rb.wait <= 0) { // off to the next town, usually a neighbour on the same continent
           const same = cities.filter((c) => c.region === rb.to.region && c !== rb.to);
@@ -1126,13 +1153,14 @@ function stepRobots(dt, t) {
         _rT.copy(rb.d).sub(prev);
         if (_rT.lengthSq() > 1e-14) rb.yaw = faceYaw(rb.d, _rT.normalize());
       }
-      const walking = rb.t < 1;
+      const walking = rb.t < 1 && !greeting;
       swingR = walking ? Math.sin((t + rb.phase) * 9) * 0.5 : Math.sin((t + rb.phase) * 1.3) * 0.08;
       swingL = -swingR;
-      bob = walking ? Math.abs(Math.sin((t + rb.phase) * 9)) * 0.05 : 0;
+      bob = walking && rb.type !== 'hover' ? Math.abs(Math.sin((t + rb.phase) * 9)) * 0.05 : 0;
       if (rb.carry) { swingR = swingL = 2.85; } // holding a data block overhead
     } else {
       const w = t + rb.phase;
+      rb.yaw = rb.baseYaw;
       switch (rb.job) {
         case 'pick': { const k = Math.pow(Math.max(0, Math.sin(w * 3.2)), 0.6); swingR = 2.4 - k * 2.2; swingL = swingR * 0.6; bob = (1 - k) * 0.02; break; }
         case 'hammer': { const k = Math.max(0, Math.sin(w * 5.5)); swingR = 1.7 - k * 1.3; swingL = 0.4; spark = k > 0.97 ? 1 : 0; break; }
@@ -1142,27 +1170,69 @@ function stepRobots(dt, t) {
         default: break;
       }
     }
+    if (greeting) { // turn to face you, hop, and wave
+      const k = t - rb.react;
+      _rT.copy(planetLocalCam).sub(rb.d);
+      _rT.addScaledVector(rb.d, -_rT.dot(rb.d));
+      if (_rT.lengthSq() > 1e-12) {
+        const want = faceYaw(rb.d, _rT.normalize());
+        let dy = want - rb.yaw;
+        dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+        rb.yaw += dy * Math.min(1, k * 3); // swings round to look at you
+      }
+      yawWobble = 0;
+      spark = 0;
+      swingR = 2.75 + Math.sin(k * 14) * 0.38;
+      swingL = rb.carry && rb.kind === 'walk' ? 2.85 : 0.25;
+      if (rb.carry && rb.kind === 'walk') swingR = 2.85; // hands full: a happy bounce instead
+      bob = k < 1.2 ? Math.abs(Math.sin(k * Math.PI * 2.5)) * 0.3 * (1.2 - k) : 0;
+    }
+    if (rb.type === 'hover') bob += 0.28 + Math.sin(t * 2.2 + rb.phase) * 0.04; // floats on its thruster ring
     groundMatrix(rb.d, rb.yaw + yawWobble, _rS, bob * ROBOT_H - 0.0002, _rB);
-    body.setMatrixAt(i, _rB);
-    arms.setMatrixAt(i * 2, armMatrix(_rB, 1, swingR, _rM));
+    rb.pos.setFromMatrixPosition(_rB).addScaledVector(rb.d, ROBOT_H * 0.6);
+    bodies[rb.type].setMatrixAt(rb.slot, _rB);
+    arms.setMatrixAt(i * 2, armMatrix(_rB, 1, swingR, _rM, rb.type));
     const tool = rb.kind === 'work' ? tools[rb.job] : null;
     if (tool) { tool.setMatrixAt(tool.count++, _rM); }
-    arms.setMatrixAt(i * 2 + 1, armMatrix(_rB, -1, swingL, _rM));
+    arms.setMatrixAt(i * 2 + 1, armMatrix(_rB, -1, swingL, _rM, rb.type));
     if (rb.kind === 'walk' && rb.carry) {
-      _rL.makeRotationY(t * 0.8 + rb.phase).setPosition(0, 1.48 + Math.sin(t * 2 + rb.phase) * 0.02, 0);
+      _rL.makeRotationY(t * 0.8 + rb.phase).setPosition(0, (rb.type === 'walker' ? 1.62 : 1.48) + Math.sin(t * 2 + rb.phase) * 0.02, 0);
       cube.setMatrixAt(nCube++, _rM.multiplyMatrices(_rB, _rL));
     }
     // sparks at the tool's tip
     if (spark > 0 && tool) {
-      _rV.set(0, -0.36, rb.job === 'hammer' ? 0.36 : 0.3).applyMatrix4(armMatrix(_rB, 1, swingR, _rM));
+      _rV.set(0, -0.36, rb.job === 'hammer' ? 0.36 : 0.3).applyMatrix4(armMatrix(_rB, 1, swingR, _rM, rb.type));
       sp.setXYZ(i, _rV.x, _rV.y, _rV.z);
       ss.setX(i, spark);
     } else ss.setX(i, Math.max(0, ss.getX(i) - dt * 8));
   });
   cube.count = nCube;
-  [body, arms, cube, ...Object.values(tools)].forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+  [...Object.values(bodies), arms, cube, ...Object.values(tools)].forEach((m) => { m.instanceMatrix.needsUpdate = true; });
   sp.needsUpdate = true;
   ss.needsUpdate = true;
+}
+
+// Tap a robot: it stops, turns to you, waves, beeps, and tells you what it's up to.
+const sayEl = document.createElement('div');
+sayEl.id = 'bot-say';
+sayEl.setAttribute('role', 'status');
+document.body.appendChild(sayEl);
+let sayBot = null;
+function greetRobot(i) {
+  const rb = robots[i];
+  rb.react = clock.getElapsedTime();
+  sayBot = rb;
+  const lines = SAYS[rb.job];
+  sayEl.innerHTML = `<b>${rb.name}</b><span>${ROLE[rb.job]}</span><p>${lines[Math.floor(Math.random() * lines.length)]}</p>`;
+  sayEl.classList.add('on');
+  score.beep();
+}
+function stepSay(t) {
+  if (!sayBot) return;
+  if (t - sayBot.react > REACT_S || coreMix > 0.1) { sayEl.classList.remove('on'); sayBot = null; return; }
+  const s = toScreen(sayBot.pos.clone().addScaledVector(sayBot.d, ROBOT_H * 0.8));
+  sayEl.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
+  sayEl.style.visibility = s.z < 1 ? 'visible' : 'hidden';
 }
 function surfaceRadius(d) {
   const t = terrain(d.x, d.y, d.z);
@@ -3043,6 +3113,10 @@ function pick(px, py) {
     const ei = nearest(eggMeshes.map((m) => ({ pos: m.userData.pos, ok: m.visible })).map((o) => (o.ok ? o : { pos: new THREE.Vector3(0, 0, -50) })), px, py, reach + 14);
     if (ei !== null) return { kind: 'egg', index: ei, label: 'Something shiny…', sub: 'Easter egg' };
   }
+  if (camera.position.length() < 1.15) { // down low, the robots can be tapped
+    const bi = nearest(robots, px, py, reach + 12);
+    if (bi !== null) return { kind: 'robot', index: bi, label: robots[bi].name, sub: ROLE[robots[bi].job] };
+  }
   const ci = nearest(cities, px, py, reach);
   if (ci !== null) return { kind: 'city', index: ci, label: cities[ci].product.name, sub: REGIONS[cities[ci].region].name };
   const pi = nearest(peaks, px, py, reach + 4);
@@ -3070,6 +3144,7 @@ function pick(px, py) {
 }
 function activate(h) {
   if (!h) return;
+  if ((h.kind === 'region' || h.kind === 'ocean') && camera.position.length() < 1.06) return; // on the ground, tapping the land just ripples
   if (h.kind === 'city') { selectRegion(cities[h.index].region, { noFly: true }); focusCity(h.index); }
   else if (h.kind === 'peak') { selectRegion(peaks[h.index].region, { noFly: true }); flyTo(peaks[h.index].pos, fitDist(0.5, 1.95)); }
   else if (h.kind === 'monolith') selectRegion(0, { dir: monoliths[h.index].pos, dist: fitDist(0.5, 2.0) });
@@ -3077,6 +3152,7 @@ function activate(h) {
   else if (h.kind === 'ocean') selectOcean(h.dir);
   else if (h.kind === 'core') enterCore();
   else if (h.kind === 'egg') openEgg(eggMeshes[h.index]);
+  else if (h.kind === 'robot') greetRobot(h.index);
   else if (h.kind === 'shop') openShop();
   else if (h.kind === 'contact') openContact();
   else openSpecial(h.kind);
@@ -3114,7 +3190,6 @@ cv.addEventListener('pointerdown', (e) => {
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* fine without capture */ }
   spin.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (!introDone) {
-    if (soundTap) { soundTap = false; enableMotion(); return; } // the first tap starts the music and lets the sunrise play on
     cine.skip = true;
   }
   enableMotion();
@@ -3578,12 +3653,24 @@ function cineAim(pos) {
   const a = edge + 0.12;
   return { dir: u.clone().multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a)), up: w.clone().multiplyScalar(Math.cos(a)).addScaledVector(u, -Math.sin(a)) };
 }
+function aimCine() {
+  cine.S.copy(sunDir).normalize();
+  const f = introTo.clone().normalize();
+  cine.N.copy(f).addScaledVector(cine.S, -f.dot(cine.S)).normalize();
+}
+// Behind the gate: hang in the dark just above the world's edge, the sun about to rise.
+function stepGate(t) {
+  aimCine();
+  const pos = cinePose(0.86 + Math.sin(t * 0.15) * 0.01);
+  camera.position.copy(pos);
+  const aim = cineAim(pos);
+  camera.up.copy(aim.up);
+  camera.lookAt(pos.clone().add(aim.dir));
+}
 function stepIntro(now) {
   if (!cine.start) {
     cine.start = now;
-    cine.S.copy(sunDir).normalize();
-    const f = introTo.clone().normalize();
-    cine.N.copy(f).addScaledVector(cine.S, -f.dot(cine.S)).normalize();
+    aimCine();
     if (!reduceMotion) document.body.classList.add('cine');
   }
   const hold = /^#cine=(\d+)$/.exec(location.hash); // td1.world/#cine=2000 freezes the opening at 2 s (for framing)
@@ -3591,6 +3678,7 @@ function stepIntro(now) {
   if (T < CINE_A) { // sunrise over the limb
     const k = T / CINE_A;
     score.swell(k * 0.55);
+    if (k > 0.5 && !cine.bloomed) { cine.bloomed = true; score.bloom(); } // the sun breaks the horizon
     const pos = cinePose(THREE.MathUtils.lerp(0.86, 0.5, ease(k))); // the sun starts hidden behind the planet's edge
     camera.position.copy(pos);
     const aim = cineAim(pos);
@@ -3606,7 +3694,7 @@ function stepIntro(now) {
     const aim = cineAim(p0);
     camera.up.copy(aim.up).lerp(new THREE.Vector3(0, 1, 0), k).normalize();
     camera.lookAt(p0.clone().addScaledVector(aim.dir, 6).lerp(new THREE.Vector3(), Math.min(1, k * 1.2)));
-    if (!cine.titled && T > CINE_A + 500) { cine.titled = true; document.body.classList.add('cine-title'); }
+    if (!cine.titled && T > CINE_A + 500) { cine.titled = true; document.body.classList.add('cine-title'); score.chime(81); }
   } else {
     camera.position.copy(introTo);
     camera.up.set(0, 1, 0);
@@ -3619,35 +3707,42 @@ function stepIntro(now) {
     setTimeout(() => document.body.classList.remove('cine-title'), 1400);
   }
 }
-const skipIntro = () => { if (!introDone) cine.skip = true; };
+let gateOpen = false, gateAt = 0;
+const skipIntro = (e) => {
+  if (!gateOpen || introDone || performance.now() - gateAt < 800) return;
+  if (e && e.target && e.target.closest && e.target.closest('#gate')) return;
+  cine.skip = true;
+};
 const soundBtn = $('#nav-sound');
-let soundTap = false;
 // sound is on unless the visitor has turned it off before
 const soundPref = () => { try { return localStorage.getItem('td1-sound') !== 'off'; } catch (e) { return true; } };
-function setSound(onNow) {
+function setSound(onNow, remember = true) {
   if (onNow) score.enable(); else score.disable();
-  try { localStorage.setItem('td1-sound', onNow ? 'on' : 'off'); } catch (e) { /* fine */ }
+  if (remember) { try { localStorage.setItem('td1-sound', onNow ? 'on' : 'off'); } catch (e) { /* fine */ } }
   soundBtn.setAttribute('aria-pressed', String(onNow));
   soundBtn.querySelector('span').textContent = onNow ? 'Sound on' : 'Sound off';
   document.body.classList.toggle('sound-on', onNow);
 }
 soundBtn.addEventListener('click', () => setSound(soundBtn.getAttribute('aria-pressed') !== 'true'));
-$('#cine-sound').addEventListener('click', (e) => { e.stopPropagation(); setSound(true); });
-// browsers only allow audio after a tap or key, so the score starts on the visitor's first one
-const AUDIO_GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
-if (soundPref()) {
-  soundBtn.setAttribute('aria-pressed', 'true');
-  soundBtn.querySelector('span').textContent = 'Sound on';
-  document.body.classList.add('sound-armed');
-  const resume = (e) => {
-    AUDIO_GESTURES.forEach((ev) => removeEventListener(ev, resume, true));
-    document.body.classList.remove('sound-armed');
-    if (e.target && e.target.closest && e.target.closest('#nav-sound')) return; // they tapped the toggle: let it turn sound off
-    if (!introDone && e.type === 'pointerdown' && e.target.id === 'world') soundTap = true;
-    setSound(true);
-  };
-  AUDIO_GESTURES.forEach((ev) => addEventListener(ev, resume, true));
+// The gate: one tap to enter. That tap is what lets the browser play sound, so the music is there from the first frame.
+function enterWorld(withSound, remember = true) {
+  if (gateOpen) return;
+  gateOpen = true;
+  gateAt = performance.now();
+  if (withSound) { setSound(true, remember); score.open(); } else setSound(false, remember);
+  document.body.classList.add('entered');
+  enableMotion();
+  setTimeout(() => { const g = $('#gate'); if (g) g.hidden = true; }, 1800);
 }
+const quietFirst = !soundPref(); // they chose quiet last time: offer that first
+$('#enter').addEventListener('click', () => enterWorld(!quietFirst));
+$('#enter-quiet').addEventListener('click', () => enterWorld(quietFirst));
+if (quietFirst) {
+  $('#gate .g-note').firstChild.textContent = 'Sound is off · ';
+  $('#enter-quiet').textContent = 'Enter with sound';
+}
+// links for testing and framing (#dev, #cine=…) skip the gate, quietly
+if (/dev|cine=/.test(location.hash)) enterWorld(false, false);
 addEventListener('keydown', skipIntro);
 $('#skip').addEventListener('click', skipIntro);
 
@@ -3689,7 +3784,7 @@ function loop() {
   camera.getWorldQuaternion(camWorldQ);
 
   if (inVR) stepVR(dtFrame, t);
-  else if (!introDone) stepIntro(now);
+  else if (!introDone) { if (gateOpen) stepIntro(now); else stepGate(t); }
   else if (flight) stepFlight(now);
   else stepSpin(dtFrame, t, now);
 
@@ -3757,6 +3852,7 @@ function loop() {
     frame();
     updateHover();
     updateLabels();
+    stepSay(t);
     updateFlare();
   } else flareEl.style.opacity = '0';
   U.uLin.value = inVR ? 0 : 1;
@@ -3781,6 +3877,9 @@ addEventListener('resize', () => {
 });
 
 document.body.classList.add('ready');
+$('#enter').disabled = false;
+$('#enter-quiet').disabled = false;
+$('#enter').focus({ preventScroll: true });
 if (location.hash === '#spill') setTimeout(() => startSpill(0.9), 3600); // td1.world/#spill shows the ocean spill straight away
 // Custom shaders were written in display colours; in the film pipeline they convert to linear light so
 // bloom and grading treat everything alike. In VR (rendered directly) they stay as written.
@@ -3797,7 +3896,7 @@ scene.traverse((o) => {
 renderer.setAnimationLoop(loop);
 // td1.world/#dev exposes a few handles for framing shots and testing
 if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, robots, ships, flocks, sats, comet, skip: () => { cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */

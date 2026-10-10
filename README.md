@@ -23,7 +23,7 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
 
 **VR:** on a Meta Quest (or any WebXR headset) an **Enter VR** button appears. You stand in space beside the world: grab it (grip or pinch) to spin it, point and pull the trigger to select places and read floating cards, use the thumbstick to move closer, B/Y for Karma Core and A/X to close. Spin it hard and the ocean spills in VR too.
 
-**Cinematic:** the site opens with a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place: on by default (it starts on the first tap, as browsers require) and remembered if the visitor turns it off.
+**Cinematic:** the site opens on a gate (TD1.WORLD, *Enter the world*). That one tap is what lets the browser play sound, so the music is there from the first frame: a deep hit, a rising rush, and a shimmering chord as the sun breaks the horizon. *Enter without sound* is there too, and remembered. Then comes a letterboxed sunrise over the planet's edge and a pull-back reveal (tap or press any key to skip; `#cine=2000` freezes the shot at 2 s for framing). Everything renders through a film pipeline: bloom, lens flare, vignette, grain, lens fringing and a filmic grade. VR renders directly for headset performance. Flights bank like a drone, close-ups pull focus, and an original ambient score (`world/sound.js`, generated live, no audio files) follows you from place to place. Sound is on by default and can be switched off in the top bar.
 
 **Alive and real:**
 - **Night side:** as the world turns away from the sun its towns light up, with suburbs and winding roads glowing between them, and a golden-hour band runs along the line between day and night.
@@ -37,6 +37,7 @@ Grab the world and spin it any way you like; left alone it turns on a tilted axi
     - Creation: builders with hammers
     - The Future: welders with torches
   - Courier robots carry glowing data blocks from town to town.
+  - Robots come in three builds (tracked, two-legged walkers and hover bots) and many paint jobs. Fly down and tap one: it stops, turns to you, waves, beeps hello and tells you what it's doing.
   - Cargo drones fly overhead, flocks of birds wheel over the land and container ships cross the Ocean of Data with wakes and navigation lights.
   - Satellites orbit, and a comet streams its tails away from the sun.
 - **Real stars and real time:** the sky is the real night sky (5,044 stars down to naked-eye brightness, the Milky Way where it really is, the constellations drawn faintly), lined up with the world's axis. You arrive on the side of the world that matches your own clock (night if it's night where you are), with the sun as high or low as it is today. Then days pass in about three and a half minutes. The HUD shows local time below you.
