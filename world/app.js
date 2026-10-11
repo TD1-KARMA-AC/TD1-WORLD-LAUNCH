@@ -50,7 +50,31 @@ const camWorld = new THREE.Vector3(), camWorldQ = new THREE.Quaternion();
 
 /* Film pipeline: render → bloom → lens (vignette, grain, fringing) → filmic grade. VR renders directly. */
 // Multisampled (anti-aliased) render target, so edges stay crisp through the film pipeline.
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: isTouch ? 2 : 4 }));
+// Only ask for 4x: it's what every phone and computer GPU supports (iPhones can't do 2x, and a mismatch draws black).
+// Safety net: draw one white frame into a tiny anti-aliased target and read it back. If it comes back black, this device
+// can't do it, so the world renders without it rather than not at all.
+function msaaWorks(samples) {
+  if (!renderer.capabilities.isWebGL2 || renderer.capabilities.maxSamples < samples) return false;
+  try {
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples, depthBuffer: true });
+    const sc = new THREE.Scene();
+    sc.background = new THREE.Color(1, 1, 1);
+    const prevXR = renderer.xr.enabled;
+    renderer.xr.enabled = false;
+    renderer.setRenderTarget(rt);
+    renderer.render(sc, new THREE.OrthographicCamera());
+    renderer.setRenderTarget(null);
+    renderer.xr.enabled = prevXR;
+    const px = new Uint16Array(4);
+    renderer.readRenderTargetPixels(rt, 1, 1, 1, 1, px);
+    const gl = renderer.getContext();
+    const ok = gl.getError() === gl.NO_ERROR && px[0] !== 0;
+    rt.dispose();
+    return ok;
+  } catch (e) { return false; }
+}
+const MSAA = !/nomsaa/.test(location.hash) && msaaWorks(4) ? 4 : 0;
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: MSAA }));
 composer.addPass(new RenderPass(scene, camera));
 const bloomScale = isSmall() || isTouch ? 0.4 : 0.75;
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
@@ -4276,7 +4300,7 @@ scene.traverse((o) => {
 renderer.setAnimationLoop(loop);
 // td1.world/#dev exposes a few handles for framing shots and testing
 if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
