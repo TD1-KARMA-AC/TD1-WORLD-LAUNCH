@@ -129,6 +129,8 @@ function fitDist(r, min) {
   const tv = Math.tan((camera.fov * DEG) / 2);
   return Math.max(min, r / Math.min(tv, tv * camera.aspect));
 }
+// The view of the whole world: sat back far enough to see its orbit (satellites, The Exchange, the moon passing by).
+const orbitView = () => Math.min(8.6, fitDist(1.85, 4.4)); // (a tall phone screen would otherwise push the world too far away)
 
 /* The world in your hands: grab it, fling it, spin it in any direction. Left alone, it turns like Earth. */
 const EARTH_AXIS = new THREE.Vector3(Math.sin(23.4 * DEG), Math.cos(23.4 * DEG), 0).normalize();
@@ -3357,7 +3359,7 @@ panelBody.addEventListener('click', (e) => {
     else if (go.dataset.go === 'book') openContact({ type: 'Book expertise' });
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
     else if (go.dataset.go === 'contact') openContact({ type: 'General enquiry', message: 'I spun the world and found the eggs.' });
-    else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), fitDist(1.32, 3.4), 2000); }
+    else if (go.dataset.go === 'surface') { closePanel(); flyTo(camera.position.clone(), orbitView(), 2000); }
   }
 });
 panelBody.addEventListener('submit', (e) => { if (e.target.id === 'enquiry') { e.preventDefault(); sendEnquiry(e.target); } });
@@ -3504,7 +3506,7 @@ function endTour(free) {
   tourEl.hidden = true;
   if (free) {
     closePanel();
-    flyTo(camera.position.clone(), fitDist(1.16, 3.0), 2400);
+    flyTo(camera.position.clone(), orbitView(), 2400);
     toast('The world is yours. Spin it, pinch in, tap anything.', 3200);
   }
 }
@@ -3514,7 +3516,7 @@ $('#tour-x').addEventListener('click', () => endTour(false));
 $('#tour-down').addEventListener('click', () => {
   const st = TOUR[tour.i];
   if (camera.position.length() < 1.08) { // back up to see the whole place again
-    if (st.land !== undefined) selectRegion(st.land, { dur: 2200 }); else flyTo(camera.position.clone(), fitDist(1.16, 3.0), 2200);
+    if (st.land !== undefined) selectRegion(st.land, { dur: 2200 }); else flyTo(camera.position.clone(), orbitView(), 2200);
     if (isSmall()) setPeek(true);
   } else if (st.land !== undefined) landAt(st.land);
 });
@@ -4388,7 +4390,7 @@ function updateLabels() {
 }
 
 let introDone = false;
-const introTo = latLon(22, ARRIVE_LON).multiplyScalar(fitDist(1.16, 3.0)); // the world fills more of the screen
+const introTo = latLon(22, ARRIVE_LON).multiplyScalar(orbitView()); // sat back: the world and its orbit
 
 /* The opening shot: skim low over the night side as the sun rises over the horizon, then pull back to reveal the world. */
 const cine = { start: 0, S: new THREE.Vector3(), N: new THREE.Vector3(), titled: false, skip: false };
