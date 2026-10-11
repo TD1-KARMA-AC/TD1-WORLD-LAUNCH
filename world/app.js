@@ -1870,7 +1870,7 @@ const mindaloo = new THREE.Group();
           bright = Math.max(bright, ray * (1 - t / 3.2) * 0.8 + (t < 1.6 ? 0.25 : 0));
         }
       }
-      const rad = 1 + h * 0.24;
+      const rad = 1 + h * 0.08; // a clean round moon, like the emblem's
       pos.push(x * rad, y * rad, z * rad);
       const g = 0.72 - mare * 0.36 - floor * 0.06 + bright * 0.22 + fbm(x * 20, y * 20, z * 20, 2) * 0.06;
       cc.setRGB(g, g * 0.98, g * 1.04); // the faintest cool tint
@@ -1887,7 +1887,25 @@ const mindaloo = new THREE.Group();
     g.setIndex(index);
     g.computeVertexNormals();
     g.scale(MOON_R, MOON_R, MOON_R);
-    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb4b6be, roughness: 1, metalness: 0, emissive: 0x8d93a8, emissiveIntensity: 0.14 })); // moonlight silver, never navy
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb9bbc3, roughness: 1, metalness: 0, emissive: 0xa4a9bb, emissiveIntensity: 0.3 }); // moonlight silver, never navy
+    // The Mindaloo rune is printed on the moon itself: projected onto its face from wherever you look, so it curves
+    // with the surface, takes the light, and sits dead centre. Etched dark into the stone, with a soft silver inlay.
+    const runeTex = new THREE.TextureLoader().load('world/assets/mindaloo-rune.png');
+    mat.userData.rune = { tex: { value: runeTex }, c: { value: new THREE.Vector3() }, r: { value: 0.16 } };
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uRune = mat.userData.rune.tex;
+      sh.uniforms.uRuneC = mat.userData.rune.c;
+      sh.uniforms.uRuneR = mat.userData.rune.r;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform sampler2D uRune; uniform vec3 uRuneC; uniform float uRuneR;')
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          vec2 ruv = (-vViewPosition.xy - uRuneC.xy) / (2.0 * uRuneR) + 0.5;
+          float rune = 0.0;
+          if (ruv.x > 0.0 && ruv.x < 1.0 && ruv.y > 0.0 && ruv.y < 1.0) rune = texture2D(uRune, ruv).r;
+          diffuseColor.rgb *= 1.0 - rune * 0.55;
+          totalEmissiveRadiance += vec3(0.86, 0.88, 1.0) * rune * 0.55;`);
+    };
+    const m = new THREE.Mesh(g, mat);
     return m;
   })();
   // soft halo of moonlight
@@ -1954,11 +1972,10 @@ const mindaloo = new THREE.Group();
     return c;
   };
   mindaloo.userData.crescents = [cres(-1), cres(1)];
-  mindaloo.userData.rune = sprite('world/assets/mindaloo-rune.png', 300, 300, 0.5, 0.5, 0.9);
   mindaloo.userData.MOON_R = MOON_R;
   mindaloo.userData.px = px;
 }
-mindaloo.position.set(-2.05, 0, 0);
+mindaloo.position.set(-3.1, 0, 0); // the flagship keeps a wide, stately orbit, clear of the world
 mindalooPivot.add(mindaloo);
 
 /* ------------------------------------------------------------------ The Exchange: the shop, a trading station in orbit */
@@ -4403,7 +4420,12 @@ function loop() {
     mindaloo.getWorldQuaternion(_mQ).invert();
     _mUp.copy(camAxis(1)).applyQuaternion(_mQ).normalize();
     _mRight.copy(camAxis(0)).applyQuaternion(_mQ).normalize();
-    u.crown.position.copy(_mDir).multiplyScalar(-u.MOON_R * 0.6);
+    u.crown.position.set(0, 0, 0); // exactly at the moon's centre: no parallax, so it never drifts off-centre
+    { // where to print the rune: the moon's centre and size, as you see it
+      const rm = u.body.material.userData.rune;
+      rm.c.value.copy(mindaloo.getWorldPosition(_mW)).applyMatrix4(camera.matrixWorldInverse);
+      rm.r.value = u.MOON_R * 0.8 * mindaloo.scale.x;
+    }
     CAM_RIGHT.value.copy(camAxis(0));
     CAM_UP.value.copy(camAxis(1));
     u.crescents.forEach((c, i) => { // at their places in the emblem, slowly turning
@@ -4418,11 +4440,9 @@ function loop() {
     const sep = toMoon.angleTo(toPlanet);
     const planetAng = Math.asin(Math.min(1, 1.05 / camWorld.length()));
     const over = THREE.MathUtils.smoothstep(sep, planetAng + 0.05, planetAng - 0.25) * (dM < camWorld.length() ? 1 : 0);
-    u.rune.position.copy(_mDir).multiplyScalar(u.MOON_R * 1.12).addScaledVector(_mUp, -87 * u.px).addScaledVector(_mRight, -8 * u.px);
     const sel = selected && selected.kind === 'mindaloo';
     u.crown.material.opacity += ((sel ? 1 : 0.8) * (1 - over * 0.75) - u.crown.material.opacity) * 0.06;
-    u.rune.material.opacity = (sel ? 1 : 0.85) * (0.85 + Math.sin(t * 0.9) * 0.15);
-    u.crown.visible = u.rune.visible = coreMix < 0.5;
+    u.crown.visible = coreMix < 0.5;
   }
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
