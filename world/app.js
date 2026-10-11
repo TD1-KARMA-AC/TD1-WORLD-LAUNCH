@@ -256,7 +256,7 @@ const WEATHER = {
 const TOWN_GRID = 0.0045;
 // how many towns get street grids: as many as this device's shaders can hold (each is one vec4: where, and how big)
 const TOWN_MAX = Math.max(32, Math.min(160, (renderer.capabilities.maxFragmentUniforms || 224) - 200));
-const TOWN_U = { towns: { value: Array.from({ length: TOWN_MAX }, () => new THREE.Vector4()) }, n: { value: 0 } };
+const TOWN_U = { towns: { value: Array.from({ length: TOWN_MAX }, () => new THREE.Vector4()) }, n: { value: 0 }, map: { value: null } };
 const PLACES = []; // every town on the world: { dir, region, rad, product }
 const townFrame = (c) => { // the same east/north axes the shader uses
   const t1 = new THREE.Vector3().crossVectors(c, Math.abs(c.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
@@ -445,6 +445,7 @@ function buildLand() {
     Object.assign(sh.uniforms, WEATHER);
     sh.uniforms.uTowns = TOWN_U.towns;
     sh.uniforms.uTownN = TOWN_U.n;
+    sh.uniforms.uTownMap = TOWN_U.map;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;\nvarying vec3 vLP;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvLP = position;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -453,13 +454,17 @@ function buildLand() {
         uniform float uTime; uniform float uHi; uniform vec3 uSun;
         varying float vRegion; varying vec3 vWP; varying vec3 vLP;
         ${WEATHER_GLSL}
-        uniform vec4 uTowns[${TOWN_MAX}]; uniform int uTownN;
+        uniform vec4 uTowns[${TOWN_MAX}]; uniform int uTownN; uniform sampler2D uTownMap;
         // Every town sits on a street grid: pale blocks, dark streets with kerbs. Buildings stand in the blocks.
+        // A small map says which town (at most two) is near each spot, so each pixel only checks those, never every town.
         void townFloor(vec3 ld, out float pave, out float street, out float lamp){
           pave = 0.0; street = 0.0; lamp = 0.0;
-          for (int i = 0; i < ${TOWN_MAX}; i++) {
-            if (i >= uTownN) break;
-            vec3 c = uTowns[i].xyz; float rr = uTowns[i].w;
+          vec2 tuv = vec2(atan(ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.14159265 + 0.5);
+          vec2 ids = floor(texture2D(uTownMap, tuv).rg * 255.0 + 0.5);
+          for (int k = 0; k < 2; k++) {
+            int id = int(k == 0 ? ids.x : ids.y) - 1;
+            if (id < 0 || id >= uTownN) continue;
+            vec3 c = uTowns[id].xyz; float rr = uTowns[id].w;
             if (dot(ld, c) < 1.0 - rr * rr * 0.9) continue;
             vec3 t1 = normalize(cross(c, abs(c.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 t2 = cross(c, t1);
@@ -1063,6 +1068,28 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
   }
   PLACES.slice(0, TOWN_MAX).forEach((p, i) => TOWN_U.towns.value[i].set(p.dir.x, p.dir.y, p.dir.z, p.rad));
   TOWN_U.n.value = Math.min(TOWN_MAX, PLACES.length);
+  { // the lookup map: for each spot on the world, which towns (up to two) are close enough to matter
+    const W = 1024, H = 512, data = new Uint8Array(W * H * 2);
+    PLACES.slice(0, Math.min(TOWN_MAX, 255)).forEach((p, i) => {
+      const rr = p.rad * 1.2 + Math.PI / H * 1.5;
+      const lat = Math.asin(THREE.MathUtils.clamp(p.dir.y, -1, 1)), lon = Math.atan2(p.dir.z, p.dir.x);
+      const y0 = Math.max(0, Math.floor(((lat - rr) / Math.PI + 0.5) * H)), y1 = Math.min(H - 1, Math.ceil(((lat + rr) / Math.PI + 0.5) * H));
+      for (let y = y0; y <= y1; y++) {
+        const la = ((y + 0.5) / H - 0.5) * Math.PI;
+        const dl = Math.min(Math.PI, rr / Math.max(0.02, Math.cos(la)));
+        const x0 = Math.floor(((lon - dl) / (Math.PI * 2) + 0.5) * W), x1 = Math.ceil(((lon + dl) / (Math.PI * 2) + 0.5) * W);
+        for (let xx = x0; xx <= x1; xx++) {
+          const o = ((((xx % W) + W) % W) + y * W) * 2;
+          if (!data[o]) data[o] = i + 1; else if (!data[o + 1] && data[o] !== i + 1) data[o + 1] = i + 1;
+        }
+      }
+    });
+    const tex = new THREE.DataTexture(data, W, H, THREE.RGFormat, THREE.UnsignedByteType);
+    tex.magFilter = tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.needsUpdate = true;
+    TOWN_U.map.value = tex;
+  }
   // villages scattered across the land, between the towns
   for (let k = 0, made = 0; k < 3000 && made < (isSmall() || isTouch ? 120 : 300); k++) {
     const f = landFaces[Math.floor(r() * landFaces.length)];
@@ -2448,7 +2475,7 @@ function stepSpin(dt, t, now) {
   if (spin.enabled) {
     if (!spin.dragging) {
       turnCamera(spin.w.x * dt, spin.w.y * dt, spin.w.z * dt);
-      spin.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.45 : spin.dist < 1.2 ? 3.2 : 1.7))); // a long, easy glide
+      spin.w.multiplyScalar(Math.exp(-dt * (spin.energy > 0.3 ? 0.35 : spin.dist < 1.2 ? 2.6 : 0.6))); // flick it and it keeps turning, slowing gently like a real globe
       // left alone, it turns on a tilted axis like Earth
       const idle = THREE.MathUtils.clamp((now - lastInteract - 3000) / 4000, 0, 1);
       if (!selected && !reduceMotion && idle > 0) {
@@ -3261,7 +3288,7 @@ function selectRegion(ri, opts = {}) {
   land.material.userData.uHi.value = ri;
   ocean.material.uniforms.uHi.value = 0;
   const o = ri === UNCH ? UNCHARTED : REGIONS[ri];
-  if (!opts.noFly) flyTo(opts.dir || o.dir || camera.position, opts.dist || fitDist(0.85, 2.65));
+  if (!opts.noFly) flyTo(opts.dir || o.dir || camera.position, opts.dist || fitDist(0.85, 2.65), opts.dur);
   openPanel(ri === UNCH ? header(UNCHARTED) : regionHtml(ri), o.color);
   setDock(o.id);
 }
@@ -3317,7 +3344,7 @@ panelBody.addEventListener('click', (e) => {
   const peak = e.target.closest('[data-peak]');
   if (peak) { flyTo(peaks[+peak.dataset.peak].pos, fitDist(0.5, 1.95)); return; }
   const jump = e.target.closest('[data-region]');
-  if (jump) { selectRegion(+jump.dataset.region); return; }
+  if (jump) { if (tour.on) tourStop(+jump.dataset.region); else selectRegion(+jump.dataset.region); return; }
   const st = e.target.closest('[data-stratum-btn]');
   if (st) { focusStratum(+st.dataset.stratumBtn); return; }
   const tab = e.target.closest('[data-shop-tab]');
@@ -3399,7 +3426,85 @@ renderer.domElement.addEventListener('pointerdown', () => { if (document.body.cl
 $('#nav-contact').addEventListener('click', () => { closeMenu(); openContact(); });
 function setDock(id) { dock.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.id === id)); }
 
-$('#begin').addEventListener('click', () => selectRegion(0));
+/* ------------------------------------------------------------------ guided tour */
+
+/* Start at the beginning: one flowing journey around the whole world, from where AI came from to where it is going,
+   then up to Mindaloo AC and on to everything else. Next and Back move you along; Fly down drops you onto the land;
+   you can still spin, pinch and tap anything along the way. */
+const TOUR = [
+  ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, kick: r.era, color: r.color, land: i, go: () => selectRegion(i, { dur: 2600 }) })),
+  { id: 'mindaloo', name: 'Mindaloo AC', kick: 'The first AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
+  { id: 'shop', name: 'The Exchange', kick: 'Shop', color: SHOP_COLOR, go: () => openShop() },
+  { id: 'core', name: 'Karma Core', kick: 'The heart of the world', color: CORE.color, go: () => enterCore() },
+  { id: 'ocean', name: 'Ocean of Data', kick: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
+  { id: 'realm', name: 'Realm', kick: 'A connected world', color: '#7FD8FF', go: () => openSpecial('realm') },
+  { id: 'contact', name: 'The Beacon', kick: 'Talk to TD1', color: BEACON_COLOR, go: () => openContact() },
+];
+const tourEl = $('#tour');
+const tour = { on: false, i: 0, landed: null };
+const pad2 = (n) => String(n).padStart(2, '0');
+function tourStop(i) {
+  tour.i = Math.max(0, Math.min(TOUR.length - 1, i));
+  const st = TOUR[tour.i];
+  closeMenu();
+  st.go();
+  if (isSmall()) panel.classList.add('peek'); // on a phone the world stays in view; pull the card up to read more
+  tourEl.style.setProperty('--c', st.color);
+  $('#tour-n').textContent = `${pad2(tour.i + 1)} / ${pad2(TOUR.length)}`;
+  $('#tour-kick').textContent = st.kick;
+  $('#tour-name').textContent = st.name;
+  $('#tour-fill').style.width = `${((tour.i + 1) / TOUR.length) * 100}%`;
+  $('#tour-prev').disabled = tour.i === 0;
+  const nx = TOUR[tour.i + 1];
+  $('#tour-next-name').textContent = nx ? nx.name : 'Explore freely';
+  $('#tour-next').classList.toggle('last', !nx);
+  tour.landed = null;
+  tourUi();
+  tourEl.classList.remove('pop'); void tourEl.offsetWidth; tourEl.classList.add('pop');
+}
+function tourUi() { // Fly down when you are up high over a continent; Back up once you are on the ground
+  if (!tour.on) return;
+  const st = TOUR[tour.i];
+  const low = camera.position.length() < 1.08;
+  if (low === tour.landed) return;
+  tour.landed = low;
+  const b = $('#tour-down');
+  b.hidden = st.land === undefined && !low;
+  b.innerHTML = low ? 'Back up <span aria-hidden="true">↑</span>' : 'Fly down <span aria-hidden="true">↓</span>';
+}
+function startTour(i = 0) {
+  tour.on = true;
+  tourEl.hidden = false;
+  document.body.classList.add('touring');
+  $('#intro').classList.add('gone');
+  tourStop(i);
+}
+function endTour(free) {
+  tour.on = false;
+  document.body.classList.remove('touring');
+  tourEl.hidden = true;
+  if (free) {
+    closePanel();
+    flyTo(camera.position.clone(), fitDist(1.16, 3.0), 2400);
+    toast('The world is yours. Spin it, pinch in, tap anything.', 3200);
+  }
+}
+$('#tour-next').addEventListener('click', () => (tour.i < TOUR.length - 1 ? tourStop(tour.i + 1) : endTour(true)));
+$('#tour-prev').addEventListener('click', () => tourStop(tour.i - 1));
+$('#tour-x').addEventListener('click', () => endTour(false));
+$('#tour-down').addEventListener('click', () => {
+  const st = TOUR[tour.i];
+  if (camera.position.length() < 1.08) { // back up to see the whole place again
+    if (st.land !== undefined) selectRegion(st.land, { dur: 2200 }); else flyTo(camera.position.clone(), fitDist(1.16, 3.0), 2200);
+    if (isSmall()) panel.classList.add('peek');
+  } else if (st.land !== undefined) landAt(st.land);
+});
+addEventListener('keydown', (e) => {
+  if (!tour.on || e.target.closest('input, textarea, select')) return;
+  if (e.key === 'ArrowRight') $('#tour-next').click();
+  else if (e.key === 'ArrowLeft' && tour.i > 0) tourStop(tour.i - 1);
+});
+$('#begin').addEventListener('click', () => startTour(0));
 $('#see-products').addEventListener('click', () => { $('#intro').classList.add('gone'); openMenu(); });
 
 /* ------------------------------------------------------------------ picking */
@@ -3656,8 +3761,8 @@ const release = (e) => {
   if (spin.pointers.size === 0) {
     spin.dragging = false;
     // let go while moving and it glides on; stop first and it stays put
-    if (reduceMotion || now - spin.lastMove > 70) spin.w.set(0, 0, 0);
-    else spin.w.copy(flingVelocity(now)).multiplyScalar(0.9);
+    if (reduceMotion || now - spin.lastMove > 140) spin.w.set(0, 0, 0);
+    else spin.w.copy(flingVelocity(now));
   }
 };
 cv.addEventListener('pointerup', release);
@@ -4248,7 +4353,7 @@ function updateLabels() {
     // fade out at the screen edges and clear of the top bar and the Explore button, so labels never clip or overlap the UI
     const s = vis > 0.005 ? toScreen(p) : null;
     if (s) {
-      const W = innerWidth, H = innerHeight, top = isSmall() ? 74 : 84, bottom = isSmall() ? 120 : 96;
+      const W = innerWidth, H = innerHeight, top = isSmall() ? (tour.on ? 128 : 74) : 84, bottom = isSmall() ? (panel.classList.contains('open') ? (panel.classList.contains('peek') ? 170 : H * 0.64) : 120) : 96;
       const edge = Math.min(s.x - 46, W - s.x - 46, s.y - top, H - bottom - s.y);
       vis *= THREE.MathUtils.clamp(edge / 36, 0, 1);
       if (ir && s.x > ir.left - 60 && s.x < ir.right + 60 && s.y > ir.top - 20 && s.y < ir.bottom + 20) vis *= 0.0;
@@ -4414,6 +4519,7 @@ function loop() {
   else if (!introDone) { if (gateOpen) stepIntro(now); else stepGate(t); }
   else if (flight) stepFlight(now);
   else stepSpin(dtFrame, t, now);
+  tourUi();
 
   if (!reduceMotion) { // the sun circles the world: day and night
     sunAt(SUN0 + sunShift + t * DAY_RATE, sunDir);
@@ -4562,8 +4668,8 @@ if (/blacktest/.test(location.hash)) { // for testing: one object that outputs i
   bad.position.set(0, 0, 1.3);
   planet.add(bad);
 }
-if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, PLACES, TOWN_MAX, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+if (/dev/.test(location.hash) || /td1dev/.test(location.search)) {
+  window.td1 = { THREE, PLACES, TOWN_MAX, renderer, composer, scene, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
