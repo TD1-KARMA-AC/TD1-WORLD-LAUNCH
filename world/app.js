@@ -253,8 +253,11 @@ const WEATHER = {
   uCloudTex: { value: null },
 };
 // Town street grids, shared by the ground shader and the building layout so buildings stand in the blocks.
-const TOWN_GRID = 0.0034;
-const TOWN_U = { towns: { value: Array.from({ length: 64 }, () => new THREE.Vector3()) }, n: { value: 0 } };
+const TOWN_GRID = 0.0045;
+// how many towns get street grids: as many as this device's shaders can hold (each is one vec4: where, and how big)
+const TOWN_MAX = Math.max(32, Math.min(160, (renderer.capabilities.maxFragmentUniforms || 224) - 200));
+const TOWN_U = { towns: { value: Array.from({ length: TOWN_MAX }, () => new THREE.Vector4()) }, n: { value: 0 } };
+const PLACES = []; // every town on the world: { dir, region, rad, product }
 const townFrame = (c) => { // the same east/north axes the shader uses
   const t1 = new THREE.Vector3().crossVectors(c, Math.abs(c.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
   return { t1, t2: new THREE.Vector3().crossVectors(c, t1) };
@@ -450,18 +453,18 @@ function buildLand() {
         uniform float uTime; uniform float uHi; uniform vec3 uSun;
         varying float vRegion; varying vec3 vWP; varying vec3 vLP;
         ${WEATHER_GLSL}
-        uniform vec3 uTowns[64]; uniform int uTownN;
+        uniform vec4 uTowns[${TOWN_MAX}]; uniform int uTownN;
         // Every town sits on a street grid: pale blocks, dark streets with kerbs. Buildings stand in the blocks.
         void townFloor(vec3 ld, out float pave, out float street, out float lamp){
           pave = 0.0; street = 0.0; lamp = 0.0;
-          for (int i = 0; i < 64; i++) {
+          for (int i = 0; i < ${TOWN_MAX}; i++) {
             if (i >= uTownN) break;
-            vec3 c = uTowns[i];
-            if (dot(ld, c) < 0.99983) continue;
+            vec3 c = uTowns[i].xyz; float rr = uTowns[i].w;
+            if (dot(ld, c) < 1.0 - rr * rr * 0.9) continue;
             vec3 t1 = normalize(cross(c, abs(c.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 t2 = cross(c, t1);
             vec2 uv = vec2(dot(ld - c, t1), dot(ld - c, t2));
-            float fade = 1.0 - smoothstep(0.0095, 0.0125, length(uv));
+            float fade = 1.0 - smoothstep(rr * 0.85, rr * 1.12, length(uv));
             vec2 q = uv / ${TOWN_GRID.toFixed(5)};
             vec2 gd = abs(fract(q) - 0.5);           // 0.5 on a street line, 0 mid-block
             vec2 g = (0.5 - gd) * ${TOWN_GRID.toFixed(5)};  // distance from the nearest street line
@@ -648,7 +651,20 @@ const ocean = new THREE.Mesh(
         // small rolling waves catch the light
         vec3 n = vN;
         float t = uTime * 0.6;
-        n += 0.022 * vec3(sin(un.y * 230.0 + t * 1.3) + sin(un.z * 170.0 - t), sin(un.z * 210.0 + t) + sin(un.x * 190.0 + t * 0.7), sin(un.x * 250.0 - t * 1.1) + sin(un.y * 160.0 + t));
+        // waves run along uneven directions with a gentle warp (no grid), and each one fades before it gets smaller than a pixel
+        {
+          float px = length(fwidth(un)) + 1e-5;
+          vec3 wp = un + 0.012 * vec3(sin(un.y * 61.0 + t * 0.3), sin(un.z * 53.0 - t * 0.25), sin(un.x * 57.0 + t * 0.2));
+          const vec3 D0 = vec3(0.62, 0.48, -0.62), D1 = vec3(-0.21, 0.83, 0.52), D2 = vec3(0.77, -0.37, 0.52), D3 = vec3(-0.55, -0.6, -0.58), D4 = vec3(0.1, -0.71, 0.7);
+          vec3 g = vec3(0.0);
+          float f;
+          f = 173.0; g += D0 * cos(dot(wp, D0) * f + t * 1.3) * (1.0 - smoothstep(0.25, 0.9, px * f));
+          f = 211.0; g += D1 * cos(dot(wp, D1) * f - t * 1.1) * (1.0 - smoothstep(0.25, 0.9, px * f));
+          f = 263.0; g += D2 * cos(dot(wp, D2) * f + t * 0.9) * (1.0 - smoothstep(0.25, 0.9, px * f));
+          f = 317.0; g += D3 * cos(dot(wp, D3) * f - t * 1.5) * 0.8 * (1.0 - smoothstep(0.25, 0.9, px * f));
+          f = 389.0; g += D4 * cos(dot(wp, D4) * f + t * 1.7) * 0.6 * (1.0 - smoothstep(0.25, 0.9, px * f));
+          n += 0.03 * (g - vN * dot(g, vN));
+        }
         n = normalize(n);
         float sunUp = dot(vN, uSun);
         float lit = smoothstep(-0.15, 0.35, sunUp);
@@ -983,59 +999,81 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     _q.copy(new THREE.Vector3(1, 0, 0).applyQuaternion(qa).dot(t1) > new THREE.Vector3(1, 0, 0).applyQuaternion(qb).dot(t1) ? qa : qb);
     lists[kind].push({ m: new THREE.Matrix4().compose(d.clone().multiplyScalar(R), _q.clone(), dims), col });
   };
-  cities.forEach((ct, ci) => {
-    const P = PAINT_T[ct.region];
-    const c = ct.face.c.clone().normalize();
-    ct.dir = c;
+  // One town: a street grid, tallest at the heart (with the product's landmark tower if it has one), houses and parks at the edge.
+  const buildTown = (c, region, rad, top, landmarkColor) => {
+    const P = PAINT_T[region];
     const { t1, t2 } = townFrame(c);
-    const G = TOWN_GRID, inner = G - 0.00075;
+    const G = TOWN_GRID, inner = G - 0.00095;
     const at = (u, v) => c.clone().addScaledVector(t1, u).addScaledVector(t2, v).normalize();
-    for (let i = -3; i < 3; i++) {
-      for (let j = -3; j < 3; j++) {
-        const u = (i + 0.5) * G, v = (j + 0.5) * G, rad = Math.hypot(u, v);
-        if (rad > 0.0105) continue;
+    const n = Math.ceil(rad / G) + 1;
+    for (let i = -n; i < n; i++) {
+      for (let j = -n; j < n; j++) {
+        const u = (i + 0.5) * G, v = (j + 0.5) * G, rc = Math.hypot(u, v);
+        if (rc > rad) continue;
         const d = at(u, v);
         if (!onLand(d, 0.003)) continue;
         const col = () => new THREE.Color(P.cols[Math.floor(r() * P.cols.length)]);
-        if (i === 0 && j === 0) { // the heart of town: the product's landmark
-          place('landmark', d, t1, t2, new THREE.Vector3(inner * 0.85, P.top * 1.35, inner * 0.85), ct.color.clone());
+        if (landmarkColor && i === 0 && j === 0) { // the heart of town: the product's landmark
+          place('landmark', d, t1, t2, new THREE.Vector3(inner * 0.85, top * 1.35, inner * 0.85), landmarkColor);
           continue;
         }
-        const k = 1 - rad / 0.0105; // 1 at the centre, 0 at the edge
+        const k = 1 - rc / rad; // 1 at the centre, 0 at the edge
         const roll = r();
-        if (k < 0.3 && roll < 0.35) { // a little park
-          for (let t = 0; t < 3; t++) towns.parkTrees.push(at(u + (r() - 0.5) * inner * 0.7, v + (r() - 0.5) * inner * 0.7));
+        if (k < 0.3 && roll < 0.3) { // a little park
+          for (let tt = 0; tt < 3; tt++) towns.parkTrees.push(at(u + (r() - 0.5) * inner * 0.7, v + (r() - 0.5) * inner * 0.7));
           continue;
         }
         if (k < 0.35) { // houses on the edge of town: a few per block
           for (let hx = -1; hx <= 1; hx += 2) for (let hz = -1; hz <= 1; hz += 2) {
             if (r() < 0.25) continue;
-            const s = inner * 0.32;
-            place('house', at(u + hx * inner * 0.24, v + hz * inner * 0.24), t1, t2, new THREE.Vector3(s, s * (0.75 + r() * 0.3), s), col());
+            const sz = inner * 0.32;
+            place('house', at(u + hx * inner * 0.24, v + hz * inner * 0.24), t1, t2, new THREE.Vector3(sz, sz * (0.75 + r() * 0.3), sz), col());
           }
           continue;
         }
-        const h = P.top * (0.25 + k * k * 0.75) * (0.7 + r() * 0.45);
+        const h = top * (0.25 + k * k * 0.75) * (0.7 + r() * 0.45);
         const kind = k > 0.7 ? (roll < 0.6 ? 'tower' : 'setback') : (roll < 0.45 ? 'block' : roll < 0.75 ? 'setback' : 'tower');
         const w = inner * (0.72 + r() * 0.2), dd = inner * (0.72 + r() * 0.2);
-        place(kind, d, t1, t2, new THREE.Vector3(w, Math.max(0.0014, h), dd), col());
+        place(kind, d, t1, t2, new THREE.Vector3(w, Math.max(0.0018, h), dd), col());
       }
     }
+  };
+  // the product towns
+  const PRODUCT_RAD = 0.0145;
+  cities.forEach((ct) => {
+    const c = ct.face.c.clone().normalize();
+    ct.dir = c;
+    buildTown(c, ct.region, PRODUCT_RAD, PAINT_T[ct.region].top * 1.25, ct.color.clone());
+    PLACES.push({ dir: c, region: ct.region, rad: PRODUCT_RAD, product: ct });
   });
-  if (cities.length) {
-    cities.slice(0, 64).forEach((ct, i) => TOWN_U.towns.value[i].copy(ct.dir));
-    TOWN_U.n.value = Math.min(64, cities.length);
+  // and the land fills up with towns of its own: every continent built over, in its own style
+  {
+    const want = Math.min(TOWN_MAX - PLACES.length, isSmall() || isTouch ? 60 : 120);
+    for (let k = 0, made = 0; k < want * 60 && made < want; k++) {
+      const f = landFaces[Math.floor(r() * landFaces.length)];
+      if (f.region === UNCH || f.region < 0 || f.h < 0.03) continue;
+      const c = f.c.clone().normalize();
+      const rad = 0.008 + r() * 0.0045;
+      if (PLACES.some((p) => p.dir.angleTo(c) < (p.rad + rad) * 1.6)) continue;
+      buildTown(c, f.region, rad, PAINT_T[f.region].top * (0.45 + r() * 0.4), null);
+      PLACES.push({ dir: c, region: f.region, rad });
+      towns.lightsDots.push({ d: c, n: 160, spread: rad * 0.8, b: 0.7 });
+      made++;
+    }
   }
+  PLACES.slice(0, TOWN_MAX).forEach((p, i) => TOWN_U.towns.value[i].set(p.dir.x, p.dir.y, p.dir.z, p.rad));
+  TOWN_U.n.value = Math.min(TOWN_MAX, PLACES.length);
   // villages scattered across the land, between the towns
-  for (let k = 0, made = 0; k < 900 && made < (isSmall() || isTouch ? 70 : 140); k++) {
+  for (let k = 0, made = 0; k < 3000 && made < (isSmall() || isTouch ? 120 : 300); k++) {
     const f = landFaces[Math.floor(r() * landFaces.length)];
     if (f.region === UNCH || f.h < 0.03) continue;
-    made++;
     const c = f.c.clone().normalize();
+    if (PLACES.some((p) => p.dir.angleTo(c) < p.rad * 1.3)) continue; // not on top of a town
+    made++;
     towns.lightsDots.push({ d: c, n: 18, spread: 0.004, b: 0.5 });
     const { t1, t2 } = townFrame(c);
-    for (let j = 0; j < 4; j++) {
-      const d = c.clone().addScaledVector(t1, (r() - 0.5) * 0.006).addScaledVector(t2, (r() - 0.5) * 0.006).normalize();
+    for (let j = 0; j < 6; j++) {
+      const d = c.clone().addScaledVector(t1, (r() - 0.5) * 0.007).addScaledVector(t2, (r() - 0.5) * 0.007).normalize();
       if (!onLand(d, 0.004)) continue;
       const s = 0.0009 + r() * 0.0003;
       place('house', d, t1, t2, new THREE.Vector3(s, s * 0.9, s * 1.2), new THREE.Color(PAINT_T[f.region].cols[Math.floor(r() * 3)]));
@@ -1168,7 +1206,7 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
       const d = nearDir(f.c, r() * 0.006, r);
       // forests grow in patches, and keep clear of the towns
       if (fbm(d.x * 7 + ri, d.y * 7, d.z * 7) < -0.02) continue;
-      if (cities.some((c) => c.dir.dot(d) > 0.99987)) continue;
+      if (PLACES.some((p) => p.dir.angleTo(d) < p.rad * 1.15)) continue;
       const kind = F.kinds[Math.floor(r() * F.kinds.length)];
       (lists[kind] = lists[kind] || []).push({ d, yaw: r() * 6.28, s: THREE.MathUtils.lerp(F.h[0], F.h[1], r()), c: new THREE.Color(F.cols[Math.floor(r() * F.cols.length)]).multiplyScalar(0.85 + r() * 0.3) });
       made++;
@@ -1188,7 +1226,7 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
 
 // Every continent has its trade: miners in The Origins, gardeners in Memory, surveyors in Intelligence,
 // builders in Creation, welders in The Future. Couriers carry glowing blocks of data between towns.
-const ROBOT_H = 0.0013;
+const ROBOT_H = 0.0019;
 const JOBS = ['pick', 'can', 'scanner', 'hammer', 'torch'];
 const ROLE = { pick: 'Miner', can: 'Gardener', scanner: 'Surveyor', hammer: 'Builder', torch: 'Welder', walk: 'Courier' };
 const CALL = { pick: 'DIG', can: 'BLOOM', scanner: 'SCAN', hammer: 'BLOK', torch: 'ARC', walk: 'POST' };
@@ -1205,37 +1243,37 @@ const PAINT = ['#f2f4f8', '#f2f4f8', '#ffb347', '#9fd3ff', '#c9b6ff', '#8ef0b8',
 const TYPES = ['tracked', 'walker', 'hover'];
 const robots = [];
 const robotParts = (() => {
-  const nWork = isSmall() || isTouch ? 6 : 12, nWalk = isSmall() || isTouch ? 16 : 30;
+  const nWork = isSmall() || isTouch ? 9 : 20, nWalk = isSmall() || isTouch ? 26 : 54;
   const r = rng(808);
   const props = { rock: [], round: [], blocks: [], pylon: [] };
   const named = (job) => `${CALL[job]}-${String(10 + Math.floor(r() * 89))}`;
   REGIONS.forEach((reg, ri) => {
     // towns to work near; The Origins has none, so its miners work the open desert
-    const towns = cities.filter((c) => c.region === ri);
-    const sites = towns.length ? towns : pickFaces(ri, nWork, 31, { minSep: 3, minH: 0.1 }).map((f) => ({ dir: f.c.clone().normalize() }));
+    const towns = PLACES.filter((p) => p.region === ri);
+    const sites = towns.length ? towns : pickFaces(ri, nWork, 31, { minSep: 3, minH: 0.1 }).map((f) => ({ dir: f.c.clone().normalize(), rad: 0.004 }));
     for (let i = 0; i < nWork && sites.length; i++) {
       const home = sites[i % sites.length];
       let d = null;
-      for (let k = 0; k < 20 && !d; k++) { const c = nearDir(home.dir, 0.0125 + r() * 0.006, r); if (onLand(c, 0.01)) d = c; } // just outside town
+      for (let k = 0; k < 20 && !d; k++) { const c = nearDir(home.dir, home.rad * 1.12 + r() * 0.004, r); if (onLand(c, 0.01)) d = c; } // just outside town
       if (!d) continue;
       // something to work on, just in front
-      const at = nearDir(d, 0.0008, r);
+      const at = nearDir(d, 0.0013, r);
       const T = at.clone().sub(d).normalize();
       const type = TYPES[Math.floor(r() * (JOBS[ri] === 'scanner' ? 3 : 2))]; // surveyors may hover
       const col = r() < 0.5 ? reg.col.clone().lerp(new THREE.Color('#ffffff'), 0.65) : new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]);
       robots.push({ kind: 'work', job: JOBS[ri], type, d, yaw: faceYaw(d, T), baseYaw: faceYaw(d, T), phase: r() * 10, col, name: named(JOBS[ri]), react: -99 });
-      const prop = { d: at, yaw: r() * 6.28, s: 0.0011, c: new THREE.Color('#ffffff') };
+      const prop = { d: at, yaw: r() * 6.28, s: 0.0018, c: new THREE.Color('#ffffff') };
       if (ri === 0) props.rock.push({ ...prop, c: new THREE.Color('#9a7550') });
-      else if (ri === 1) props.round.push({ ...prop, s: 0.0022, c: new THREE.Color('#9a86d6') });
+      else if (ri === 1) props.round.push({ ...prop, s: 0.0034, c: new THREE.Color('#9a86d6') });
       else if (ri === 3) props.blocks.push(prop);
-      else if (ri === 4) props.pylon.push({ ...prop, s: 0.0024 });
+      else if (ri === 4) props.pylon.push({ ...prop, s: 0.0038 });
     }
   });
   for (let i = 0; i < nWalk; i++) {
-    const home = cities[Math.floor(r() * cities.length)];
+    const home = PLACES[Math.floor(r() * PLACES.length)];
     const type = r() < 0.4 ? 'hover' : (r() < 0.5 ? 'walker' : 'tracked');
     robots.push({ kind: 'walk', job: 'walk', type, from: home, to: home, t: 1, wait: r() * 3, speed: (type === 'hover' ? 0.018 : 0.012) + r() * 0.008, phase: r() * 10, q: null, angle: 1,
-      carry: r() < 0.65, d: nearDir(home.dir, 0.0115 + r() * 0.0015, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
+      carry: r() < 0.65, d: nearDir(home.dir, home.rad * 1.08, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
   }
   if (props.rock.length) scatterMesh(tree('rock'), props.rock);
   if (props.round.length) scatterMesh(tree('round'), props.round);
@@ -1302,12 +1340,13 @@ function stepRobots(dt, t) {
       if (greeting) { /* stand still and say hello */ } else if (rb.t >= 1) {
         rb.wait -= dt;
         if (rb.wait <= 0) { // off to the next town, usually a neighbour on the same continent
-          const same = cities.filter((c) => c.region === rb.to.region && c !== rb.to);
-          const pool = Math.random() < 0.85 && same.length ? same : cities;
+          // off to a nearby town on the same continent
+          const same = PLACES.filter((c) => c.region === rb.to.region && c !== rb.to && c.dir.angleTo(rb.to.dir) < 0.35);
+          const pool = same.length ? same : PLACES.filter((c) => c !== rb.to && c.dir.angleTo(rb.to.dir) < 0.6);
           rb.from = rb.to;
           rb.to = pool[Math.floor(Math.random() * pool.length)];
           rb.start = rb.d.clone();
-          rb.goal = nearDir(rb.to.dir, 0.0115 + Math.random() * 0.0015, Math.random); // the edge of the next town
+          rb.goal = nearDir(rb.to.dir, rb.to.rad * 1.08, Math.random); // the edge of the next town
           rb.angle = Math.max(0.002, rb.start.angleTo(rb.goal));
           rb.q = new THREE.Quaternion().setFromUnitVectors(rb.start, rb.goal);
           rb.t = 0;
@@ -3235,9 +3274,11 @@ function landAt(ri) {
   $('#intro').classList.add('gone');
   const camUp = camera.up.clone();
   const tangent = camUp.addScaledVector(town.dir, -camUp.dot(town.dir)).normalize();
-  let spot = town.dir.clone().addScaledVector(tangent, -0.022).normalize();
-  for (let k = 0; k < 8 && !onLand(spot, 0); k++) spot = town.dir.clone().addScaledVector(tangent, -0.022 + k * 0.003).normalize();
-  flyTo(spot, surfaceRadius(spot) + 0.0085, 3400);
+  // stand back far enough to see the whole town (further on a narrow phone screen)
+  const back = isSmall() ? 0.038 : 0.03, up = isSmall() ? 0.0125 : 0.0095;
+  let spot = town.dir.clone().addScaledVector(tangent, -back).normalize();
+  for (let k = 0; k < 8 && !onLand(spot, 0); k++) spot = town.dir.clone().addScaledVector(tangent, -back + k * 0.003).normalize();
+  flyTo(spot, surfaceRadius(spot) + up, 3400);
   landedHint = Math.max(landedHint, 1);
 }
 function selectOcean(dir) {
@@ -4181,8 +4222,11 @@ function updateHud() {
   hudEls.sun.textContent = spin.energy > 0.3 ? 'Spin warning' : `${el > 0.12 ? 'Day' : el > -0.12 ? (hr < 12 ? 'Dawn' : 'Dusk') : 'Night'} ${hm}`;
 }
 const _lC = new THREE.Vector3(), _lT = new THREE.Vector3(), _lP = new THREE.Vector3();
+const introEl = $('#intro');
 function updateLabels() {
   const camDir = _lC.copy(camera.position).normalize();
+  // keep labels off the welcome text while it is up
+  const ir = introEl && !introEl.classList.contains('gone') && introEl.offsetParent ? introEl.getBoundingClientRect() : null;
   const camDist = camera.position.length();
   labels.forEach((l) => {
     const p = l.getPos();
@@ -4201,19 +4245,26 @@ function updateLabels() {
       vis *= 1 - coreMix;
     }
     vis *= 1 - Math.min(1, spin.energy * 1.5);
+    // fade out at the screen edges and clear of the top bar and the Explore button, so labels never clip or overlap the UI
+    const s = vis > 0.005 ? toScreen(p) : null;
+    if (s) {
+      const W = innerWidth, H = innerHeight, top = isSmall() ? 74 : 84, bottom = isSmall() ? 120 : 96;
+      const edge = Math.min(s.x - 46, W - s.x - 46, s.y - top, H - bottom - s.y);
+      vis *= THREE.MathUtils.clamp(edge / 36, 0, 1);
+      if (ir && s.x > ir.left - 60 && s.x < ir.right + 60 && s.y > ir.top - 20 && s.y < ir.bottom + 20) vis *= 0.0;
+    }
     const op = vis.toFixed(2);
     if (op !== l.op) { l.el.style.opacity = op; l.op = op; }
     const pe = vis > 0.4 ? 'auto' : 'none';
     if (pe !== l.pe) { l.el.style.pointerEvents = pe; l.pe = pe; }
     if (vis < 0.005) return; // hidden: no need to move it
-    const s = toScreen(p);
     const tr = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, 0) translate(-50%, -50%)`;
     if (tr !== l.tr) { l.el.style.transform = tr; l.tr = tr; }
   });
 }
 
 let introDone = false;
-const introTo = latLon(22, ARRIVE_LON).multiplyScalar(fitDist(1.32, 3.4));
+const introTo = latLon(22, ARRIVE_LON).multiplyScalar(fitDist(1.16, 3.0)); // the world fills more of the screen
 
 /* The opening shot: skim low over the night side as the sun rises over the horizon, then pull back to reveal the world. */
 const cine = { start: 0, S: new THREE.Vector3(), N: new THREE.Vector3(), titled: false, skip: false };
@@ -4512,7 +4563,7 @@ if (/blacktest/.test(location.hash)) { // for testing: one object that outputs i
   planet.add(bad);
 }
 if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, PLACES, TOWN_MAX, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
