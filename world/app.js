@@ -1955,23 +1955,36 @@ const mindaloo = new THREE.Group();
     g.setIndex(index);
     g.computeVertexNormals();
     g.scale(MOON_R, MOON_R, MOON_R);
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb9bbc3, roughness: 1, metalness: 0, emissive: 0xa4a9bb, emissiveIntensity: 0.3 }); // moonlight silver, never navy
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xc9cad4, roughness: 0.95, metalness: 0, emissive: 0x8e9098, emissiveIntensity: 0.1 }); // lit silver stone with a real day and night side; a faint glow keeps the dark side from going flat black
     // The Mindaloo rune is printed on the moon itself: projected onto its face from wherever you look, so it curves
     // with the surface, takes the light, and sits dead centre. Etched dark into the stone, with a soft silver inlay.
     const runeTex = new THREE.TextureLoader().load('world/assets/mindaloo-rune.png');
-    mat.userData.rune = { tex: { value: runeTex }, c: { value: new THREE.Vector3() }, r: { value: 0.16 } };
+    mat.userData.rune = { tex: { value: runeTex }, c: { value: new THREE.Vector3() }, r: { value: 0.16 }, t: { value: 0 } };
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uRune = mat.userData.rune.tex;
       sh.uniforms.uRuneC = mat.userData.rune.c;
       sh.uniforms.uRuneR = mat.userData.rune.r;
+      sh.uniforms.uRuneT = mat.userData.rune.t;
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform sampler2D uRune; uniform vec3 uRuneC; uniform float uRuneR;')
+        .replace('#include <common>', '#include <common>\nuniform sampler2D uRune; uniform vec3 uRuneC; uniform float uRuneR; uniform float uRuneT;')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          { // the rune is cut into the stone: its edges catch the sunlight on one side and fall into shadow on the other
+            vec2 ruvN = (-vViewPosition.xy - uRuneC.xy) / (2.0 * uRuneR) + 0.5;
+            if (ruvN.x > 0.0 && ruvN.x < 1.0 && ruvN.y > 0.0 && ruvN.y < 1.0) {
+              float e = 1.5 / 512.0;
+              float rx = texture2D(uRune, ruvN + vec2(e, 0.0)).r - texture2D(uRune, ruvN - vec2(e, 0.0)).r;
+              float ry = texture2D(uRune, ruvN + vec2(0.0, e)).r - texture2D(uRune, ruvN - vec2(0.0, e)).r;
+              normal = normalize(normal + vec3(rx, ry, 0.0) * 1.6);
+            }
+          }`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
           vec2 ruv = (-vViewPosition.xy - uRuneC.xy) / (2.0 * uRuneR) + 0.5;
           float rune = 0.0;
           if (ruv.x > 0.0 && ruv.x < 1.0 && ruv.y > 0.0 && ruv.y < 1.0) rune = texture2D(uRune, ruv).r;
-          diffuseColor.rgb *= 1.0 - rune * 0.55;
-          totalEmissiveRadiance += vec3(0.86, 0.88, 1.0) * rune * 0.55;`);
+          // carved into the stone, and lit from within: moonlight breathing slowly through the rune, day side and night side alike
+          float breathe = 0.78 + 0.22 * sin(uRuneT * 1.1) + 0.06 * sin(uRuneT * 3.7);
+          diffuseColor.rgb *= 1.0 - rune * 0.7;
+          totalEmissiveRadiance += vec3(0.80, 0.74, 1.0) * rune * 1.35 * breathe;`);
     };
     const m = new THREE.Mesh(g, mat);
     return m;
@@ -2012,34 +2025,37 @@ const mindaloo = new THREE.Group();
     return sp;
   };
   mindaloo.userData.crown = sprite('world/assets/mindaloo-halo.png', 1448, 1086, 733 / 1448, 1 - 463 / 1086, 0.75);
-  // The two crescents are real moons: same cratered surface, lit from behind and to the outside so they read as
-  // a waxing and a waning crescent from any angle, exactly where they sit in the emblem.
-  const crescentMat = (side) => new THREE.ShaderMaterial({
-    uniforms: { uSide: { value: side }, uRight: CAM_RIGHT, uUp: CAM_UP },
-    transparent: true, depthWrite: false, // the unlit side is see-through, as in the emblem: only the crescent shows
-    vertexShader: `varying vec3 vN; varying vec3 vP; varying vec3 vW;
-      void main(){ vN = normalize(mat3(modelMatrix) * normal); vP = position; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform float uSide; uniform vec3 uRight; uniform vec3 uUp; varying vec3 vN; varying vec3 vP; varying vec3 vW;
-      ${GLSL_NOISE}
+  mindaloo.userData.crown.visible = false; // a flat picture in space read like a sticker: the emblem lives in the panel instead
+  // The emblem's two crescents, made real: two small moons circling Mindaloo on a faint ring of light,
+  // the same cratered stone lit by the same sun, so from any angle you catch them waxing and waning.
+  // lit by the sun alone (the moon's own glow-light sits right beside them and would blow them out)
+  const moonletMat = new THREE.ShaderMaterial({
+    uniforms: { uSun: { value: sunDir } },
+    vertexShader: `attribute vec3 color; varying vec3 vC; varying vec3 vN;
+      void main(){ vC = color; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 uSun; varying vec3 vC; varying vec3 vN;
       void main(){
-        // lit from behind and to the outside, measured against your own line of sight: the same thin crescent from anywhere
-        vec3 V = normalize(cameraPosition - vW);
-        vec3 L = normalize(uSide * uRight * 0.72 + uUp * 0.08 - V * 0.69);
-        float lit = smoothstep(0.0, 0.28, dot(normalize(vN), L));
-        vec3 p = normalize(vP);
-        float mare = smoothstep(0.5, 0.62, fbm(p * 2.4 + 7.0)); // dark seas
-        float g = 0.82 - mare * 0.26 + (fbm(p * 11.0) - 0.5) * 0.18; // and cratered highlands
-        gl_FragColor = vec4(vec3(g) * vec3(0.95, 0.96, 1.0) * 1.05, lit);
+        float l = max(dot(normalize(vN), normalize(uSun)), 0.0);
+        vec3 c = vC * vec3(0.93, 0.94, 1.0) * (0.12 + 0.95 * l);
+        gl_FragColor = vec4(c, 1.0);
       }`,
   });
-  const crescentGeo = new THREE.SphereGeometry(MOON_R * 168 / 178, 48, 32);
-  const cres = (side) => {
-    const c = new THREE.Mesh(crescentGeo, crescentMat(side));
-    c.renderOrder = 6;
-    mindaloo.add(c);
-    return c;
-  };
-  mindaloo.userData.crescents = [cres(-1), cres(1)];
+  const orbit = new THREE.Group();
+  orbit.rotation.set(0.42, 0, 0.16);
+  mindaloo.add(orbit);
+  const ORBIT_R = MOON_R * 2.35;
+  const ringPts = [];
+  for (let i = 0; i <= 128; i++) { const a = (i / 128) * Math.PI * 2; ringPts.push(new THREE.Vector3(Math.cos(a) * ORBIT_R, 0, Math.sin(a) * ORBIT_R)); }
+  const ring = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ringPts), new THREE.LineBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+  orbit.add(ring);
+  const moonlets = [0, 1].map((i) => {
+    const m = new THREE.Mesh(body.geometry, moonletMat);
+    m.scale.setScalar(i ? 0.3 : 0.24);
+    orbit.add(m);
+    return { m, phase: i * Math.PI + 0.6, speed: i ? 0.21 : 0.29 };
+  });
+  mindaloo.userData.orbit = { group: orbit, ring, moonlets, R: ORBIT_R };
+  mindaloo.userData.crescents = [];
   mindaloo.userData.MOON_R = MOON_R;
   mindaloo.userData.px = px;
 }
@@ -3328,7 +3344,12 @@ function openSpecial(kind) {
   selected = { kind };
   land.material.userData.uHi.value = -10;
   const obj = kind === 'realm' ? realm : mindaloo;
-  flyTo(obj.getWorldPosition(new THREE.Vector3()), kind === 'realm' ? fitDist(1.6, 4.4) : fitDist(1.5, 3.9));
+  if (kind === 'mindaloo') { // a hero shot: close to the moon, the world rising huge behind it
+    const m = obj.getWorldPosition(new THREE.Vector3());
+    const side = new THREE.Vector3().crossVectors(m, camera.up).normalize();
+    const dir = m.clone().normalize().applyAxisAngle(side, -0.03); // the moon sits just above the middle, up against the world behind it
+    flyTo(dir, m.length() + (isSmall() ? 2.2 : 1.2), 2600);
+  } else flyTo(obj.getWorldPosition(new THREE.Vector3()), fitDist(1.6, 4.4));
   openPanel(specialHtml(kind), kind === 'realm' ? '#7FD8FF' : '#D9CCFF');
   setDock(kind);
 }
@@ -4371,6 +4392,7 @@ function updateLabels() {
       vis *= 1 - coreMix;
     }
     vis *= 1 - Math.min(1, spin.energy * 1.5);
+    if (selected && selected.kind === 'mindaloo' && l.el.classList.contains('mindaloo')) vis = 0; // you're right there: no need for its name tag
     // fade out at the screen edges and clear of the top bar and the Explore button, so labels never clip or overlap the UI
     const s = vis > 0.005 ? toScreen(p) : null;
     if (s) {
@@ -4602,8 +4624,16 @@ function loop() {
     { // where to print the rune: the moon's centre and size, as you see it
       const rm = u.body.material.userData.rune;
       rm.c.value.copy(mindaloo.getWorldPosition(_mW)).applyMatrix4(camera.matrixWorldInverse);
-      rm.r.value = u.MOON_R * 0.8 * mindaloo.scale.x;
+      rm.r.value = u.MOON_R * 0.68 * mindaloo.scale.x; // inside the rim, so it reads as carved into the face, not stuck over it
+      rm.t.value = t;
     }
+    u.orbit.moonlets.forEach((o) => {
+      const a = o.phase + t * o.speed;
+      o.m.position.set(Math.cos(a) * u.orbit.R, 0, Math.sin(a) * u.orbit.R);
+      o.m.rotation.y = t * 0.1;
+    });
+    u.orbit.ring.material.opacity = 0.16 + 0.08 * Math.sin(t * 0.6);
+    u.orbit.group.visible = coreMix < 0.5;
     CAM_RIGHT.value.copy(camAxis(0));
     CAM_UP.value.copy(camAxis(1));
     u.crescents.forEach((c, i) => { // at their places in the emblem, slowly turning
@@ -4620,7 +4650,7 @@ function loop() {
     const over = THREE.MathUtils.smoothstep(sep, planetAng + 0.05, planetAng - 0.25) * (dM < camWorld.length() ? 1 : 0);
     const sel = selected && selected.kind === 'mindaloo';
     u.crown.material.opacity += ((sel ? 1 : 0.8) * (1 - over * 0.75) - u.crown.material.opacity) * 0.06;
-    u.crown.visible = coreMix < 0.5;
+    u.crown.visible = false;
   }
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
