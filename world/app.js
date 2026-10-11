@@ -76,6 +76,23 @@ function msaaWorks(samples) {
 const MSAA = !/nomsaa/.test(location.hash) && msaaWorks(4) ? 4 : 0;
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: MSAA }));
 composer.addPass(new RenderPass(scene, camera));
+// Clean-up pass: if any shader on some device produces an invalid pixel (NaN or infinity), it's zeroed here.
+// Without this the glow would smear one bad pixel across the whole screen and the world would go black.
+const sanitize = new ShaderPass({
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      #if __VERSION__ >= 300
+        if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0);
+      #else
+        if (!(c.r == c.r && c.g == c.g && c.b == c.b)) c = vec4(0.0);
+      #endif
+      gl_FragColor = vec4(clamp(c.rgb, 0.0, 60.0), 1.0);
+    }`,
+});
+if (!/nosan/.test(location.hash)) composer.addPass(sanitize);
 const bloomScale = isSmall() || isTouch ? 0.4 : 0.75;
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth * bloomScale, innerHeight * bloomScale), 0.7, 0.55, 0.72);
 composer.addPass(bloom);
@@ -193,6 +210,7 @@ const DAY_RATE = 0.03; // radians per second: a day passes in about three and a 
 const U = { uTime: { value: 0 }, uLin: { value: 1 } }; // shared time uniform; uLin: shaders write linear light for the film pipeline
 const AIR = { value: 1 };
 const SKY_FADE = { value: 1 };
+let baseShadowOff = false; // set by safe mode
 const _srCache = new Map(); // ground heights, see surfaceRadius() // the stars fade behind a blue daytime sky when you land on the day side
 
 /* ------------------------------------------------------------------ noise */
@@ -247,7 +265,7 @@ const WEATHER_GLSL = `
   uniform sampler2D uCloudTex;
   float cloudCover(vec3 cp){ // cp: a point on the cloud sphere, in the clouds' frame; read from the baked cloud map
     vec3 d = normalize(cp);
-    return texture2D(uCloudTex, vec2(atan(-d.z, d.x) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r;
+    return texture2D(uCloudTex, vec2(atan(-d.z, d.x + 1e-7) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r;
   }
   float cloudShadow(vec3 ld){
     if (uShadow < 0.5) return 0.0;
@@ -257,7 +275,7 @@ const WEATHER_GLSL = `
     return cloudCover(uCloudRot * c * 1.045) * 0.55 * day;
   }
   float nightLights(vec3 ld, float dist){
-    vec2 uv = vec2(atan(-ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+    vec2 uv = vec2(atan(-ld.z, ld.x + 1e-7) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5);
     float dens = texture2D(uNight, uv).r;
     vec3 q = ld * 2600.0;
     float hs = hh(floor(q));
@@ -482,7 +500,7 @@ function buildLand() {
         float lights = nightLights(ld, camD) * smoothstep(0.004, 0.02, camD) * (1.0 - pave); // inside town the streets and windows take over
         float twinkle = 0.85 + 0.15 * sin(uTime * 3.0 + dot(ld, vec3(913.0, 517.0, 731.0)));
         totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * lights * night * twinkle * 1.6;
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.4, 0.38), smoothstep(0.05, 0.6, texture2D(uNight, vec2(atan(-ld.z, ld.x) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r) * 0.22); // by day, towns read as grey-brown patches
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.4, 0.38), smoothstep(0.05, 0.6, texture2D(uNight, vec2(atan(-ld.z, ld.x + 1e-7) / 6.2831853 + 0.5, asin(clamp(ld.y, -1.0, 1.0)) / 3.1415927 + 0.5)).r) * 0.22); // by day, towns read as grey-brown patches
         float shade = cloudShadow(ld);
         if (camD < 0.3) { // close to the ground: soil, grass and stone in fine, crisp detail
           float k = smoothstep(0.3, 0.04, camD);
@@ -3912,7 +3930,7 @@ function setQuality(level) {
   composer.setPixelRatio(dpr);
   composer.setSize(innerWidth, innerHeight);
   bloom.enabled = level > 0;
-  WEATHER.uShadow.value = level === 2 ? baseShadow : 0;
+  WEATHER.uShadow.value = level >= 1 && !baseShadowOff ? baseShadow : 0;
   const keep = [0.4, 0.7, 1][level];
   forestMeshes.forEach(({ m, full }) => { m.count = Math.floor(full * keep); });
   document.body.dataset.quality = String(level);
@@ -3939,6 +3957,91 @@ function stepQuality(now, inVR) {
     setQuality(quality.level + 1);
     quality.lastChange = now;
     quality.ups++;
+  }
+}
+
+
+/* ------------------------------------------------------------------ safe mode: never a black screen */
+
+// Right after drawing, peek at a few pixels around the middle of the screen (where the world is). If they're all pure
+// black several checks in a row, something this device's graphics can't handle is wiping the picture. Switch effects
+// off one at a time, from most to least likely, until the world shows. Every step is noted for the diagnostics panel.
+const safe = { since: 0, step: 0, direct: false, blackRuns: 0, lastCheck: 0, log: [] };
+const SAFE_STEPS = [
+  ['cloud shadows off', () => { WEATHER.uShadow.value = 0; baseShadowOff = true; }],
+  ['anti-aliasing off', () => { [composer.renderTarget1, composer.renderTarget2].forEach((rt) => { rt.samples = 0; rt.dispose(); }); }],
+  ['glow off', () => { bloom.enabled = false; }],
+  ['film effects off', () => { lens.enabled = false; }],
+  ['direct drawing', () => { safe.direct = true; renderer.toneMapping = THREE.ACESFilmicToneMapping; }],
+];
+const _px = new Uint8Array(4 * 9);
+function watchdog(now) {
+  if (!gateOpen || safe.step >= SAFE_STEPS.length) return;
+  if (introDone && !safe.since) safe.since = now;
+  if (safe.since && now - safe.since > 12000 && !safe.blackRuns) return; // checks cost a tiny stall: only in the first moments
+  const every = now - safe.lastCheck;
+  if (every < (safe.blackRuns ? 300 : 2500)) return;
+  safe.lastCheck = now;
+  if (!introDone || flight || coreMix > 0.05 || camera.position.length() > 6) return; // only judge when the world fills the middle
+  const gl = renderer.getContext();
+  const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+  let sum = 0;
+  try {
+    for (let i = 0; i < 9; i++) {
+      gl.readPixels(Math.floor(w * (0.4 + (i % 3) * 0.1)), Math.floor(h * (0.4 + Math.floor(i / 3) * 0.1)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, _px.subarray(i * 4, i * 4 + 4));
+    }
+    for (let i = 0; i < 9; i++) sum += (_px[i * 4] + _px[i * 4 + 1] + _px[i * 4 + 2]) * (_px[i * 4 + 3] / 255);
+  } catch (e) { return; }
+  if (sum > 0) { safe.blackRuns = 0; return; }
+  safe.blackRuns++;
+  if (safe.blackRuns < 3) return;
+  safe.blackRuns = 0;
+  const [name, fix] = SAFE_STEPS[safe.step++];
+  fix();
+  safe.log.push(name);
+}
+
+// Diagnostics: tap the LIVE readout (top left) four times quickly. Screenshot it and send it over.
+const diagErrors = [];
+{
+  const keep = (kind) => (...a) => { diagErrors.push(`${kind}: ${a.map((x) => String(x && x.message ? x.message : x)).join(' ').slice(0, 300)}`); if (diagErrors.length > 12) diagErrors.shift(); };
+  const ce = console.error.bind(console), cw = console.warn.bind(console);
+  console.error = (...a) => { keep('error')(...a); ce(...a); };
+  console.warn = (...a) => { keep('warn')(...a); cw(...a); };
+  addEventListener('error', (e) => keep('crash')(e.message));
+}
+function showDiag() {
+  const gl = renderer.getContext();
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+  const lines = [
+    `GPU: ${gpu}`,
+    `WebGL2: ${renderer.capabilities.isWebGL2} · max samples ${renderer.capabilities.maxSamples} · MSAA ${MSAA}`,
+    `float buffers: ${Boolean(gl.getExtension('EXT_color_buffer_float'))} / half ${Boolean(gl.getExtension('EXT_color_buffer_half_float'))}`,
+    `quality ${quality.level} · pixel ratio ${renderer.getPixelRatio().toFixed(2)} · screen ${innerWidth}×${innerHeight}`,
+    `safe mode: ${safe.log.length ? safe.log.join(' → ') : 'not needed'}`,
+    `frame ${Math.round(1000 / Math.max(1, (quality.frames.reduce((a, b) => a + b, 0) / Math.max(1, quality.frames.length)) || 16))} fps (approx)`,
+    ...diagErrors.slice(-8),
+  ];
+  let el = $('#diag');
+  if (!el) {
+    el = document.createElement('pre');
+    el.id = 'diag';
+    el.addEventListener('click', () => el.remove());
+    document.body.appendChild(el);
+  }
+  el.textContent = `TD1.WORLD diagnostics (tap to close)\n\n${lines.join('\n')}`;
+}
+{
+  let taps = [];
+  const hudEl = $('#hud');
+  if (hudEl) {
+    hudEl.addEventListener('pointerdown', () => {
+      const now = performance.now();
+      taps = taps.filter((t) => now - t < 1500);
+      taps.push(now);
+      if (taps.length >= 4) { taps = []; showDiag(); }
+    });
   }
 }
 
@@ -4259,7 +4362,7 @@ function loop() {
     stepNearCard();
     updateFlare();
   } else flareEl.style.opacity = '0';
-  U.uLin.value = inVR ? 0 : 1;
+  U.uLin.value = inVR || safe.direct ? 0 : 1;
   lens.uniforms.uTime.value = t;
   { // focus pulls in on close-ups
     const target = introDone && !inVR && quality.level > 0 && !isTouch ? THREE.MathUtils.smoothstep(2.35 - camWorld.length(), 0, 0.6) * (selected ? 1 : 0.7) * (1 - landK(camWorld.length()) * 0.75) : 0;
@@ -4267,8 +4370,9 @@ function loop() {
   }
   const ground = stepGround(inVR);
   if (!inVR || score.on) score.spin(Math.max(spin.energy, ground * 0.22)); // wind when you're down in the air
-  if (inVR) renderer.render(scene, camera);
+  if (inVR || safe.direct) renderer.render(scene, camera);
   else composer.render(); // the camera keeps its parallax until the next frame, so taps line up with what's drawn
+  if (!inVR) watchdog(now);
 }
 
 addEventListener('resize', () => {
@@ -4299,8 +4403,13 @@ scene.traverse((o) => {
 });
 renderer.setAnimationLoop(loop);
 // td1.world/#dev exposes a few handles for framing shots and testing
+if (/blacktest/.test(location.hash)) { // for testing: one object that outputs invalid pixels
+  const bad = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.ShaderMaterial({ uniforms: { uZero: { value: 0 } }, vertexShader: 'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: 'uniform float uZero; void main(){ gl_FragColor = vec4(vec3(uZero / uZero), 1.0); }' }));
+  bad.position.set(0, 0, 1.3);
+  planet.add(bad);
+}
 if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */

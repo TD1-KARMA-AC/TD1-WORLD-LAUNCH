@@ -418,7 +418,7 @@ export function buildingMaterial({ sunDir, timeUniform }) {
         if (vWin > 0.5 && abs(vNl.y) < 0.5) {
           vec2 f = abs(vNl.x) > 0.5 ? vec2(vBox.z, vBox.y) : vec2(vBox.x, vBox.y);
           vec2 q = f / vec2(0.00042, 0.0005);
-          vec2 cell = floor(q), w = fract(q), aa = fwidth(q);
+          vec2 cell = floor(q), w = fract(q), aa = fwidth(q) + 1e-4; // never zero-width edges (undefined on some GPUs)
           float wx = smoothstep(0.16 - aa.x, 0.16 + aa.x, w.x) * (1.0 - smoothstep(0.84 - aa.x, 0.84 + aa.x, w.x));
           float wy = smoothstep(0.24 - aa.y, 0.24 + aa.y, w.y) * (1.0 - smoothstep(0.88 - aa.y, 0.88 + aa.y, w.y));
           float detail = 1.0 - smoothstep(0.3, 0.6, max(aa.x, aa.y)); // windows smaller than a pixel blend into an even tone
