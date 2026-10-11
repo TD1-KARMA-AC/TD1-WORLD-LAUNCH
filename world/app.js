@@ -1903,10 +1903,31 @@ const mindaloo = new THREE.Group();
   haloTex.colorSpace = THREE.SRGBColorSpace;
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   halo.scale.setScalar(1.15);
+  halo.material.opacity = 0.5;
   const light = new THREE.PointLight(0xc9d4ff, 1.4, 4, 2);
   mindaloo.add(halo, body, light);
   mindaloo.userData.body = body;
   mindaloo.userData.halo = halo;
+
+  // The Mindaloo emblem, in the sky: the two crescents and the crown of silver thorns ring the real moon,
+  // and the Mindaloo rune glows on its face. Black in the artwork adds nothing, so only the silver shows.
+  // Measured from the artwork: its moon is 178 px across the radius, centred at (733, 463) of 1448 × 1086.
+  const px = MOON_R / 178;
+  const loader = new THREE.TextureLoader();
+  const sprite = (file, w, h, cx, cy, opacity) => {
+    const tex = loader.load(file);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0xe4e8ff, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sp.scale.set(w * px, h * px, 1);
+    sp.center.set(cx, cy);
+    sp.renderOrder = 6; // after the planet's surface and air, so they don't paint over it
+    mindaloo.add(sp);
+    return sp;
+  };
+  mindaloo.userData.crown = sprite('world/assets/mindaloo-halo.png', 1448, 1086, 733 / 1448, 1 - 463 / 1086, 0.6);
+  mindaloo.userData.rune = sprite('world/assets/mindaloo-rune.png', 300, 300, 0.5, 0.5, 0.9);
+  mindaloo.userData.MOON_R = MOON_R;
+  mindaloo.userData.px = px;
 }
 mindaloo.position.set(-2.05, 0, 0);
 mindalooPivot.add(mindaloo);
@@ -2515,6 +2536,7 @@ REGIONS.forEach((r, i) => {
   el.style.setProperty('--c', r.color);
 });
 addLabel('<span class="nm">Realm</span><span class="era">Connected world</span>', 'moon', () => realm.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.24, 0)), () => openSpecial('realm'), { surface: false });
+const _mInv = new THREE.Matrix4(), _mDir = new THREE.Vector3(), _mUp = new THREE.Vector3(), _mRight = new THREE.Vector3(), _mQ = new THREE.Quaternion();
 const camAxis = (col) => new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, col);
 STRATA.forEach((st, i) => {
   const el = addLabel(`<span class="era">${st.span}</span><span class="nm">${st.name}</span>`, 'stratum', () => {
@@ -3069,7 +3091,8 @@ function specialHtml(kind) {
       + `<a class="cta" href="${REALM_URL}">Enter Realm →</a>`;
   }
   if (kind === 'mindaloo') {
-    return header({ name: 'Mindaloo AC', era: 'Moonlight · TD1 flagship', color: '#D9CCFF', tagline: 'Autonomous Consciousness, powered by Karma Core.', intro: 'Mindaloo means moonlight, and AC stands for Autonomous Consciousness. Mindaloo AC is TD1’s flagship: a sovereign AI with its own lasting identity and memory, a spatial canvas of agents that work together, and Karma Core at its heart. As it orbits, its light falls across every continent.' })
+    return '<img class="emblem" src="world/assets/mindaloo-emblem.jpg" alt="The Mindaloo emblem: a full moon between two crescents, crowned in silver thorns, with the Mindaloo rune at its heart." width="960" height="720">'
+      + header({ name: 'Mindaloo AC', era: 'Moonlight · TD1 flagship', color: '#D9CCFF', tagline: 'Autonomous Consciousness, powered by Karma Core.', intro: 'Mindaloo means moonlight, and AC stands for Autonomous Consciousness. Mindaloo AC is TD1’s flagship: a sovereign AI with its own lasting identity and memory, a spatial canvas of agents that work together, and Karma Core at its heart. As it orbits, its light falls across every continent.' })
       + acHtml(false)
       + (MINDALOO_URL
         ? `<a class="cta" href="${MINDALOO_URL}" target="_blank" rel="noopener">Visit Mindaloo AC ↗</a>`
@@ -4341,6 +4364,21 @@ function loop() {
   beacon.userData.sweep.children[0].material.opacity = 0.16 + beaconFlash * 0.5;
   beacon.visible = coreMix < 0.5;
   mindaloo.userData.body.rotation.y = t * 0.05;
+  { // the emblem faces you: crown just behind the moon, rune just in front, a little below centre as in the artwork
+    const u = mindaloo.userData;
+    mindaloo.updateMatrixWorld();
+    _mInv.copy(mindaloo.matrixWorld).invert();
+    _mDir.copy(camWorld).applyMatrix4(_mInv).normalize();
+    mindaloo.getWorldQuaternion(_mQ).invert();
+    _mUp.copy(camAxis(1)).applyQuaternion(_mQ).normalize();
+    _mRight.copy(camAxis(0)).applyQuaternion(_mQ).normalize();
+    u.crown.position.copy(_mDir).multiplyScalar(-u.MOON_R * 0.6);
+    u.rune.position.copy(_mDir).multiplyScalar(u.MOON_R * 1.12).addScaledVector(_mUp, -87 * u.px).addScaledVector(_mRight, -8 * u.px);
+    const sel = selected && selected.kind === 'mindaloo';
+    u.crown.material.opacity += ((sel ? 0.95 : 0.6) - u.crown.material.opacity) * 0.05;
+    u.rune.material.opacity = (sel ? 1 : 0.85) * (0.85 + Math.sin(t * 0.9) * 0.15);
+    u.crown.visible = u.rune.visible = coreMix < 0.5;
+  }
   mindaloo.userData.halo.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.2;
   { // shrink away instead of filling the screen when it passes the camera
     const d = mindaloo.getWorldPosition(new THREE.Vector3()).distanceTo(camWorld);
@@ -4409,7 +4447,7 @@ if (/blacktest/.test(location.hash)) { // for testing: one object that outputs i
   planet.add(bad);
 }
 if (/dev/.test(location.hash)) {
-  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */

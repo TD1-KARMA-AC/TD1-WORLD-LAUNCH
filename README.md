@@ -15,7 +15,7 @@ A living 3D world of intelligence. Visitors land on a planet they can spin, zoom
 | **Realm** (moon) | Connected world, served from `/realm/` |
 | **The Exchange** (orbiting station) | The shop: Courses, Documents and Clothing, live from Shopify |
 | **The Beacon** (lighthouse) | Contact and bookings: enquiry form on the Uncharted Isles |
-| **Mindaloo AC** (moon) | TD1’s flagship Autonomous Consciousness (AC). Mindaloo means moonlight. Links to www.mindaloo.ac |
+| **Mindaloo AC** (moon) | TD1’s flagship Autonomous Consciousness (AC). Mindaloo means moonlight. The Mindaloo emblem rings it in the sky (the two crescents and silver thorn crown, `world/assets/mindaloo-halo.png`) with the rune glowing on its face (`mindaloo-rune.png`); the full emblem tops its panel. Links to www.mindaloo.ac |
 
 The 50 TD1 products appear as **cities of light** on the continent that fits them, joined by pulses of data. Little beings hop between them, and each continent has its own landform and flora.
 
