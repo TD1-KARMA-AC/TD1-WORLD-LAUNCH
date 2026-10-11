@@ -444,7 +444,17 @@ body.cine .top, body.cine #intro, body.cine #hud, body.cine #edge, body.cine #me
   body.panel-open #menu-btn { opacity: 0; pointer-events: none; }
   #dock { right: 12px; left: 12px; width: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 56px); max-height: calc(100% - 150px); }
   #edge .l { left: 5px; } #edge .r { right: 5px; }
-  #panel.peek { height: 150px; }
+  #panel.peek { height: calc(176px + env(safe-area-inset-bottom)); cursor: pointer; }
+  #panel.peek #panel-body { overflow: hidden; touch-action: none; }
+  #panel.peek .ph .coords { display: none; }
+  #panel.peek::after { /* fade the cut-off text and say there is more */
+    display: flex; content: 'Tap to read more  ↑'; align-items: flex-end; justify-content: center; right: 0; left: 0; bottom: 0; width: auto; height: 64px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)); border: 0; opacity: 1;
+    font: 500 10px var(--data); letter-spacing: 0.2em; text-transform: uppercase; color: var(--c);
+    background: linear-gradient(180deg, rgba(5, 7, 16, 0), rgba(5, 7, 16, 0.96) 55%);
+  }
+  .ph { padding-right: 40px; }
+  #panel-close { top: 10px; right: 12px; }
   #panel-grip { display: flex; justify-content: center; padding: 10px 0 2px; flex: none; }
   #panel-grip span { width: 40px; height: 3px; background: var(--hair-2); }
   #panel-body { padding: 8px 18px 26px; }

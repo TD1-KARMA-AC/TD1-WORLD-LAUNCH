@@ -3340,7 +3340,7 @@ function focusCity(i) {
 
 panelBody.addEventListener('click', (e) => {
   const city = e.target.closest('[data-city]');
-  if (city) { focusCity(+city.dataset.city); if (isSmall()) panel.classList.add('peek'); return; }
+  if (city) { focusCity(+city.dataset.city); if (isSmall()) setPeek(true); return; }
   const peak = e.target.closest('[data-peak]');
   if (peak) { flyTo(peaks[+peak.dataset.peak].pos, fitDist(0.5, 1.95)); return; }
   const jump = e.target.closest('[data-region]');
@@ -3365,7 +3365,26 @@ panelBody.addEventListener('change', (e) => {
   if (e.target.id === 'f-type') panelBody.querySelector('.f-book').hidden = e.target.value !== 'Book expertise';
 });
 $('#panel-close').addEventListener('click', closePanel);
-$('#panel-grip').addEventListener('click', () => panel.classList.toggle('peek'));
+// On a phone the card can sit low (just the title, the world in view) or come up to read; tap it, or swipe it up and down.
+function setPeek(on) {
+  panel.classList.toggle('peek', on);
+  if (on) panelBody.scrollTop = 0;
+}
+$('#panel-grip').addEventListener('click', (e) => { e.stopPropagation(); setPeek(!panel.classList.contains('peek')); });
+panel.addEventListener('click', (e) => { // tap the low card anywhere to read it
+  if (panel.classList.contains('peek') && !e.target.closest('#panel-close, #panel-grip, a, button, input, select, textarea')) setPeek(false);
+}, true);
+{
+  let sy = null, st = 0;
+  panel.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; st = panelBody.scrollTop; }, { passive: true });
+  panel.addEventListener('touchend', (e) => {
+    if (sy === null || !isSmall()) return;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (dy < -40 && panel.classList.contains('peek')) setPeek(false);
+    else if (dy > 50 && !panel.classList.contains('peek') && st <= 0) setPeek(true); // pulled down from the top: tuck it away
+    sy = null;
+  }, { passive: true });
+}
 addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 
 /* ------------------------------------------------------------------ dock */
@@ -3448,7 +3467,7 @@ function tourStop(i) {
   const st = TOUR[tour.i];
   closeMenu();
   st.go();
-  if (isSmall()) panel.classList.add('peek'); // on a phone the world stays in view; pull the card up to read more
+  if (isSmall()) setPeek(true); // on a phone the world stays in view; pull the card up to read more
   tourEl.style.setProperty('--c', st.color);
   $('#tour-n').textContent = `${pad2(tour.i + 1)} / ${pad2(TOUR.length)}`;
   $('#tour-kick').textContent = st.kick;
@@ -3496,7 +3515,7 @@ $('#tour-down').addEventListener('click', () => {
   const st = TOUR[tour.i];
   if (camera.position.length() < 1.08) { // back up to see the whole place again
     if (st.land !== undefined) selectRegion(st.land, { dur: 2200 }); else flyTo(camera.position.clone(), fitDist(1.16, 3.0), 2200);
-    if (isSmall()) panel.classList.add('peek');
+    if (isSmall()) setPeek(true);
   } else if (st.land !== undefined) landAt(st.land);
 });
 addEventListener('keydown', (e) => {
@@ -4122,7 +4141,7 @@ function frame() {
   const introOn = !$('#intro').classList.contains('gone') && !document.body.classList.contains('cine');
   const tx = open && !small ? Math.min(440, innerWidth * 0.4) / 2 : (introOn && !small ? -Math.min(220, innerWidth * 0.12) : 0);
   const introUp = introOn && small ? innerHeight * 0.1 : 0;
-  const ty = open && small ? (peek ? 70 : innerHeight * 0.3) : introUp;
+  const ty = open && small ? (peek ? (document.body.classList.contains('touring') ? 30 : 70) : innerHeight * 0.3) : introUp;
   offX += (tx - offX) * 0.08;
   offY += (ty - offY) * 0.08;
   if (Math.abs(offX) < 0.5 && Math.abs(offY) < 0.5 && !open && !introOn) { camera.clearViewOffset(); return; }
