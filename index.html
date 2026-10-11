@@ -9,7 +9,7 @@
   <meta property="og:title" content="TD1.WORLD">
   <meta property="og:description" content="A living 3D world of intelligence. Spin it, fly in, explore.">
   <meta property="og:url" content="https://www.td1.world/">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2303040a'/%3E%3Cpath d='M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z' fill='rgba(193,162,255,0.2)' stroke='%23C1A2FF' stroke-width='7' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2303040a'/%3E%3Cg transform='translate(14 7) scale(0.165)' fill='%23C1A2FF'%3E%3Cpath d='M40 269 L218 153 L218 386 Z'/%3E%3Cpath d='M242 8 L438 135 L242 262 Z'/%3E%3Cpath d='M242 277 L438 404 L242 531 Z'/%3E%3C/g%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -19,13 +19,14 @@
   </script>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="td1-logo" viewBox="30 0 420 540"><path d="M40 269 L218 153 L218 386 Z"/><path d="M242 8 L438 135 L242 262 Z"/><path d="M242 277 L438 404 L242 531 Z"/></symbol></svg>
   <canvas id="world" aria-hidden="true"></canvas>
   <div id="labels" aria-label="Places on the world"></div>
   <div id="tip" role="status" aria-live="polite"></div>
 
   <header class="top">
     <a class="brand" href="./" aria-label="TD1.WORLD home">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="rgba(193,162,255,0.16)" stroke="#C1A2FF" stroke-width="6" stroke-linejoin="round"/></svg>
+      <svg class="logo" viewBox="30 0 420 540" aria-hidden="true"><use href="#td1-logo"/></svg>
       <b>TD1<span>.WORLD</span></b>
     </a>
     <nav><button type="button" id="nav-sound" aria-pressed="false"><i aria-hidden="true"></i><span>Sound off</span></button><button type="button" id="nav-vr" hidden>Enter VR</button><button type="button" id="nav-contact">Get in touch</button></nav>
@@ -54,7 +55,7 @@
 
   <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <div class="g-in">
-      <svg class="g-knot" viewBox="0 0 100 100" aria-hidden="true"><path pathLength="1" d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="none" stroke="#C1A2FF" stroke-width="3.5" stroke-linejoin="round"/></svg>
+      <svg class="g-logo" viewBox="30 0 420 540" aria-hidden="true"><defs><linearGradient id="g-fill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#d9ccff"/><stop offset="1" stop-color="#9f86ff"/></linearGradient><linearGradient id="g-sheen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="g-clip"><path d="M40 269 L218 153 L218 386 Z"/><path d="M242 8 L438 135 L242 262 Z"/><path d="M242 277 L438 404 L242 531 Z"/></clipPath></defs><g fill="url(#g-fill)"><path class="t1" d="M40 269 L218 153 L218 386 Z"/><path class="t2" d="M242 8 L438 135 L242 262 Z"/><path class="t3" d="M242 277 L438 404 L242 531 Z"/></g><g clip-path="url(#g-clip)"><rect class="sheen" x="-200" y="0" width="180" height="540" fill="url(#g-sheen)" transform="skewX(-18)"/></g></svg>
       <h1 id="gate-title">TD1<span>.WORLD</span></h1>
       <p class="g-sub">A living world of intelligence</p>
       <div class="g-load" aria-live="polite"><i></i><span>Building the world</span></div>
@@ -72,7 +73,7 @@
   <div id="edge" aria-hidden="true"><i class="l"></i><i class="r"></i></div>
 
   <button id="menu-btn" type="button" aria-expanded="false" aria-controls="dock">
-    <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M25 10 L50 35 L75 10 L90 25 L65 50 L90 75 L75 90 L50 65 L25 90 L10 75 L35 50 L10 25 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/></svg>
+    <svg class="logo" viewBox="30 0 420 540" aria-hidden="true"><use href="#td1-logo"/></svg>
     <span>Explore</span>
   </button>
   <nav id="dock" aria-label="Explore TD1.WORLD" hidden></nav>

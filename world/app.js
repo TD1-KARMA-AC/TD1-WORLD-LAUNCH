@@ -210,6 +210,7 @@ const DAY_RATE = 0.03; // radians per second: a day passes in about three and a 
 const U = { uTime: { value: 0 }, uLin: { value: 1 } }; // shared time uniform; uLin: shaders write linear light for the film pipeline
 const AIR = { value: 1 };
 const SKY_FADE = { value: 1 };
+const CAM_RIGHT = { value: new THREE.Vector3(1, 0, 0) }, CAM_UP = { value: new THREE.Vector3(0, 1, 0) }; // the camera's axes, for shaders that light things relative to you
 let baseShadowOff = false; // set by safe mode
 const _srCache = new Map(); // ground heights, see surfaceRadius() // the stars fade behind a blue daytime sky when you land on the day side
 
@@ -1886,7 +1887,7 @@ const mindaloo = new THREE.Group();
     g.setIndex(index);
     g.computeVertexNormals();
     g.scale(MOON_R, MOON_R, MOON_R);
-    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, emissive: 0x1a1430, emissiveIntensity: 0.35 }));
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb4b6be, roughness: 1, metalness: 0, emissive: 0x8d93a8, emissiveIntensity: 0.14 })); // moonlight silver, never navy
     return m;
   })();
   // soft halo of moonlight
@@ -1903,7 +1904,7 @@ const mindaloo = new THREE.Group();
   haloTex.colorSpace = THREE.SRGBColorSpace;
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   halo.scale.setScalar(1.15);
-  halo.material.opacity = 0.5;
+  halo.visible = false; // the emblem's crown is the glow now
   const light = new THREE.PointLight(0xc9d4ff, 1.4, 4, 2);
   mindaloo.add(halo, body, light);
   mindaloo.userData.body = body;
@@ -1924,7 +1925,35 @@ const mindaloo = new THREE.Group();
     mindaloo.add(sp);
     return sp;
   };
-  mindaloo.userData.crown = sprite('world/assets/mindaloo-halo.png', 1448, 1086, 733 / 1448, 1 - 463 / 1086, 0.6);
+  mindaloo.userData.crown = sprite('world/assets/mindaloo-halo.png', 1448, 1086, 733 / 1448, 1 - 463 / 1086, 0.75);
+  // The two crescents are real moons: same cratered surface, lit from behind and to the outside so they read as
+  // a waxing and a waning crescent from any angle, exactly where they sit in the emblem.
+  const crescentMat = (side) => new THREE.ShaderMaterial({
+    uniforms: { uSide: { value: side }, uRight: CAM_RIGHT, uUp: CAM_UP },
+    transparent: true, depthWrite: false, // the unlit side is see-through, as in the emblem: only the crescent shows
+    vertexShader: `varying vec3 vN; varying vec3 vP; varying vec3 vW;
+      void main(){ vN = normalize(mat3(modelMatrix) * normal); vP = position; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uSide; uniform vec3 uRight; uniform vec3 uUp; varying vec3 vN; varying vec3 vP; varying vec3 vW;
+      ${GLSL_NOISE}
+      void main(){
+        // lit from behind and to the outside, measured against your own line of sight: the same thin crescent from anywhere
+        vec3 V = normalize(cameraPosition - vW);
+        vec3 L = normalize(uSide * uRight * 0.72 + uUp * 0.08 - V * 0.69);
+        float lit = smoothstep(0.0, 0.28, dot(normalize(vN), L));
+        vec3 p = normalize(vP);
+        float mare = smoothstep(0.5, 0.62, fbm(p * 2.4 + 7.0)); // dark seas
+        float g = 0.82 - mare * 0.26 + (fbm(p * 11.0) - 0.5) * 0.18; // and cratered highlands
+        gl_FragColor = vec4(vec3(g) * vec3(0.95, 0.96, 1.0) * 1.05, lit);
+      }`,
+  });
+  const crescentGeo = new THREE.SphereGeometry(MOON_R * 168 / 178, 48, 32);
+  const cres = (side) => {
+    const c = new THREE.Mesh(crescentGeo, crescentMat(side));
+    c.renderOrder = 6;
+    mindaloo.add(c);
+    return c;
+  };
+  mindaloo.userData.crescents = [cres(-1), cres(1)];
   mindaloo.userData.rune = sprite('world/assets/mindaloo-rune.png', 300, 300, 0.5, 0.5, 0.9);
   mindaloo.userData.MOON_R = MOON_R;
   mindaloo.userData.px = px;
@@ -2125,11 +2154,12 @@ coreWorld.add(coreHalo);
 const coreLight = new THREE.PointLight(0xc9b5ff, 0, 3, 2);
 coreWorld.add(coreLight);
 
-// The Karma knot (from the Mindaloo AC emblem), turning slowly around the heart.
-const knot = new THREE.LineLoop(
+// The TD1 logo, drawn in light around the heart: three triangles.
+const LOGO_TRIS = [[[40, 269], [218, 153], [218, 386]], [[242, 8], [438, 135], [242, 262]], [[242, 277], [438, 404], [242, 531]]];
+const knot = new THREE.LineSegments(
   new THREE.BufferGeometry().setFromPoints(
-    [[25, 10], [50, 35], [75, 10], [90, 25], [65, 50], [90, 75], [75, 90], [50, 65], [25, 90], [10, 75], [35, 50], [10, 25]]
-      .map(([x, y]) => new THREE.Vector3((x - 50) / 50 * 0.34, (50 - y) / 50 * 0.34, 0)),
+    LOGO_TRIS.flatMap((tri) => tri.flatMap((p, i) => [p, tri[(i + 1) % 3]]))
+      .map(([x, y]) => new THREE.Vector3((x - 239) * (0.68 / 523), (270 - y) * (0.68 / 523), 0)),
   ),
   new THREE.LineBasicMaterial({ color: 0xc1a2ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
 );
@@ -2216,7 +2246,7 @@ function applyCore(m, t) {
   coreLight.intensity = ss(m, 0.3, 1) * (1.2 + beat * 0.8);
   knot.material.opacity = ss(m, 0.5, 1) * 0.55;
   knot.quaternion.copy(camWorldQ);
-  knot.rotateZ(t * 0.12);
+  knot.rotateZ(Math.sin(t * 0.3) * 0.06); // upright, swaying gently
   forces.forEach((f) => { f.spin.rotation.y = t * f.speed; f.orb.material.opacity = 1; f.ring.material.opacity = 0.22 * ss(m, 0.5, 1); f.orb.visible = m > 0.4; });
   threads.material.uniforms.uAlpha.value = ss(m, 0.55, 1);
 }
@@ -2536,6 +2566,7 @@ REGIONS.forEach((r, i) => {
   el.style.setProperty('--c', r.color);
 });
 addLabel('<span class="nm">Realm</span><span class="era">Connected world</span>', 'moon', () => realm.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.24, 0)), () => openSpecial('realm'), { surface: false });
+const _mW = new THREE.Vector3(), _mW2 = new THREE.Vector3(), _mW3 = new THREE.Vector3();
 const _mInv = new THREE.Matrix4(), _mDir = new THREE.Vector3(), _mUp = new THREE.Vector3(), _mRight = new THREE.Vector3(), _mQ = new THREE.Quaternion();
 const camAxis = (col) => new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, col);
 STRATA.forEach((st, i) => {
@@ -4373,9 +4404,23 @@ function loop() {
     _mUp.copy(camAxis(1)).applyQuaternion(_mQ).normalize();
     _mRight.copy(camAxis(0)).applyQuaternion(_mQ).normalize();
     u.crown.position.copy(_mDir).multiplyScalar(-u.MOON_R * 0.6);
+    CAM_RIGHT.value.copy(camAxis(0));
+    CAM_UP.value.copy(camAxis(1));
+    u.crescents.forEach((c, i) => { // at their places in the emblem, slowly turning
+      c.position.copy(_mRight).multiplyScalar((i ? 253 : -253) * u.px).addScaledVector(_mUp, -73 * u.px);
+      c.rotation.y = t * 0.04 * (i ? -1 : 1) + i * 2;
+      c.visible = coreMix < 0.5;
+    });
+    // over the planet the crown would read like a sticker on the world: let it recede, and shine against space
+    const mw = mindaloo.getWorldPosition(_mW);
+    const toMoon = _mW2.copy(mw).sub(camWorld), dM = toMoon.length();
+    const toPlanet = _mW3.copy(camWorld).negate();
+    const sep = toMoon.angleTo(toPlanet);
+    const planetAng = Math.asin(Math.min(1, 1.05 / camWorld.length()));
+    const over = THREE.MathUtils.smoothstep(sep, planetAng + 0.05, planetAng - 0.25) * (dM < camWorld.length() ? 1 : 0);
     u.rune.position.copy(_mDir).multiplyScalar(u.MOON_R * 1.12).addScaledVector(_mUp, -87 * u.px).addScaledVector(_mRight, -8 * u.px);
     const sel = selected && selected.kind === 'mindaloo';
-    u.crown.material.opacity += ((sel ? 0.95 : 0.6) - u.crown.material.opacity) * 0.05;
+    u.crown.material.opacity += ((sel ? 1 : 0.8) * (1 - over * 0.75) - u.crown.material.opacity) * 0.06;
     u.rune.material.opacity = (sel ? 1 : 0.85) * (0.85 + Math.sin(t * 0.9) * 0.15);
     u.crown.visible = u.rune.visible = coreMix < 0.5;
   }
