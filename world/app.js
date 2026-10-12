@@ -1338,6 +1338,7 @@ function scatterMesh(geo, list, mat = MODEL_MAT) {
 // Every continent has its trade: miners in The Origins, gardeners in Memory, surveyors in Intelligence,
 // builders in Creation, welders in The Future. Couriers carry glowing blocks of data between towns.
 const ROBOT_H = 0.0019;
+let robotK = 1; // how big the robots are drawn right now (true size at street level, bigger from the air)
 const JOBS = ['pick', 'can', 'scanner', 'hammer', 'torch'];
 const ROLE = { pick: 'Miner', can: 'Gardener', scanner: 'Surveyor', hammer: 'Builder', torch: 'Welder', walk: 'Courier' };
 const CALL = { pick: 'DIG', can: 'BLOOM', scanner: 'SCAN', hammer: 'BLOK', torch: 'ARC', walk: 'POST' };
@@ -1448,6 +1449,7 @@ function stepRobots(dt, t) {
   const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
   // true size when you're down among them (about your height), bigger from the air so you can still spot them
   const rk = walk.on || vr.street.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01);
+  robotK = rk;
   _rS.setScalar(ROBOT_H * rk);
   if (Math.abs(rk - (robotParts.propK ?? 1)) > 0.04 || (rk !== robotParts.propK && (rk === 0.27 || rk === 1))) { // their work shrinks with them
     robotParts.propK = rk;
@@ -1519,7 +1521,7 @@ function stepRobots(dt, t) {
     }
     if (rb.type === 'hover') bob += 0.28 + Math.sin(t * 2.2 + rb.phase) * 0.04; // floats on its thruster ring
     groundMatrix(rb.d, rb.yaw + yawWobble, _rS, bob * ROBOT_H - 0.0002, _rB);
-    rb.pos.setFromMatrixPosition(_rB).addScaledVector(rb.d, ROBOT_H * 0.6);
+    rb.pos.setFromMatrixPosition(_rB).addScaledVector(rb.d, ROBOT_H * robotK * 0.6);
     bodies[rb.type].setMatrixAt(rb.slot, _rB);
     arms.setMatrixAt(i * 2, armMatrix(_rB, 1, swingR, _rM, rb.type));
     const tool = rb.kind === 'work' ? tools[rb.job] : null;
@@ -1562,7 +1564,7 @@ function greetRobot(i) {
 function stepSay(t) {
   if (!sayBot) return;
   if (t - sayBot.react > REACT_S || coreMix > 0.1) { sayEl.classList.remove('on'); sayBot = null; return; }
-  const s = toScreen(sayBot.pos.clone().addScaledVector(sayBot.d, ROBOT_H * 0.8));
+  const s = toScreen(sayBot.pos.clone().addScaledVector(sayBot.d, ROBOT_H * robotK * 0.7));
   sayEl.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
   sayEl.style.visibility = s.z < 1 ? 'visible' : 'hidden';
 }
@@ -5010,6 +5012,8 @@ const _tk = new THREE.Vector3();
 function stepTalk(t) {
   const close = introDone && !renderer.xr.isPresenting && (walk.on || camera.position.length() - 1 < 0.035);
   if (close && t > talkUi.next && talkUi.convs.length < (isSmall() ? 1 : 2)) { talkUi.next = t + 3 + Math.random() * 4; startTalk(t); }
+  const placed = [];
+  if (sayBot && sayEl.classList.contains('on')) { const r = sayEl.getBoundingClientRect(); placed.push({ x: r.left + r.width / 2, y: r.bottom, w: r.width, h: r.height }); }
   for (let i = talkUi.convs.length - 1; i >= 0; i--) {
     const c = talkUi.convs[i];
     let el = t - c.t0, line = null;
@@ -5025,9 +5029,10 @@ function stepTalk(t) {
       p.setXYZ(0, c.a.pos.x, c.a.pos.y, c.a.pos.z); p.setXYZ(1, c.b.pos.x, c.b.pos.y, c.b.pos.z); p.needsUpdate = true;
       c.beam.material.opacity = 0.35 + 0.25 * Math.sin(t * 9);
     }
-    const head = _tk.copy(line.who.pos).addScaledVector(line.who.d, ROBOT_H * (walk.on ? 0.3 : 0.9));
+    const head = _tk.copy(line.who.pos).addScaledVector(line.who.d, ROBOT_H * robotK * 0.6);
     const s = toScreen(head);
-    const vis = s.z < 1 && s.x > -40 && s.x < innerWidth + 40 && s.y > 40 && s.y < innerHeight;
+    const greeting = sayBot && (c.a === sayBot || c.b === sayBot); // you tapped one of them: their hello wins
+    const vis = !greeting && s.z < 1 && s.x > -40 && s.x < innerWidth + 40 && s.y > 40 && s.y < innerHeight;
     if (c.el.dataset.text !== line.text) {
       c.el.dataset.text = line.text;
       c.el.querySelector('b').textContent = line.who.name + (c.think ? ' · thinking' : '');
@@ -5037,7 +5042,13 @@ function stepTalk(t) {
       if (vis && !c.think && line === c.lines[0]) score.beep();
     }
     c.el.style.opacity = vis ? '1' : '0';
-    if (vis) c.el.style.transform = `translate3d(${Math.round(s.x)}px, ${Math.round(s.y)}px, 0) translate(-50%, -100%)`;
+    if (vis) { // never stack two bubbles on top of each other: the later one steps up
+      const h = c.el.offsetHeight || 60, w = c.el.offsetWidth || 220;
+      let y = s.y;
+      for (const r of placed) if (Math.abs(r.x - s.x) < (r.w + w) / 2 && Math.abs(r.y - y) < (r.h + h) / 2 + 4) y = r.y - (r.h + h) / 2 - 6;
+      placed.push({ x: s.x, y, w, h });
+      c.el.style.transform = `translate3d(${Math.round(s.x)}px, ${Math.round(y)}px, 0) translate(-50%, -100%)`;
+    }
   }
 }
 
