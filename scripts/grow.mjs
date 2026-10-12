@@ -26,6 +26,7 @@ Each night you decide what the robots start building tomorrow. Keep the world co
 Reply with JSON only, no prose, in exactly this shape:
 {"headline": "one short line of world news, under 140 characters, present tense, warm and a little wonder-filled",
  "towns": [{"region": "<continent id>", "size": "small|medium|large", "name": "<town name, 1-3 words>"}],
+ "event": {"type": "festival|market|discovery|launch", "region": "<continent id>", "text": "one line describing today's event, under 140 characters"},
  "talk": [{"region": "<continent id>", "lines": ["A: ...", "B: ...", "A: ..."]}, {"region": "<continent id>", "think": true, "lines": ["A: ..."]}]}
 Plan 1 to 3 towns. Town names should suit their continent and never repeat earlier ones.
 "talk" is what the robots say to each other over their radios today (visitors overhear it when they zoom in): 14 short
@@ -62,7 +63,9 @@ const talk = (Array.isArray(plan.talk) ? plan.talk : []).slice(0, 24)
   .map((c) => ({ region: c.region in built ? c.region : undefined, think: c.think === true || undefined,
     lines: c.lines.slice(0, c.think ? 1 : 5).map((l) => clean(l, 110)).filter((l) => /^[AB]:\s*\S/.test(l)) }))
   .filter((c) => c.lines.length);
-const entry = { day, date: new Date(EPOCH + (day - 1) * 86400000 + 8 * 3600000).toISOString().slice(0, 10), headline: clean(plan.headline, 160), towns, talk };
+const ev = plan.event && ['festival', 'market', 'discovery', 'launch'].includes(plan.event.type) && plan.event.region in built
+  ? { type: plan.event.type, region: plan.event.region, text: clean(plan.event.text, 160) } : undefined;
+const entry = { day, date: new Date(EPOCH + (day - 1) * 86400000 + 8 * 3600000).toISOString().slice(0, 10), headline: clean(plan.headline, 160), towns, talk, event: ev };
 growth.days.push(entry);
 fs.writeFileSync(FILE, `${JSON.stringify(growth, null, 2)}\n`);
 console.log(`Day ${day}: ${entry.headline}\n${towns.map((t) => `  ${t.name} (${t.size}, ${t.region})`).join('\n')}`);

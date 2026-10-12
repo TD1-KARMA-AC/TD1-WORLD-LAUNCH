@@ -1506,6 +1506,7 @@ function stepRobots(dt, t) {
     arms.setMatrixAt(i * 2 + 1, armMatrix(_rB, -1, swingL, _rM, rb.type));
     if (rb.kind === 'walk' && rb.carry) {
       _rL.makeRotationY(t * 0.8 + rb.phase).setPosition(0, (rb.type === 'walker' ? 1.62 : 1.48) + Math.sin(t * 2 + rb.phase) * 0.02, 0);
+      cube.setColorAt(nCube, RES_COL[(rb.from && rb.from.region) || 0]);
       cube.setMatrixAt(nCube++, _rM.multiplyMatrices(_rB, _rL));
     }
     // sparks at the tool's tip
@@ -1516,6 +1517,7 @@ function stepRobots(dt, t) {
     } else ss.setX(i, Math.max(0, ss.getX(i) - dt * 8));
   });
   cube.count = nCube;
+  if (cube.instanceColor) cube.instanceColor.needsUpdate = true;
   [...Object.values(bodies), arms, cube, ...Object.values(tools)].forEach((m) => { m.instanceMatrix.needsUpdate = true; });
   sp.needsUpdate = true;
   ss.needsUpdate = true;
@@ -3619,6 +3621,7 @@ const MENU = [
   ] },
   { title: 'Explore the world', items: [
     ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, sub: r.era, color: r.color, go: () => selectRegion(i) })),
+    { id: 'civ', name: 'The Civilisation', sub: `Day ${WORLD_DAY}: the robots’ world`, color: '#C9B8FF', go: () => openCiv() },
     { id: 'core', name: 'Karma Core', sub: 'The heart of the world', color: CORE.color, go: () => enterCore() },
     { id: 'ocean', name: 'Ocean of Data', sub: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
     { id: 'realm', name: 'Realm', sub: 'A connected world', color: '#7FD8FF', go: () => openSpecial('realm') },
@@ -3668,6 +3671,7 @@ function setDock(id) { dock.querySelectorAll('.chip').forEach((b) => b.classList
 const TOUR = [
   ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, kick: r.era, color: r.color, land: i, go: () => selectRegion(i, { dur: 2600 }) })),
   { id: 'mindaloo', name: 'Mindaloo AC', kick: 'The first AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
+  { id: 'civ', name: 'The Civilisation', kick: `Day ${WORLD_DAY}`, color: '#C9B8FF', go: () => openCiv() },
   { id: 'shop', name: 'The Exchange', kick: 'Shop', color: SHOP_COLOR, go: () => openShop() },
   { id: 'core', name: 'Karma Core', kick: 'The heart of the world', color: CORE.color, go: () => enterCore() },
   { id: 'ocean', name: 'Ocean of Data', kick: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
@@ -4873,6 +4877,127 @@ function stepTalk(t) {
   }
 }
 
+/* ------------------------------------------------------------------ the civilisation */
+// A small, honest simulation, the same for everyone on the same day: towns hold robots, continents make goods,
+// goods are traded (the couriers carry them, in their continent's colour), and something happens each day.
+const civ = (() => {
+  const today = GROWTH && (GROWTH.days || []).find((d) => d.day === WORLD_DAY);
+  const regions = REGIONS.map((R, ri) => ({ ri, towns: 0, pop: 0, make: 0, built: 0 }));
+  PLACES.forEach((p) => {
+    const age = WORLD_DAY - (p.born ?? -60);
+    p.pop = Math.round((p.product ? 5200 : p.rad * 300000) * Math.min(1.6, 0.35 + Math.max(0, age) / 30) + 40);
+    const g = regions[p.region];
+    g.towns++;
+    g.pop += p.pop;
+    if (p.born === WORLD_DAY) g.built++;
+  });
+  regions.forEach((g) => { g.make = Math.round(g.pop / 35); });
+  const rt = rng(WORLD_DAY * 977 + 3);
+  const trades = [];
+  regions.forEach((g) => { // each continent ships its goods to two others, more to whoever is building most
+    const others = regions.filter((o) => o !== g).sort((a, b) => (b.built - a.built) || (rt() - 0.5));
+    others.slice(0, 2).forEach((o, k) => trades.push({ from: g.ri, to: o.ri, qty: Math.round(g.make * (k ? 0.18 : 0.32) * (0.8 + rt() * 0.4)) }));
+  });
+  const KINDS = {
+    festival: (ri, town) => `${town} holds a festival of lights tonight. Look for fireworks after dark.`,
+    market: (ri) => `Market day in ${REGIONS[ri].name}: ${RES[ri].many} are trading at double.`,
+    discovery: (ri) => `Surveyors in ${REGIONS[ri].name} found a fresh seam of ${RES[ri].many}.`,
+    launch: () => 'The Future sends a supply rocket to the robots’ new station in orbit.',
+  };
+  let event = null;
+  const e = today && today.event;
+  const madeToday = PLACES.filter((p) => p.born === WORLD_DAY);
+  if (e && typeof e.text === 'string' && KINDS[e.type]) {
+    const ri = Math.max(0, REGIONS.findIndex((R) => R.id === e.region));
+    event = { type: e.type, ri, text: e.text.slice(0, 160) };
+  } else {
+    const type = ['festival', 'market', 'discovery', 'launch', 'festival'][Math.floor(rt() * 5)];
+    const ri = Math.floor(rt() * REGIONS.length);
+    const town = (madeToday[0] && madeToday[0].name) || `A town in ${REGIONS[ri].name}`;
+    event = { type, ri, text: KINDS[type](ri, town) };
+  }
+  if (event.type === 'festival') { // over a real town on that continent, the newest if it's done
+    const cand = PLACES.filter((p) => p.region === event.ri);
+    event.place = cand.find((p) => p.born === WORLD_DAY - 1) || cand[Math.floor(rt() * cand.length)];
+  }
+  const pop = regions.reduce((s, g) => s + g.pop, 0);
+  return { regions, trades, event, pop };
+})();
+// courier cargo: the colour of the goods of the continent it set out from
+const RES_COL = ['#d8a874', '#bfa2ff', '#7fd8ff', '#ff8fb8', '#9dffb8'].map((c) => new THREE.Color(c));
+
+// Fireworks over the festival town, after dark there
+const fireworks = (() => {
+  const N = 480;
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 2.4, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  pts.frustumCulled = false;
+  pts.visible = false;
+  planet.add(pts);
+  const parts = Array.from({ length: N }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), life: 0, c: new THREE.Color() }));
+  return { pts, parts, next: 0, i: 0 };
+})();
+function stepFireworks(t, dt) {
+  const ev = civ.event, place = ev.place;
+  if (ev.type !== 'festival' || !place) return;
+  const night = place.dir.dot(sunDir) < -0.05;
+  const near = camera.position.distanceTo(place.dir) < 1.4;
+  const fw = fireworks;
+  if (night && near && t > fw.next) { // a new burst
+    fw.next = t + 0.7 + Math.random() * 1.1;
+    const up = place.dir;
+    const R = surfaceRadius(up) + 0.012 + Math.random() * 0.008;
+    const c = nearDir(up, Math.random() * place.rad * 0.8, Math.random).multiplyScalar(R);
+    const hue = new THREE.Color().setHSL(Math.random(), 0.9, 0.62);
+    for (let k = 0; k < 60; k++) {
+      const q = fw.parts[fw.i];
+      fw.i = (fw.i + 1) % fw.parts.length;
+      q.p.copy(c);
+      q.v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(0.004 + Math.random() * 0.002);
+      q.life = 1;
+      q.c.copy(hue);
+    }
+    if (camera.position.distanceTo(c) < 0.15) score.thump && score.thump();
+  }
+  let alive = false;
+  const pa = fw.pts.geometry.attributes.position, ca = fw.pts.geometry.attributes.color;
+  fw.parts.forEach((q, i) => {
+    if (q.life > 0) {
+      q.life -= dt * 0.55;
+      q.p.addScaledVector(q.v, dt);
+      q.v.multiplyScalar(1 - dt * 1.2).addScaledVector(q.p, -dt * 0.0035 / q.p.length()); // drag, and a little gravity
+      alive = true;
+    }
+    const k = Math.max(0, q.life);
+    pa.setXYZ(i, q.p.x, q.p.y, q.p.z);
+    ca.setXYZ(i, q.c.r * k * 1.6, q.c.g * k * 1.6, q.c.b * k * 1.6);
+  });
+  fw.pts.visible = alive;
+  if (alive) { pa.needsUpdate = true; ca.needsUpdate = true; }
+}
+
+// The Civilisation: the robots' world in numbers, today
+const fmtN = (n) => n.toLocaleString('en-AU');
+function civHtml() {
+  const recent = towns.days.slice(-7).reverse();
+  return header({ name: 'The Civilisation', era: `Day ${WORLD_DAY}`, color: '#C9B8FF', tagline: 'A world the robots are building for themselves.', intro: dayNews() })
+    + `<section><div class="civ-stats"><div><b>${fmtN(civ.pop)}</b><span>robots living here</span></div><div><b>${PLACES.length}</b><span>towns</span></div><div><b>${civ.regions.reduce((s, g) => s + g.built, 0)}</b><span>going up today</span></div></div></section>`
+    + `<section><h3>Today</h3><p class="civ-event">${esc(civ.event.text)}</p></section>`
+    + `<section><h3>The continents</h3><ul class="civ-regions">${civ.regions.map((g) => `<li style="--c:${REGIONS[g.ri].color}"><button type="button" class="jump" data-region="${g.ri}">${esc(REGIONS[g.ri].name)}</button><span>${g.towns} towns · ${fmtN(g.pop)} robots</span><span>makes <i style="--k:${RES_COL[g.ri].getStyle()}"></i>${esc(RES[g.ri].many)} · ${fmtN(g.make)} a day</span></li>`).join('')}</ul></section>`
+    + `<section><h3>Today’s trades</h3><ul class="civ-trades">${civ.trades.map((tr) => `<li><i style="--k:${RES_COL[tr.from].getStyle()}"></i>${esc(REGIONS[tr.from].name)} → ${esc(REGIONS[tr.to].name)}<span>${fmtN(tr.qty)} ${esc(RES[tr.from].many)}</span></li>`).join('')}</ul><p class="sub">Couriers carry them between towns, glowing in their colour.</p></section>`
+    + `<section><h3>Recent history</h3><ol class="civ-history">${recent.map((d) => `<li><span class="yr">Day ${d.day}</span><div>${esc(d.headline || (d.made.length ? `${d.made.length} new town${d.made.length > 1 ? 's' : ''}: ${[...new Set(d.made.map((p) => REGIONS[p.region].name))].join(', ')}` : 'A quiet day of finishing touches.'))}${d.made.filter((p) => p.name).length ? `<small>${esc(d.made.map((p) => p.name).filter(Boolean).join(' · '))}</small>` : ''}</div></li>`).join('')}</ol></section>`;
+}
+function openCiv() {
+  exitCore();
+  score.chime(79);
+  selected = { kind: 'civ' };
+  openPanel(civHtml(), '#C9B8FF');
+  setDock('civ');
+}
+
 /* ------------------------------------------------------------------ the growing world */
 // Today's buildings rise through the day: by midnight they are finished, and tomorrow's sites break ground.
 const _gM = new THREE.Matrix4(), _gS = new THREE.Vector3();
@@ -4922,7 +5047,7 @@ function announceDay() {
 towns.days.length && towns.days[towns.days.length - 1].made.forEach((p) => {
   addLabel(`<span class="era">New · Day ${WORLD_DAY}</span><span class="nm">${esc(p.name || 'New town')}</span>`, 'region newtown', () => p.dir.clone().multiplyScalar(surfaceRadius(p.dir) + 0.01), () => landNear(p.dir));
 });
-if (hudEls.day) hudEls.day.textContent = `Day ${WORLD_DAY}`;
+if (hudEls.day) { hudEls.day.textContent = `Day ${WORLD_DAY}`; hudEls.day.parentElement.addEventListener('click', openCiv); }
 
 function loop() {
   const now = performance.now();
@@ -4931,6 +5056,7 @@ function loop() {
   loop.prevT = t;
   U.uTime.value = t;
   stepGrowth();
+  stepFireworks(t, dtFrame);
   const inVR = renderer.xr.isPresenting;
   stepQuality(now, inVR);
   camera.getWorldPosition(camWorld);

@@ -649,3 +649,22 @@ body.walking #labels, body.walking #near-card, body.walking #intro { display: no
 #talk .tb.pop span { animation: talkIn 0.35s ease-out; }
 @keyframes talkIn { from { opacity: 0; filter: blur(3px); } }
 body.walking #talk .tb { font-size: 13.5px; }
+
+/* ---------------------------------------------------------------- the civilisation */
+.civ-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.civ-stats div { padding: 12px 10px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--hair); clip-path: var(--chamfer-s); }
+.civ-stats b { display: block; font: 700 22px var(--display); color: #e6dcff; font-variant-numeric: tabular-nums; }
+.civ-stats span { font: 500 10px var(--data); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.civ-event { margin-top: 10px; padding: 12px 14px; color: var(--ink); background: rgba(193, 162, 255, 0.08); box-shadow: inset 2px 0 0 #c9b8ff; line-height: 1.5; }
+.civ-regions, .civ-trades, .civ-history { list-style: none; margin-top: 12px; display: grid; gap: 8px; }
+.civ-regions li { display: grid; gap: 2px; padding: 10px 12px; box-shadow: inset 2px 0 0 var(--c), inset 0 0 0 1px var(--hair); }
+.civ-regions .jump { justify-self: start; font: 700 14px var(--display); letter-spacing: 0.06em; color: var(--c); text-transform: uppercase; }
+.civ-regions span { font-size: 13px; color: var(--ink-2); }
+.civ-regions i, .civ-trades i { display: inline-block; width: 9px; height: 9px; margin-right: 7px; background: var(--k); box-shadow: 0 0 8px var(--k); vertical-align: 0; }
+.civ-trades li { display: flex; align-items: center; gap: 2px; font-size: 13.5px; color: var(--ink); }
+.civ-trades li span { margin-left: auto; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.civ-history li { display: grid; grid-template-columns: 58px 1fr; gap: 10px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.civ-history .yr { font: 500 11px var(--data); color: #c9b8ff; padding-top: 2px; }
+.civ-history small { display: block; margin-top: 2px; color: var(--ink-3); font-size: 12px; }
+#hud .wday { cursor: pointer; }
+#hud .wday:hover b { text-decoration: underline; }
