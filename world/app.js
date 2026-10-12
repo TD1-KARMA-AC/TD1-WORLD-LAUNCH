@@ -3412,6 +3412,7 @@ function walkStep(f, s, dist) { // move along the ground; you can't walk into th
   if (!onLand(next, 0.0004)) return;
   walk.dir.copy(next);
   walk.head.addScaledVector(walk.dir, -walk.head.dot(walk.dir)).normalize();
+  if (walk.ref) walk.ref.addScaledVector(walk.dir, -walk.ref.dot(walk.dir)).normalize();
 }
 function startWalk(dir, heading) {
   if (!dir || !onLand(dir, 0.0004)) { toast('Find some land to stand on first', 2400); return; }
@@ -3437,6 +3438,7 @@ function endWalk(silent) {
   walk.keys.clear();
   document.body.classList.remove('walking');
   padKnob.style.transform = '';
+  if (gyro.on) setGyro(false);
   spin.enabled = true;
   if (!silent) flyTo(walk.dir.clone(), surfaceRadius(walk.dir) + 0.0095, 1600);
 }
@@ -3454,6 +3456,7 @@ function stepWalk(dt, now) {
     }
   }
   walkPose(_wP, _wQ);
+  if (!walk.anim) gyroLook(_wQ);
   if (walk.anim) {
     const k = Math.min(1, (now - walk.anim.t0) / walk.anim.dur), e = ease(k);
     camera.position.lerpVectors(walk.anim.p, _wP, e);
@@ -3464,6 +3467,53 @@ function stepWalk(dt, now) {
     camera.quaternion.copy(_wQ);
   }
   camera.up.copy(walk.dir);
+}
+// 360 on a phone: hold it up and turn around to look; the pad still walks you where you're looking.
+const gyro = { on: false, q: new THREE.Quaternion(), have: false, yaw0: null, drag: 0 };
+{
+  const zee = new THREE.Vector3(0, 0, 1), eul = new THREE.Euler(), q0 = new THREE.Quaternion(), q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+  addEventListener('deviceorientation', (e) => {
+    if (!gyro.on || e.alpha == null) return;
+    const orient = ((screen.orientation && screen.orientation.angle) || window.orientation || 0) * DEG;
+    eul.set(e.beta * DEG, e.alpha * DEG, -e.gamma * DEG, 'YXZ');
+    gyro.q.setFromEuler(eul).multiply(q1).multiply(q0.setFromAxisAngle(zee, -orient));
+    gyro.have = true;
+  });
+}
+async function setGyro(on) {
+  if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+    try { if ((await DeviceOrientationEvent.requestPermission()) !== 'granted') { toast('Motion access was declined, so 360 can’t follow your phone.', 3600); return; } } catch (e) { return; }
+  }
+  gyro.on = on;
+  gyro.have = false;
+  gyro.yaw0 = null;
+  gyro.drag = 0;
+  document.body.classList.toggle('gyro', on);
+  $('#walk-360').setAttribute('aria-pressed', String(on));
+  if (on) {
+    walk.ref = walk.head.clone();
+    toast('360 on: hold your phone up and turn around', 3200);
+  }
+}
+const _gyF = new THREE.Vector3(), _gyM = new THREE.Matrix4(), _gyQ = new THREE.Quaternion(), _gyY = new THREE.Quaternion(), _gyR = new THREE.Vector3(), _gyB = new THREE.Vector3();
+// the phone's orientation, carried into the street's own frame (up is straight up from the ground under you)
+function gyroLook(out) {
+  if (!gyro.on || !gyro.have) return false;
+  _gyF.set(0, 0, -1).applyQuaternion(gyro.q);
+  const yaw = Math.atan2(-_gyF.x, -_gyF.z);
+  if (gyro.yaw0 === null) gyro.yaw0 = yaw; // the way you were facing when 360 came on stays ahead of you
+  const ref = walk.ref.addScaledVector(walk.dir, -walk.ref.dot(walk.dir)).normalize();
+  _gyR.crossVectors(ref, walk.dir).normalize();
+  _gyB.copy(ref).negate();
+  _gyM.makeBasis(_gyR, walk.dir, _gyB);
+  _gyQ.setFromRotationMatrix(_gyM);
+  _gyY.setFromAxisAngle(_gyF.set(0, 1, 0), -gyro.yaw0 + gyro.drag);
+  out.copy(_gyQ).multiply(_gyY).multiply(gyro.q);
+  // walking goes where you look
+  _gyF.set(0, 0, -1).applyQuaternion(out);
+  const h = _gyF.addScaledVector(walk.dir, -_gyF.dot(walk.dir));
+  if (h.lengthSq() > 1e-6) walk.head.copy(h.normalize());
+  return true;
 }
 // "Walk here": stand on the ground just ahead of where you're looking, facing the same way
 function walkHere() {
@@ -3477,6 +3527,7 @@ function walkHere() {
 const walkBtn = $('#walk-btn'), padEl = $('#walk-pad'), padKnob = padEl.querySelector('i');
 walkBtn.addEventListener('click', walkHere);
 $('#walk-up').addEventListener('click', () => endWalk());
+$('#walk-360').addEventListener('click', () => setGyro(!gyro.on));
 { // the thumb pad: push to walk, push all the way to run
   let id = null;
   const set = (e) => {
@@ -3969,6 +4020,7 @@ cv.addEventListener('pointermove', (e) => {
     const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
     prev.x = e.clientX; prev.y = e.clientY;
     if (walk.anim) return;
+    if (gyro.on && gyro.have) { gyro.drag += dx * 0.0042; lastInteract = now; return; } // your body does the looking; a drag just nudges it round
     walk.head.applyAxisAngle(walk.dir, dx * 0.0042).normalize();
     walk.pitch = THREE.MathUtils.clamp(walk.pitch + dy * 0.0032, -1.1, 1.25);
     lastInteract = now;
@@ -4336,6 +4388,7 @@ async function enterVR() {
   }
 }
 renderer.xr.addEventListener('sessionstart', () => {
+  if (walk.on) endWalk(true);
   vr.active = true;
   if (!vrCtrls.length) vrSetup();
   vrBuildLabels();

@@ -668,3 +668,12 @@ body.walking #talk .tb { font-size: 13.5px; }
 .civ-history small { display: block; margin-top: 2px; color: var(--ink-3); font-size: 12px; }
 #hud .wday { cursor: pointer; }
 #hud .wday:hover b { text-decoration: underline; }
+#walk-360 { display: none; }
+@media (pointer: coarse) {
+  body.walking #walk-360 {
+    display: inline-flex; align-items: center; position: fixed; right: 14px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 108px); z-index: 22;
+    height: 42px; padding: 0 16px; font: 700 12px var(--display); letter-spacing: 0.16em; color: #e9ddff;
+    background: rgba(5, 7, 16, 0.75); clip-path: var(--chamfer-s); box-shadow: inset 0 0 0 1px rgba(193, 162, 255, 0.6);
+  }
+  body.gyro #walk-360 { color: #07050e; background: #7fd8ff; box-shadow: 0 0 20px rgba(127, 216, 255, 0.6); }
+}
