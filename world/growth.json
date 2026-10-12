@@ -1,0 +1,4 @@
+{
+  "about": "The world's growth plan, one entry per day. Written each night by scripts/grow.mjs (Claude, when ANTHROPIC_API_KEY is set). Days with no entry follow the world's own seeded plan.",
+  "days": []
+}

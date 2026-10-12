@@ -256,9 +256,21 @@ const WEATHER = {
 };
 // Town street grids, shared by the ground shader and the building layout so buildings stand in the blocks.
 const TOWN_GRID = 0.0045;
-// how many towns get street grids: as many as this device's shaders can hold (each is one vec4: where, and how big)
-const TOWN_MAX = Math.max(32, Math.min(160, (renderer.capabilities.maxFragmentUniforms || 224) - 200));
-const TOWN_U = { towns: { value: Array.from({ length: TOWN_MAX }, () => new THREE.Vector4()) }, n: { value: 0 }, map: { value: null } };
+// Towns live in two small textures (where each one is and how big, and which towns are near each spot), so every
+// device can draw every town's streets, however many the world grows.
+const TOWN_MAX = 255;
+const TOWN_U = { n: { value: 0 }, map: { value: null }, data: { value: null } };
+
+/* The world grows every day. Day 1 was 12 October 2026 (Perth). Each night new towns are planned (by Claude, when the
+   nightly job has a key; by the world's own seeded plan otherwise), and through the day the robots raise them. */
+const WORLD_EPOCH = Date.UTC(2026, 9, 11, 16); // midnight, 12 Oct 2026, in Perth
+const _dayHash = location.hash.match(/day=(\d+(?:\.\d+)?)/); // #day=30 previews the world on day 30
+const worldClock = () => (_dayHash ? +_dayHash[1] : Math.max(1, (Date.now() - WORLD_EPOCH) / 86400000 + 1));
+const WORLD_DAY = Math.floor(worldClock());
+const GROWTH = await Promise.race([
+  fetch('world/growth.json', { cache: 'no-cache' }).then((res) => (res.ok ? res.json() : null)).catch(() => null),
+  new Promise((res) => setTimeout(() => res(null), 2500)),
+]);
 const PLACES = []; // every town on the world: { dir, region, rad, product }
 const townFrame = (c) => { // the same east/north axes the shader uses
   const t1 = new THREE.Vector3().crossVectors(c, Math.abs(c.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
@@ -445,9 +457,9 @@ function buildLand() {
     sh.uniforms.uHi = mat.userData.uHi;
     sh.uniforms.uSun = { value: sunDir };
     Object.assign(sh.uniforms, WEATHER);
-    sh.uniforms.uTowns = TOWN_U.towns;
     sh.uniforms.uTownN = TOWN_U.n;
     sh.uniforms.uTownMap = TOWN_U.map;
+    sh.uniforms.uTownData = TOWN_U.data;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aRegion;\nvarying float vRegion;\nvarying vec3 vWP;\nvarying vec3 vLP;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRegion = aRegion;\nvLP = position;\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -456,7 +468,7 @@ function buildLand() {
         uniform float uTime; uniform float uHi; uniform vec3 uSun;
         varying float vRegion; varying vec3 vWP; varying vec3 vLP;
         ${WEATHER_GLSL}
-        uniform vec4 uTowns[${TOWN_MAX}]; uniform int uTownN; uniform sampler2D uTownMap;
+        uniform sampler2D uTownData; uniform int uTownN; uniform sampler2D uTownMap;
         // Every town sits on a street grid: pale blocks, dark streets with kerbs. Buildings stand in the blocks.
         // A small map says which town (at most two) is near each spot, so each pixel only checks those, never every town.
         void townFloor(vec3 ld, out float pave, out float street, out float lamp){
@@ -466,7 +478,8 @@ function buildLand() {
           for (int k = 0; k < 2; k++) {
             int id = int(k == 0 ? ids.x : ids.y) - 1;
             if (id < 0 || id >= uTownN) continue;
-            vec3 c = uTowns[id].xyz; float rr = uTowns[id].w;
+            vec4 T = texelFetch(uTownData, ivec2(id, 0), 0);
+            vec3 c = T.xyz; float rr = T.w;
             if (dot(ld, c) < 1.0 - rr * rr * 0.9) continue;
             vec3 t1 = normalize(cross(c, abs(c.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
             vec3 t2 = cross(c, t1);
@@ -996,7 +1009,8 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     });
     return m;
   };
-  const place = (kind, d, t1, t2, dims, col) => {
+  towns.rising = []; // today's buildings, still going up
+  const place = (kind, d, t1, t2, dims, col, rise) => {
     const R = baseR(d, t1, t2, dims.x / 2, dims.z / 2) - 0.00012;
     _q.setFromUnitVectors(up, d);
     _x.set(1, 0, 0).applyQuaternion(_q);
@@ -1004,10 +1018,11 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     const tryQ = (a) => _q.clone().multiply(_y.setFromAxisAngle(up, a));
     const qa = tryQ(yaw), qb = tryQ(-yaw);
     _q.copy(new THREE.Vector3(1, 0, 0).applyQuaternion(qa).dot(t1) > new THREE.Vector3(1, 0, 0).applyQuaternion(qb).dot(t1) ? qa : qb);
+    if (rise !== undefined && rise !== false) towns.rising.push({ kind, i: lists[kind].length, p: d.clone().multiplyScalar(R), q: _q.clone(), s: dims.clone(), delay: rise * 0.62 });
     lists[kind].push({ m: new THREE.Matrix4().compose(d.clone().multiplyScalar(R), _q.clone(), dims), col });
   };
   // One town: a street grid, tallest at the heart (with the product's landmark tower if it has one), houses and parks at the edge.
-  const buildTown = (c, region, rad, top, landmarkColor) => {
+  const buildTown = (c, region, rad, top, landmarkColor, r, rising) => {
     const P = PAINT_T[region];
     const { t1, t2 } = townFrame(c);
     const G = TOWN_GRID, inner = G - 0.00095;
@@ -1034,14 +1049,14 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
           for (let hx = -1; hx <= 1; hx += 2) for (let hz = -1; hz <= 1; hz += 2) {
             if (r() < 0.25) continue;
             const sz = inner * 0.32;
-            place('house', at(u + hx * inner * 0.24, v + hz * inner * 0.24), t1, t2, new THREE.Vector3(sz, sz * (0.75 + r() * 0.3), sz), col());
+            place('house', at(u + hx * inner * 0.24, v + hz * inner * 0.24), t1, t2, new THREE.Vector3(sz, sz * (0.75 + r() * 0.3), sz), col(), rising && r());
           }
           continue;
         }
         const h = top * (0.25 + k * k * 0.75) * (0.7 + r() * 0.45);
         const kind = k > 0.7 ? (roll < 0.6 ? 'tower' : 'setback') : (roll < 0.45 ? 'block' : roll < 0.75 ? 'setback' : 'tower');
         const w = inner * (0.72 + r() * 0.2), dd = inner * (0.72 + r() * 0.2);
-        place(kind, d, t1, t2, new THREE.Vector3(w, Math.max(0.0018, h), dd), col());
+        place(kind, d, t1, t2, new THREE.Vector3(w, Math.max(0.0018, h), dd), col(), rising && r());
       }
     }
   };
@@ -1050,26 +1065,68 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
   cities.forEach((ct) => {
     const c = ct.face.c.clone().normalize();
     ct.dir = c;
-    buildTown(c, ct.region, PRODUCT_RAD, PAINT_T[ct.region].top * 1.25, ct.color.clone());
+    buildTown(c, ct.region, PRODUCT_RAD, PAINT_T[ct.region].top * 1.25, ct.color.clone(), rng(1000 + ct.region * 97 + PLACES.length));
     PLACES.push({ dir: c, region: ct.region, rad: PRODUCT_RAD, product: ct });
   });
-  // and the land fills up with towns of its own: every continent built over, in its own style
+  // and the land fills up with towns of its own, a few more every day: every continent built over, in its own style.
+  // The building sites are fixed (the same for everyone, forever); each day's plan says which continents grow next.
   {
-    const want = Math.min(TOWN_MAX - PLACES.length, isSmall() || isTouch ? 60 : 120);
-    for (let k = 0, made = 0; k < want * 60 && made < want; k++) {
-      const f = landFaces[Math.floor(r() * landFaces.length)];
+    const rs = rng(9090);
+    const sites = REGIONS.map(() => []);
+    const taken = PLACES.map((p) => ({ dir: p.dir, rad: p.rad }));
+    for (let k = 0; k < 40000 && taken.length < TOWN_MAX + 40; k++) {
+      const f = landFaces[Math.floor(rs() * landFaces.length)];
       if (f.region === UNCH || f.region < 0 || f.h < 0.03) continue;
       const c = f.c.clone().normalize();
-      const rad = 0.008 + r() * 0.0045;
-      if (PLACES.some((p) => p.dir.angleTo(c) < (p.rad + rad) * 1.6)) continue;
-      buildTown(c, f.region, rad, PAINT_T[f.region].top * (0.45 + r() * 0.4), null);
-      PLACES.push({ dir: c, region: f.region, rad });
-      towns.lightsDots.push({ d: c, n: 160, spread: rad * 0.8, b: 0.7 });
-      made++;
+      if (taken.some((p) => p.dir.angleTo(c) < (p.rad + 0.0125) * 1.6)) continue;
+      taken.push({ dir: c, rad: 0.0125 });
+      sites[f.region].push({ c, seed: Math.floor(rs() * 1e9) });
+    }
+    const SIZES = { small: [0.0085, 0.5], medium: [0.0105, 0.65], large: [0.0125, 0.8] };
+    const regionIx = (v) => (typeof v === 'number' ? v : REGIONS.findIndex((R) => R.id === v || R.name === v));
+    const autoPlan = (day) => { // the world's own plan, when no one has written one for that day
+      const rp = rng(day * 7919 + 13);
+      const n = 2 + Math.floor(rp() * 2);
+      return { towns: Array.from({ length: n }, () => ({ region: Math.floor(rp() * REGIONS.length), size: ['small', 'medium', 'medium', 'large'][Math.floor(rp() * 4)] })) };
+    };
+    const planned = new Map((GROWTH && GROWTH.days || []).map((d) => [d.day, d]));
+    const next = REGIONS.map(() => 0);
+    const BASE = 16; // each continent started with this many towns of its own
+    const raise = (region, size, born, name) => {
+      const site = sites[region] && sites[region][next[region]];
+      if (!site || PLACES.length >= TOWN_MAX) return null;
+      next[region]++;
+      const [rad, k] = SIZES[size] || SIZES.medium;
+      const age = WORLD_DAY - born;
+      const top = PAINT_T[region].top * k * (0.8 + 0.2 * Math.min(1, age / 40)); // towns keep growing taller for a month or so
+      const rr = rng(site.seed);
+      buildTown(site.c, region, rad, top, null, rr, born === WORLD_DAY && WORLD_DAY > 0);
+      const place = { dir: site.c, region, rad, born, name: name || '' };
+      PLACES.push(place);
+      towns.lightsDots.push({ d: site.c, n: Math.round(60 + rad * 9000), spread: rad * 0.8, b: 0.7 });
+      return place;
+    };
+    for (let i = 0; i < BASE; i++) REGIONS.forEach((R, ri) => raise(ri, ['small', 'medium', 'large'][(i + ri) % 3], -60));
+    towns.days = [];
+    for (let day = 1; day <= WORLD_DAY; day++) {
+      const plan = planned.get(day) || autoPlan(day);
+      const made = (plan.towns || []).slice(0, 5).map((t) => {
+        const ri = regionIx(t.region);
+        return ri >= 0 ? raise(ri, t.size, day, typeof t.name === 'string' ? t.name.slice(0, 40) : '') : null;
+      }).filter(Boolean);
+      towns.days.push({ day, headline: typeof plan.headline === 'string' ? plan.headline.slice(0, 160) : '', made, by: planned.has(day) ? 'claude' : 'world' });
     }
   }
-  PLACES.slice(0, TOWN_MAX).forEach((p, i) => TOWN_U.towns.value[i].set(p.dir.x, p.dir.y, p.dir.z, p.rad));
   TOWN_U.n.value = Math.min(TOWN_MAX, PLACES.length);
+  { // where each town is, and how big, for the street shader
+    const data = new Float32Array(256 * 4);
+    PLACES.slice(0, TOWN_MAX).forEach((p, i) => data.set([p.dir.x, p.dir.y, p.dir.z, p.rad], i * 4));
+    const tex = new THREE.DataTexture(data, 256, 1, THREE.RGBAFormat, THREE.FloatType);
+    tex.magFilter = tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.needsUpdate = true;
+    TOWN_U.data.value = tex;
+  }
   { // the lookup map: for each spot on the world, which towns (up to two) are close enough to matter
     const W = 1024, H = 512, data = new Uint8Array(W * H * 2);
     PLACES.slice(0, Math.min(TOWN_MAX, 255)).forEach((p, i) => {
@@ -1118,6 +1175,8 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     mesh.computeBoundingSphere();
     planet.add(mesh);
     towns.meshes.push(mesh);
+    towns.byKind = towns.byKind || {};
+    towns.byKind[kind] = mesh;
   });
 }
 
@@ -1278,7 +1337,7 @@ const robotParts = (() => {
   const named = (job) => `${CALL[job]}-${String(10 + Math.floor(r() * 89))}`;
   REGIONS.forEach((reg, ri) => {
     // towns to work near; The Origins has none, so its miners work the open desert
-    const towns = PLACES.filter((p) => p.region === ri);
+    const towns = PLACES.filter((p) => p.region === ri).sort((a, b) => (b.born === WORLD_DAY) - (a.born === WORLD_DAY)); // today's building sites get workers first
     const sites = towns.length ? towns : pickFaces(ri, nWork, 31, { minSep: 3, minH: 0.1 }).map((f) => ({ dir: f.c.clone().normalize(), rad: 0.004 }));
     for (let i = 0; i < nWork && sites.length; i++) {
       const home = sites[i % sites.length];
@@ -3317,6 +3376,13 @@ function landAt(ri) {
   if (!town) return;
   closePanel();
   $('#intro').classList.add('gone');
+  landNear(town.dir);
+}
+// Fly down to stand just outside a town, looking at it.
+function landNear(dir) {
+  const town = { dir };
+  closePanel();
+  $('#intro').classList.add('gone');
   const camUp = camera.up.clone();
   const tangent = camUp.addScaledVector(town.dir, -camUp.dot(town.dir)).normalize();
   // stand back far enough to see the whole town (further on a narrow phone screen)
@@ -4351,7 +4417,7 @@ nearEl.addEventListener('click', (e) => {
 
 /* ------------------------------------------------------------------ loop */
 
-const hudEls = { pos: $('#hud-pos'), alt: $('#hud-alt'), over: $('#hud-over'), sun: $('#hud-sun') };
+const hudEls = { pos: $('#hud-pos'), alt: $('#hud-alt'), over: $('#hud-over'), sun: $('#hud-sun'), day: $('#hud-day') };
 function updateHud() {
   if (!hudEls.pos) return;
   const d = camera.position.clone().normalize();
@@ -4475,6 +4541,7 @@ function stepIntro(now) {
     camera.lookAt(0, 0, 0);
     introDone = true;
     syncSpin();
+    setTimeout(announceDay, 2800);
     score.swell(0.38);
     score.place('space');
     document.body.classList.remove('cine');
@@ -4547,12 +4614,54 @@ function updateFlare() {
   });
 }
 
+/* ------------------------------------------------------------------ the growing world */
+// Today's buildings rise through the day: by midnight they are finished, and tomorrow's sites break ground.
+const _gM = new THREE.Matrix4(), _gS = new THREE.Vector3();
+let growTick = 0;
+function stepGrowth() {
+  if (!towns.rising.length || growTick++ % 30) return;
+  const p = worldClock() % 1;
+  const touched = new Set();
+  towns.rising.forEach((b) => {
+    const k = THREE.MathUtils.clamp((p - b.delay) / 0.3, 0, 1);
+    const e = 1 - Math.pow(1 - k, 3);
+    if (b.e === e) return;
+    b.e = e;
+    const mesh = towns.byKind[b.kind];
+    if (!mesh) return;
+    _gS.copy(b.s);
+    _gS.y *= Math.max(0.04, e);
+    mesh.setMatrixAt(b.i, _gM.compose(b.p, b.q, _gS));
+    touched.add(mesh);
+  });
+  touched.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+}
+const REGION_LIST = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
+function dayNews() {
+  const today = towns.days[towns.days.length - 1];
+  if (!today) return '';
+  if (today.headline) return today.headline;
+  const names = [...new Set(today.made.map((p) => REGIONS[p.region].name))];
+  const n = today.made.length;
+  return n ? `Overnight the robots broke ground on ${n} new town${n > 1 ? 's' : ''} in ${REGION_LIST(names)}.` : 'The robots are finishing what they started.';
+}
+function announceDay() {
+  if (tour.on) return;
+  toast(`Day ${WORLD_DAY} · ${dayNews()}`, 6000);
+}
+// today's new towns wear a name tag; tap it to fly down and watch them being built
+towns.days.length && towns.days[towns.days.length - 1].made.forEach((p) => {
+  addLabel(`<span class="era">New · Day ${WORLD_DAY}</span><span class="nm">${esc(p.name || 'New town')}</span>`, 'region newtown', () => p.dir.clone().multiplyScalar(surfaceRadius(p.dir) + 0.01), () => landNear(p.dir));
+});
+if (hudEls.day) hudEls.day.textContent = `Day ${WORLD_DAY}`;
+
 function loop() {
   const now = performance.now();
   const t = clock.getElapsedTime();
   const dtFrame = Math.min(0.05, t - (loop.prevT ?? t));
   loop.prevT = t;
   U.uTime.value = t;
+  stepGrowth();
   const inVR = renderer.xr.isPresenting;
   stepQuality(now, inVR);
   camera.getWorldPosition(camWorld);

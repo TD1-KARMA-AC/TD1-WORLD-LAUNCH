@@ -101,3 +101,15 @@ python3 -m http.server 8000
 ```
 
 Then open http://localhost:8000.
+
+## The growing world
+
+TD1.WORLD grows every day. Day 1 was 12 October 2026 (Perth). Each day new towns break ground, and their buildings
+rise through the day while robots work on them. Today's towns wear a "New" name tag, and the day's news shows after the intro.
+
+- `world/growth.json` holds each day's plan: a headline and 1 to 3 towns (continent, size, name).
+- `scripts/grow.mjs` writes that plan every night by asking Claude (the Anthropic API), then checks the answer.
+- `.github/workflows/grow.yml` runs it at 00:05 Perth time. Add the repository secret `ANTHROPIC_API_KEY` to switch it on.
+  GitHub only runs scheduled jobs from the default branch, so the workflow file must be on that branch too.
+- Days without a plan follow the world's own seeded plan, so the world keeps growing even with no key.
+- `#day=30` (or `#dev&day=30.5`) previews the world on any day; the fraction is the time of day.
