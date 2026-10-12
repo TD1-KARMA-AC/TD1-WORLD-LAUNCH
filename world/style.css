@@ -635,3 +635,17 @@ body.walking #walk-ui { display: block; }
 }
 body.walking #labels, body.walking #near-card, body.walking #intro { display: none; }
 @media (max-width: 759px) { #walk-btn, #walk-up { right: 14px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); } }
+
+/* ---------------------------------------------------------------- robot conversations */
+#talk { position: fixed; inset: 0; pointer-events: none; z-index: 9; }
+#talk .tb {
+  position: absolute; left: 0; top: 0; max-width: min(260px, 70vw); padding: 8px 11px 9px; margin-top: -12px;
+  background: rgba(6, 8, 18, 0.86); clip-path: var(--chamfer-s); box-shadow: inset 0 0 0 1px rgba(193, 162, 255, 0.5);
+  font: 400 12.5px/1.4 var(--body); color: var(--ink); transition: opacity 0.25s; will-change: transform;
+}
+#talk .tb b { display: block; margin-bottom: 2px; font: 600 9.5px var(--data); letter-spacing: 0.16em; color: #c9b8ff; text-transform: uppercase; }
+#talk .tb.think { background: rgba(6, 8, 18, 0.7); box-shadow: inset 0 0 0 1px rgba(127, 216, 255, 0.35); font-style: italic; color: var(--ink-2); }
+#talk .tb.think b { color: var(--signal); font-style: normal; }
+#talk .tb.pop span { animation: talkIn 0.35s ease-out; }
+@keyframes talkIn { from { opacity: 0; filter: blur(3px); } }
+body.walking #talk .tb { font-size: 13.5px; }

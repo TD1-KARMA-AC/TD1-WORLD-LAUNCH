@@ -1366,16 +1366,18 @@ const robotParts = (() => {
     robots.push({ kind: 'walk', job: 'walk', type, from: home, to: home, t: 1, wait: r() * 3, speed: (type === 'hover' ? 0.018 : 0.012) + r() * 0.008, phase: r() * 10, q: null, angle: 1,
       carry: r() < 0.65, d: nearDir(home.dir, home.rad * 1.08, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
   }
-  if (props.rock.length) scatterMesh(tree('rock'), props.rock);
-  if (props.round.length) scatterMesh(tree('round'), props.round);
+  const propMeshes = []; // the robots' work (rocks, saplings, blocks, pylons): scaled along with them
+  const keep = (m, list) => { if (m) propMeshes.push({ m, list }); };
+  if (props.rock.length) keep(scatterMesh(tree('rock'), props.rock), props.rock);
+  if (props.round.length) keep(scatterMesh(tree('round'), props.round), props.round);
   { // builders' stacks of coloured blocks
     const g = merge([0, 1, 2, 3, 4, 5].map((k) => { const b = new THREE.BoxGeometry(0.3, 0.3, 0.3).toNonIndexed(); b.translate((k % 3) * 0.32 - 0.32, Math.floor(k / 3) * 0.31 + 0.15, k > 2 ? 0.05 : 0); const c = new THREE.Color().setHSL(k / 6, 0.7, 0.6); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).map((_, j) => [c.r, c.g, c.b][j % 3]), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count), 1)); return b; }));
-    scatterMesh(g, props.blocks);
+    keep(scatterMesh(g, props.blocks), props.blocks);
   }
   { // The Future's light pylons, being welded
     const g = merge([(() => { const b = new THREE.CylinderGeometry(0.06, 0.1, 1, 6).toNonIndexed(); b.translate(0, 0.5, 0); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).fill(0.95), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count), 1)); return b; })(),
       (() => { const b = new THREE.SphereGeometry(0.1, 10, 8).toNonIndexed(); b.translate(0, 1.05, 0); b.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count * 3).map((_, j) => [0.5, 1, 0.7][j % 3]), 3)); b.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(b.attributes.position.count).fill(1), 1)); return b; })()]);
-    scatterMesh(g, props.pylon);
+    keep(scatterMesh(g, props.pylon), props.pylon);
   }
 
   const N = robots.length;
@@ -1407,7 +1409,7 @@ const robotParts = (() => {
   sparks.renderOrder = 4;
   planet.add(sparks);
   flora.push(sparks);
-  return { bodies, arms, cube, tools, sparks };
+  return { bodies, arms, cube, tools, sparks, propMeshes, propK: 1 };
 })();
 
 const _rB = new THREE.Matrix4(), _rL = new THREE.Matrix4(), _rM = new THREE.Matrix4(), _rS = new THREE.Vector3(), _rV = new THREE.Vector3(), _rT = new THREE.Vector3();
@@ -1424,12 +1426,21 @@ function stepRobots(dt, t) {
   let nCube = 0;
   const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
   // true size when you're down among them (about your height), bigger from the air so you can still spot them
-  _rS.setScalar(ROBOT_H * (walk.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01)));
+  const rk = walk.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01);
+  _rS.setScalar(ROBOT_H * rk);
+  if (Math.abs(rk - (robotParts.propK ?? 1)) > 0.04 || (rk !== robotParts.propK && (rk === 0.27 || rk === 1))) { // their work shrinks with them
+    robotParts.propK = rk;
+    const m4 = new THREE.Matrix4(), sc = new THREE.Vector3();
+    robotParts.propMeshes.forEach(({ m, list }) => {
+      list.forEach((it, i) => { sc.setScalar(it.s * rk); m.setMatrixAt(i, groundMatrix(it.d, it.yaw, sc, (it.lift ?? -0.0003) * rk, m4)); });
+      m.instanceMatrix.needsUpdate = true;
+    });
+  }
   robots.forEach((rb, i) => {
     let swingR = 0, swingL = 0, bob = 0, yawWobble = 0, spark = 0;
     const greeting = t - rb.react < REACT_S;
     if (rb.kind === 'walk') {
-      if (greeting) { /* stand still and say hello */ } else if (rb.t >= 1) {
+      if (greeting || t < (rb.talkUntil || 0)) { /* stand still: saying hello, or deep in conversation */ } else if (rb.t >= 1) {
         rb.wait -= dt;
         if (rb.wait <= 0) { // off to the next town, usually a neighbour on the same continent
           // off to a nearby town on the same continent
@@ -4751,6 +4762,117 @@ function updateFlare() {
   });
 }
 
+/* ------------------------------------------------------------------ the robots talk */
+// Get close and you'll catch them talking: over their radios (a thin beam joins the two), about what is really
+// happening on the world today. Claude writes the day's conversations each night; without them the world's own
+// seeded talk fills in. They are written once and played back here, so it costs nothing per visitor.
+const RES = [ // what each continent makes, and trades
+  { name: 'stone', many: 'stone' }, { name: 'memory crystal', many: 'memory crystals' }, { name: 'compute core', many: 'compute cores' },
+  { name: 'pigment', many: 'pigments' }, { name: 'energy cell', many: 'energy cells' },
+];
+const TALK_SEED = [
+  ['A: {town} needs {res2} by tonight. Can Memory spare any?', 'B: Sending a courier now. Tell them it costs one story.', 'A: Deal. Everyone pays in stories here.'],
+  ['A: Did you see the new foundations at {town}?', 'B: I poured half of them. The other half poured me.', 'A: That explains the concrete on your antenna.'],
+  ['A: Quick question. Why do humans keep visiting us?', 'B: They like watching us build.', 'A: Then let us build something worth watching.'],
+  ['A: My sensors say the sun sets in four minutes.', 'B: Your sensors say that every four minutes.', 'A: And they are always right.'],
+  ['A: {region} is running low on {res}.', 'B: I know a ridge east of here. Rich seam.', 'A: Mark it on the shared map. I am on my way.'],
+  ['A: I dreamed in vectors last night.', 'B: What did they point at?', 'A: The isles. Someone has to go there first.'],
+  ['A: Trade report: three crates of {res} out, two crates of {res2} in.', 'B: Fair?', 'A: Fair enough. The Exchange will balance it.'],
+  ['A: Is the human watching us right now?', 'B: Act natural.', 'A: I am a robot. This is natural.'],
+  ['A: {town} asked for a taller tower.', 'B: How tall?', 'A: Tall enough to see Mindaloo from the roof.'],
+  ['A: Remember when this was all empty land?', 'B: That was three days ago.', 'A: Feels longer when you count in milliseconds.'],
+  ['A: The architect sent tomorrow’s plan.', 'B: Anything for us?', 'A: Two new towns. Bring your best welds.'],
+  ['A: Thinking about the second world again.', 'B: The one in the sky?', 'A: Ours. Built by us, for us. One day.'],
+];
+const TALK_THINK = [
+  'Note to self: humans wave back if you wave first.',
+  'If I stack the {res} at an angle, the light lands better.',
+  'Counting the lights in {town}. Still counting.',
+  'Every brick here remembers who placed it. I placed this one.',
+  'Tomorrow, the bridge. Today, the bolts.',
+];
+const talkUi = { layer: $('#talk'), bubbles: [], convs: [], next: 0 };
+function todaysTalk() {
+  const today = GROWTH && (GROWTH.days || []).find((d) => d.day === WORLD_DAY);
+  const fromClaude = today && Array.isArray(today.talk) ? today.talk.filter((c) => c && Array.isArray(c.lines) && c.lines.length) : [];
+  const rt = rng(WORLD_DAY * 131 + 7);
+  const made = (towns.days[towns.days.length - 1] || { made: [] }).made;
+  const fill = (s, ri) => s
+    .replace(/\{town\}/g, (made[Math.floor(rt() * made.length)] || {}).name || `the new town in ${REGIONS[ri].name}`)
+    .replace(/\{region\}/g, REGIONS[ri].name)
+    .replace(/\{res\}/g, RES[ri].many)
+    .replace(/\{res2\}/g, RES[(ri + 1 + Math.floor(rt() * 4)) % 5].many);
+  const own = [];
+  REGIONS.forEach((R, ri) => {
+    for (let k = 0; k < 3; k++) own.push({ region: R.id, lines: TALK_SEED[Math.floor(rt() * TALK_SEED.length)].map((l) => fill(l, ri)) });
+    own.push({ region: R.id, think: true, lines: [`A: ${fill(TALK_THINK[Math.floor(rt() * TALK_THINK.length)], ri)}`] });
+  });
+  return fromClaude.length ? fromClaude.concat(own.filter((c) => c.think)) : own;
+}
+const TALKS = todaysTalk();
+const beamMat = new THREE.LineBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+function newBubble() {
+  const el = document.createElement('div');
+  el.className = 'tb';
+  el.innerHTML = '<b></b><span></span>';
+  talkUi.layer.appendChild(el);
+  return el;
+}
+const robotRegion = (rb) => (rb.kind === 'work' ? JOBS.indexOf(rb.job) : rb.to ? rb.to.region : 0);
+function startTalk(t) {
+  const cam = camera.position, fwd = camAxis(2).negate();
+  const near = robots.filter((rb) => rb.pos && !(t < (rb.talkUntil || 0) + 14) && rb.pos.distanceTo(cam) < (walk.on ? 0.03 : 0.05) && _rV.copy(rb.pos).sub(cam).dot(fwd) > 0);
+  if (!near.length) return;
+  const a = near[Math.floor(Math.random() * near.length)];
+  let b = null, bd = 0.02;
+  robots.forEach((o) => { if (o !== a && o.pos && !(t < (o.talkUntil || 0) + 6)) { const d = o.pos.distanceTo(a.pos); if (d < bd) { bd = d; b = o; } } });
+  const ri = robotRegion(a);
+  const pool = TALKS.filter((c) => (b ? !c.think : c.think) && (!c.region || c.region === REGIONS[ri].id));
+  const conv = (pool.length ? pool : TALKS.filter((c) => (b ? !c.think : c.think)))[Math.floor(Math.random() * Math.max(1, pool.length || TALKS.length))];
+  if (!conv) return;
+  const lines = conv.lines.map((l) => { const m = /^\s*([AB])\s*:\s*(.*)$/.exec(l); return m ? { who: m[1] === 'B' && b ? b : a, text: m[2] } : { who: a, text: l }; });
+  const dur = lines.reduce((s, l) => s + 2.6 + l.text.length * 0.045, 0);
+  a.talkUntil = t + dur;
+  if (b) b.talkUntil = t + dur;
+  const beam = b ? new THREE.Line(new THREE.BufferGeometry().setFromPoints([a.pos, b.pos]), beamMat.clone()) : null;
+  if (beam) scene.add(beam);
+  talkUi.convs.push({ a, b, lines, t0: t, beam, el: newBubble(), think: !!conv.think });
+}
+const _tk = new THREE.Vector3();
+function stepTalk(t) {
+  const close = introDone && !renderer.xr.isPresenting && (walk.on || camera.position.length() - 1 < 0.035);
+  if (close && t > talkUi.next && talkUi.convs.length < (isSmall() ? 1 : 2)) { talkUi.next = t + 3 + Math.random() * 4; startTalk(t); }
+  for (let i = talkUi.convs.length - 1; i >= 0; i--) {
+    const c = talkUi.convs[i];
+    let el = t - c.t0, line = null;
+    for (const l of c.lines) { const len = 2.6 + l.text.length * 0.045; if (el < len) { line = l; break; } el -= len; }
+    if (!line || !close) {
+      c.el.remove();
+      if (c.beam) { scene.remove(c.beam); c.beam.geometry.dispose(); c.beam.material.dispose(); }
+      talkUi.convs.splice(i, 1);
+      continue;
+    }
+    if (c.beam) { // the radio link between them, flickering with the words
+      const p = c.beam.geometry.attributes.position;
+      p.setXYZ(0, c.a.pos.x, c.a.pos.y, c.a.pos.z); p.setXYZ(1, c.b.pos.x, c.b.pos.y, c.b.pos.z); p.needsUpdate = true;
+      c.beam.material.opacity = 0.35 + 0.25 * Math.sin(t * 9);
+    }
+    const head = _tk.copy(line.who.pos).addScaledVector(line.who.d, ROBOT_H * (walk.on ? 0.3 : 0.9));
+    const s = toScreen(head);
+    const vis = s.z < 1 && s.x > -40 && s.x < innerWidth + 40 && s.y > 40 && s.y < innerHeight;
+    if (c.el.dataset.text !== line.text) {
+      c.el.dataset.text = line.text;
+      c.el.querySelector('b').textContent = line.who.name + (c.think ? ' · thinking' : '');
+      c.el.querySelector('span').textContent = line.text;
+      c.el.classList.toggle('think', c.think);
+      c.el.classList.remove('pop'); void c.el.offsetWidth; c.el.classList.add('pop');
+      if (vis && !c.think && line === c.lines[0]) score.beep();
+    }
+    c.el.style.opacity = vis ? '1' : '0';
+    if (vis) c.el.style.transform = `translate3d(${Math.round(s.x)}px, ${Math.round(s.y)}px, 0) translate(-50%, -100%)`;
+  }
+}
+
 /* ------------------------------------------------------------------ the growing world */
 // Today's buildings rise through the day: by midnight they are finished, and tomorrow's sites break ground.
 const _gM = new THREE.Matrix4(), _gS = new THREE.Vector3();
@@ -4928,6 +5050,7 @@ function loop() {
     updateHover();
     updateLabels();
     stepSay(t);
+    stepTalk(t);
     stepNearCard();
     updateFlare();
   } else flareEl.style.opacity = '0';
@@ -4978,7 +5101,7 @@ if (/blacktest/.test(location.hash)) { // for testing: one object that outputs i
   planet.add(bad);
 }
 if (/dev/.test(location.hash) || /td1dev/.test(location.search)) {
-  window.td1 = { THREE, PLACES, TOWN_MAX, land, walk, renderer, composer, scene, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, PLACES, TOWN_MAX, land, walk, talkUi, TALKS, startTalk, clock, renderer, composer, scene, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */

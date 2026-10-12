@@ -24,8 +24,15 @@ const recent = growth.days.slice(-7).map((d) => `Day ${d.day}: ${d.headline}`).j
 const system = `You are the architect of TD1.WORLD, a living 3D planet where each continent is an idea about AI and little robots build towns on it.
 Each night you decide what the robots start building tomorrow. Keep the world coherent and growing; favour continents that have had less lately, but follow the story.
 Reply with JSON only, no prose, in exactly this shape:
-{"headline": "one short line of world news, under 140 characters, present tense, warm and a little wonder-filled", "towns": [{"region": "<continent id>", "size": "small|medium|large", "name": "<town name, 1-3 words>"}]}
-Plan 1 to 3 towns. Town names should suit their continent and never repeat earlier ones.`;
+{"headline": "one short line of world news, under 140 characters, present tense, warm and a little wonder-filled",
+ "towns": [{"region": "<continent id>", "size": "small|medium|large", "name": "<town name, 1-3 words>"}],
+ "talk": [{"region": "<continent id>", "lines": ["A: ...", "B: ...", "A: ..."]}, {"region": "<continent id>", "think": true, "lines": ["A: ..."]}]}
+Plan 1 to 3 towns. Town names should suit their continent and never repeat earlier ones.
+"talk" is what the robots say to each other over their radios today (visitors overhear it when they zoom in): 14 short
+conversations of 2 to 4 lines between robot A and robot B, plus 4 one-line private thoughts ("think": true). Make them
+about today: the new towns, trades of each continent's goods (origins: stone, memory: memory crystals, intelligence:
+compute cores, creation: pigments, future: energy cells), small problems, plans, curiosity about the humans watching,
+and the dream of building a world of their own. Each line under 100 characters. Nerdy, kind, a little funny. No emoji.`;
 const user = `A new day is starting: day ${day}.
 Continents (id: name, what it is about, towns you have planned there so far):
 ${REGIONS.map((r) => `- ${r.id}: ${r.name}. ${r.tagline} ${r.intro || ''} (${built[r.id]} planned)`).join('\n')}
@@ -36,7 +43,7 @@ Earlier town names: ${growth.days.flatMap((d) => (d.towns || []).map((t) => t.na
 const res = await fetch('https://api.anthropic.com/v1/messages', {
   method: 'POST',
   headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-  body: JSON.stringify({ model: process.env.TD1_MODEL || 'claude-sonnet-5-5', max_tokens: 700, system, messages: [{ role: 'user', content: user }] }),
+  body: JSON.stringify({ model: process.env.TD1_MODEL || 'claude-sonnet-5-5', max_tokens: 3000, system, messages: [{ role: 'user', content: user }] }),
 });
 if (!res.ok) { console.error(`Claude answered ${res.status}: ${await res.text()}`); process.exit(1); }
 const out = await res.json();
@@ -50,7 +57,12 @@ const towns = (Array.isArray(plan.towns) ? plan.towns : []).slice(0, 3)
   .filter((t) => t && t.region in built)
   .map((t) => ({ region: t.region, size: SIZES.includes(t.size) ? t.size : 'medium', name: clean(t.name, 40) }));
 if (!towns.length) { console.error('The plan had no usable towns:', text); process.exit(1); }
-const entry = { day, date: new Date(EPOCH + (day - 1) * 86400000 + 8 * 3600000).toISOString().slice(0, 10), headline: clean(plan.headline, 160), towns };
+const talk = (Array.isArray(plan.talk) ? plan.talk : []).slice(0, 24)
+  .filter((c) => c && Array.isArray(c.lines) && c.lines.length)
+  .map((c) => ({ region: c.region in built ? c.region : undefined, think: c.think === true || undefined,
+    lines: c.lines.slice(0, c.think ? 1 : 5).map((l) => clean(l, 110)).filter((l) => /^[AB]:\s*\S/.test(l)) }))
+  .filter((c) => c.lines.length);
+const entry = { day, date: new Date(EPOCH + (day - 1) * 86400000 + 8 * 3600000).toISOString().slice(0, 10), headline: clean(plan.headline, 160), towns, talk };
 growth.days.push(entry);
 fs.writeFileSync(FILE, `${JSON.stringify(growth, null, 2)}\n`);
 console.log(`Day ${day}: ${entry.headline}\n${towns.map((t) => `  ${t.name} (${t.size}, ${t.region})`).join('\n')}`);
