@@ -1447,7 +1447,7 @@ function stepRobots(dt, t) {
   let nCube = 0;
   const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
   // true size when you're down among them (about your height), bigger from the air so you can still spot them
-  const rk = walk.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01);
+  const rk = walk.on || vr.street.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01);
   _rS.setScalar(ROBOT_H * rk);
   if (Math.abs(rk - (robotParts.propK ?? 1)) > 0.04 || (rk !== robotParts.propK && (rk === 0.27 || rk === 1))) { // their work shrinks with them
     robotParts.propK = rk;
@@ -2755,7 +2755,7 @@ function addLabel(html, cls, getPos, onClick, opts = {}) {
   el.addEventListener('click', (e) => { e.stopPropagation(); if (e.detail === 0) onClick(); }); // keyboard
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); pointerDown(e, onClick); }); // drags pass through to the world
   labelLayer.appendChild(el);
-  labels.push({ el, getPos, surface: opts.surface !== false, layer: opts.layer || 'world' });
+  labels.push({ el, getPos, surface: opts.surface !== false, layer: opts.layer || 'world', show: opts.show });
   return el;
 }
 REGIONS.forEach((r, i) => {
@@ -2967,7 +2967,7 @@ const _fogDay = new THREE.Color(0x7f9fcc), _fogDusk = new THREE.Color(0xd9906a),
 let landedHint = 0;
 function stepGround(inVR) {
   const alt = camWorld.length() - 1;
-  const L = inVR ? 0 : THREE.MathUtils.smoothstep(0.07 - alt, 0, 0.05); // inside the air
+  const L = inVR && !vr.street.on ? 0 : THREE.MathUtils.smoothstep(0.07 - alt, 0, 0.05); // inside the air
   AIR.value = 1 - L; // the data arcs and beams fade when you're down among them
   cityBeams.material.opacity = AIR.value;
   skyDome.visible = L > 0.001;
@@ -2986,7 +2986,7 @@ function stepGround(inVR) {
   clouds.material.side = alt < 0.045 ? THREE.DoubleSide : THREE.FrontSide;
   // the near plane follows the height, so things right in front of you aren't clipped
   const near = walk.on ? 0.00004 : THREE.MathUtils.clamp(alt * 0.22, 0.0012, 0.05);
-  if (Math.abs(near - camera.near) / camera.near > 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
+  if (!vr.street.on && Math.abs(near - camera.near) / camera.near > 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
   // a word of help the first times you get close
   if (!inVR && introDone && !flight && !walk.on && performance.now() - lastInteract < 1500) {
     if (landedHint === 0 && alt < 0.6 && alt > 0.2) { landedHint = 1; toast(isTouch ? 'Keep pinching to fly down to the surface' : 'Keep zooming in to fly down to the surface', 3000); }
@@ -3628,6 +3628,8 @@ function focusCity(i) {
 }
 
 panelBody.addEventListener('click', (e) => {
+  const cgo = e.target.closest('[data-city-go]');
+  if (cgo) { const ci = +cgo.dataset.cityGo; selectRegion(cities[ci].region, { noFly: true }); focusCity(ci); return; }
   const city = e.target.closest('[data-city]');
   if (city) { focusCity(+city.dataset.city); if (isSmall()) setPeek(true); return; }
   const peak = e.target.closest('[data-peak]');
@@ -4301,7 +4303,7 @@ function vrSetup() {
     scene.add(dot);
     ctrl.add(ray);
     ctrl.userData = { ray, dot, gamepad: null };
-    ctrl.addEventListener('connected', (e) => { ctrl.userData.gamepad = e.data.gamepad || null; ray.visible = e.data.targetRayMode !== 'gaze'; });
+    ctrl.addEventListener('connected', (e) => { ctrl.userData.gamepad = e.data.gamepad || null; ctrl.userData.hand = e.data.handedness; ray.visible = e.data.targetRayMode !== 'gaze'; });
     ctrl.addEventListener('disconnected', () => { ctrl.userData.gamepad = null; });
     const start = () => {
       const speed = vr.w.length();
@@ -4326,11 +4328,90 @@ function vrSetup() {
   }
 }
 
+// VR street level: point at the land and click the thumbstick to stand there at human size; left stick walks
+// where you look, right stick turns; click the thumbstick again to rise. The world is scaled around you, not moved.
+vr.street = { on: false, dir: new THREE.Vector3(), head: new THREE.Vector3(), snapped: false, prevQ: new THREE.Quaternion(), btn: [false, false] };
+const _vs = new THREE.Vector3(), _vs2 = new THREE.Vector3(), _vsM = new THREE.Matrix4();
+function vrStreetEnter(dirLocal) {
+  const d = dirLocal.clone().normalize();
+  if (!onLand(d, 0.0004)) return false;
+  const st = vr.street;
+  st.prevQ.copy(planet.quaternion);
+  planet.quaternion.identity();
+  coreWorld.quaternion.identity();
+  vr.w.set(0, 0, 0); vr.grab = null; vr.turn = null;
+  vrHideCard();
+  st.on = true;
+  st.dir.copy(d);
+  const h = new THREE.Vector3(0, 1, 0).addScaledVector(d, -d.y);
+  st.head.copy(h.lengthSq() > 1e-6 ? h.normalize() : new THREE.Vector3(1, 0, 0));
+  camera.near = 0.05; camera.far = 1e6; camera.updateProjectionMatrix();
+  vr.labels.forEach((sp) => { sp.visible = false; });
+  vrCtrls.forEach((c) => { c.userData.ray.visible = false; c.userData.dot.visible = false; });
+  score.chime(74);
+  return true;
+}
+function vrStreetExit() {
+  const st = vr.street;
+  if (!st.on) return;
+  st.on = false;
+  rig.scale.setScalar(1);
+  rig.quaternion.identity();
+  camera.near = 0.05; camera.far = 200; camera.updateProjectionMatrix();
+  planet.quaternion.copy(st.prevQ);
+  coreWorld.quaternion.copy(planet.quaternion);
+  vrCtrls.forEach((c) => { c.userData.ray.visible = true; });
+}
+function vrStreetToggle(ctrl) {
+  if (vr.street.on) { vrStreetExit(); return; }
+  _m4.identity().extractRotation(ctrl.matrixWorld);
+  vrRay.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  vrRay.ray.direction.set(0, 0, -1).applyMatrix4(_m4);
+  const hit = vrRay.intersectObject(pickSphere, false)[0];
+  if (!hit) return;
+  vrStreetEnter(hit.point.clone().applyQuaternion(planet.quaternion.clone().invert()));
+}
+function stepVRStreet(dt) {
+  const st = vr.street;
+  vrCtrls.forEach((ctrl) => {
+    const gp = ctrl.userData.gamepad;
+    if (!gp) return;
+    const ax = gp.axes[2] || 0, ay = gp.axes[3] || 0;
+    if (ctrl.userData.hand === 'right') { // snap turn, 30 degrees at a time
+      if (Math.abs(ax) > 0.7 && !st.snapped) { st.head.applyAxisAngle(st.dir, ax > 0 ? -Math.PI / 6 : Math.PI / 6).normalize(); st.snapped = true; }
+      if (Math.abs(ax) < 0.3) st.snapped = false;
+    } else if (Math.hypot(ax, ay) > 0.18) { // walk the way you're looking
+      const look = _vs.set(0, 0, -1).applyQuaternion(camera.getWorldQuaternion(_vq));
+      look.addScaledVector(st.dir, -look.dot(st.dir)).normalize();
+      const side = _vs2.crossVectors(look, st.dir).normalize();
+      const v = look.multiplyScalar(-ay).addScaledVector(side, ax);
+      const next = st.dir.clone().addScaledVector(v, WALK_SPEED * 1.6 * dt).normalize();
+      if (onLand(next, 0.0004)) {
+        st.dir.copy(next);
+        st.head.addScaledVector(st.dir, -st.head.dot(st.dir)).normalize();
+      }
+    }
+  });
+  rig.position.copy(st.dir).multiplyScalar(surfaceRadius(st.dir));
+  const right = _vs.crossVectors(st.head, st.dir).normalize();
+  _vsM.makeBasis(right, st.dir, _vs2.copy(st.head).negate());
+  rig.quaternion.setFromRotationMatrix(_vsM);
+  rig.scale.setScalar(EYE / 1.6); // your 1.6 m eye height becomes a person's height in this world
+}
+
 function vrRotatePlanet(q) {
   planet.quaternion.premultiply(q);
   coreWorld.quaternion.copy(planet.quaternion);
 }
 function stepVR(dt, t) {
+  // click a thumbstick: stand on the land you're pointing at (or rise back up)
+  vrCtrls.forEach((ctrl, i) => {
+    const gp = ctrl.userData.gamepad;
+    const down = Boolean(gp && gp.buttons[3] && gp.buttons[3].pressed);
+    if (down && !vr.street.btn[i]) vrStreetToggle(ctrl);
+    vr.street.btn[i] = down;
+  });
+  if (vr.street.on) { stepVRStreet(dt); return; }
   // stand back from the world; thumbsticks move you closer or further
   vrCtrls.forEach((ctrl, i) => {
     const gp = ctrl.userData.gamepad;
@@ -4348,6 +4429,8 @@ function stepVR(dt, t) {
   });
   vr.rigDist += (vr.rigTarget - vr.rigDist) * (1 - Math.exp(-dt * 5));
   rig.position.set(0, -1.6, vr.rigDist);
+  rig.quaternion.identity();
+  rig.scale.setScalar(1);
 
   // grabbing turns the world under your hand
   if (vr.grab) {
@@ -4426,6 +4509,7 @@ renderer.xr.addEventListener('sessionstart', () => {
   try { renderer.xr.setFoveation(1); } catch (e) { /* older runtimes */ }
 });
 renderer.xr.addEventListener('sessionend', () => {
+  vrStreetExit();
   vr.active = false;
   vrHideCard();
   vr.grab = null;
@@ -4687,6 +4771,8 @@ function updateLabels() {
       vis *= 1 - coreMix;
     }
     vis *= 1 - Math.min(1, spin.energy * 1.5);
+    if (l.show && !l.show()) vis = 0;
+    if (selected && selected.kind === 'nova' && !l.el.classList.contains('nova-mini')) vis = 0; // out at their world, everything else's names stay quiet
     if (selected && selected.kind === 'mindaloo' && l.el.classList.contains('mindaloo')) vis = 0; // you're right there: no need for its name tag
     // fade out at the screen edges and clear of the top bar and the Explore button, so labels never clip or overlap the UI
     const s = vis > 0.005 ? toScreen(p) : null;
@@ -5154,11 +5240,95 @@ const nova = (() => {
   scene.add(m);
   return { m, lit };
 })();
+// What the robots chose to build on their world: a monument to everything TD1 makes, one more finished each day,
+// spreading out from where they first landed; and small replicas of TD1's worlds circling it.
+const showcase = (() => {
+  const R = 0.32, N = cities.length;
+  const centre = new THREE.Vector3(0.3, 0.8, 0.5).normalize();
+  const pts = [];
+  for (let i = 0; i < 400; i++) { // even spread of spots over the sphere, nearest the landing site first
+    const y = 1 - (i + 0.5) / 200, r = Math.sqrt(Math.max(0, 1 - y * y)), a = i * 2.39996;
+    if (Math.abs(y) > 1) continue;
+    pts.push(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r));
+  }
+  pts.sort((a, b) => b.dot(centre) - a.dot(centre));
+  const built = Math.min(N, 4 + (WORLD_DAY - 1) * 2), building = Math.min(N, built + 1);
+  const geo = (() => {
+    const shaft = new THREE.CylinderGeometry(0.12, 0.28, 1, 4, 1).toNonIndexed();
+    shaft.translate(0, 0.5, 0);
+    return shaft;
+  })();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xe6e2f2, roughness: 0.4, metalness: 0.3, emissive: 0xffffff, emissiveIntensity: 0.05 });
+  const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, building));
+  const crowns = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), Math.max(1, building));
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3();
+  const items = cities.slice(0, building).map((ct, i) => {
+    const d = pts[i % pts.length];
+    const h = 0.011 + (i % 3) * 0.004;
+    return { ct, i, d, h, done: i < built };
+  });
+  const place = (it, k) => {
+    q.setFromUnitVectors(up, it.d);
+    sc.set(0.022, it.h * Math.max(0.04, k), 0.022);
+    mesh.setMatrixAt(it.i, m4.compose(it.d.clone().multiplyScalar(R * 0.995), q, sc));
+    sc.setScalar(0.02 * (k >= 1 ? 1 : 0));
+    crowns.setMatrixAt(it.i, m4.compose(it.d.clone().multiplyScalar(R * 0.995 + it.h + 0.004), q, sc));
+    crowns.setColorAt(it.i, it.ct.color);
+  };
+  items.forEach((it) => place(it, it.done ? 1 : 0.05));
+  mesh.count = crowns.count = items.length;
+  nova.m.add(mesh, crowns);
+  // TD1's worlds in miniature, circling theirs
+  const minis = [
+    { name: 'TD1.WORLD', col: 0x1f5fa8, glow: 0xc9a77a, r: 0.07, orbit: 0.62, speed: 0.12, phase: 0 },
+    { name: 'Mindaloo AC', col: 0x8a8c96, glow: 0xd9d8e2, r: 0.045, orbit: 0.78, speed: 0.09, phase: 2.1 },
+    { name: 'Realm', col: 0x4a2fa0, glow: 0x5fd0e8, r: 0.04, orbit: 0.9, speed: 0.07, phase: 4.2 },
+  ].map((o) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(o.r, 32, 20), new THREE.ShaderMaterial({ // a little world: seas, lands, a lit side
+      uniforms: { uSun: { value: sunDir }, uSea: { value: new THREE.Color(o.col) }, uLand: { value: new THREE.Color(o.glow) } },
+      vertexShader: 'varying vec3 vN; varying vec3 vP; void main(){ vP = position; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform vec3 uSun; uniform vec3 uSea; uniform vec3 uLand; varying vec3 vN; varying vec3 vP;
+        ${GLSL_NOISE}
+        void main(){ vec3 p = normalize(vP); float land = smoothstep(0.47, 0.53, fbm(p * 2.6 + 1.7));
+          vec3 c = mix(uSea * 0.55, uLand * 0.8, land); float l = max(dot(normalize(vN), uSun), 0.0);
+          gl_FragColor = vec4(c * (0.18 + 0.95 * l) + uLand * 0.12 * pow(1.0 - abs(dot(normalize(vN), normalize(cameraPosition))), 3.0), 1.0); }`,
+    }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(o.orbit, 0.0012, 4, 160), new THREE.MeshBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.14 }));
+    ring.rotation.x = Math.PI / 2;
+    const g = new THREE.Group();
+    g.rotation.set(0.25 + o.phase * 0.05, 0, 0.12);
+    g.add(ring, m);
+    g.position.copy(nova.m.position);
+    scene.add(g);
+    return { ...o, m, g };
+  });
+  return { items, built, building, mesh, crowns, place, minis };
+})();
+function stepShowcase(t) {
+  const it = showcase.items[showcase.building - 1];
+  if (it && !it.done && (stepShowcase.n = (stepShowcase.n || 0) + 1) % 30 === 0) { // today's monument rises through the day
+    showcase.place(it, worldClock() % 1);
+    showcase.mesh.instanceMatrix.needsUpdate = true;
+    showcase.crowns.instanceMatrix.needsUpdate = true;
+  }
+  showcase.minis.forEach((o) => { const a = o.phase + t * o.speed; o.m.position.set(Math.cos(a) * o.orbit, 0, Math.sin(a) * o.orbit); o.m.rotation.y = t * 0.3; });
+}
+const nearNova = () => camera.position.distanceTo(nova.m.position) < 3;
+showcase.minis.forEach((o) => addLabel(`<span class="nm">${esc(o.name)}</span><span class="era">Their tribute</span>`, 'moon nova-mini', () => o.m.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(o.r + 0.05)), () => openNova(), { surface: false, show: nearNova }));
+function showcaseHtml() {
+  return `<section><h3>Monuments to TD1 <span class="count">${showcase.built} of ${cities.length}</span></h3>
+    <p class="sub">What the robots chose to build first on their own world: a monument to every product TD1 makes. One more is finished each day. Tap one to visit its town.</p>
+    <ul class="civ-trades showcase">${cities.map((ct, i) => {
+      const state = i < showcase.built ? 'Built' : i < showcase.building ? 'Rising today' : 'Planned';
+      return `<li><i style="--k:${ct.color.getStyle()}"></i><button type="button" class="city-go" data-city-go="${i}">${esc(ct.product.name)}</button><span>${state}</span></li>`;
+    }).join('')}</ul></section>`;
+}
 function stepBeyond(t) {
   station.pivot.rotation.y = t * 0.05;
   station.g.rotation.y = t * 0.3;
   station.beacon.visible = Math.sin(t * 3) > 0;
   nova.m.rotation.y = t * 0.02;
+  stepShowcase(t);
 }
 addLabel('<span class="nm">Their World</span><span class="era">Built by the robots</span>', 'moon nova', () => nova.m.position.clone().add(camAxis(1).multiplyScalar(0.45)), () => openNova(), { surface: false });
 addLabel('<span class="nm">Robot Station</span><span class="era">In orbit</span>', 'moon station', () => station.g.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(0.12)), () => openStation(), { surface: false });
@@ -5168,8 +5338,9 @@ function openNova() {
   score.chime(83);
   selected = { kind: 'nova' };
   flyTo(nova.m.position.clone(), nova.m.position.length() + 1.4, 3200);
-  openPanel(header({ name: 'Their World', era: `Day ${WORLD_DAY} · ${Math.round(nova.lit * 100)}% built`, color: '#C9B8FF', tagline: 'The planet the robots are building for themselves.', intro: 'TD1 builds TD1.WORLD with AC. Out here, the robots are building a world of their own: no brief, no product, just what they decide to make. Every day its lights reach a little further. Come back tomorrow and see.' })
-    + `<section><div class="civ-stats"><div><b>${Math.round(nova.lit * 100)}%</b><span>lit up</span></div><div><b>${station.modules}</b><span>station modules</span></div><div><b>${PLACES.filter((p) => p.colony).length}</b><span>island colonies</span></div></div></section>`
+  openPanel(header({ name: 'Their World', era: `Day ${WORLD_DAY} · ${Math.round(nova.lit * 100)}% built`, color: '#C9B8FF', tagline: 'The planet the robots are building for themselves.', intro: 'TD1 builds TD1.WORLD with AC. Out here, the robots are building a world of their own, and the first thing they chose to build was a monument to every product their makers make, with TD1’s own worlds circling in miniature. Every day its lights reach further and another monument is finished. Come back tomorrow and see.' })
+    + `<section><div class="civ-stats"><div><b>${Math.round(nova.lit * 100)}%</b><span>lit up</span></div><div><b>${showcase.built}</b><span>monuments to TD1</span></div><div><b>${PLACES.filter((p) => p.colony).length}</b><span>island colonies</span></div></div></section>`
+    + showcaseHtml()
     + '<section><button type="button" class="cta" data-go="civ">See their civilisation</button></section>', '#C9B8FF');
   setDock('nova');
 }

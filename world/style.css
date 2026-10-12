@@ -678,3 +678,5 @@ body.walking #talk .tb { font-size: 13.5px; }
   body.gyro #walk-360 { color: #07050e; background: #7fd8ff; box-shadow: 0 0 20px rgba(127, 216, 255, 0.6); }
 }
 body.panel-open #walk-btn, body.menu-open #walk-btn { opacity: 0; pointer-events: none; }
+.showcase .city-go { font: 500 13.5px var(--body); color: var(--ink); text-align: left; }
+.showcase .city-go:hover { color: #fff; text-decoration: underline; }
