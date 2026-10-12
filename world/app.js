@@ -987,6 +987,7 @@ function nearDir(d, ang, r) {
   const a = r() * Math.PI * 2;
   return d.clone().addScaledVector(t1, Math.cos(a) * ang).addScaledVector(t2, Math.sin(a) * ang).normalize();
 }
+const onAnyLand = (d, min = 0.01) => { const t = terrain(d.x, d.y, d.z); return t.h > min && t.region >= 0; }; // the isles too
 const onLand = (d, min = 0.01) => { const t = terrain(d.x, d.y, d.z); return t.h > min && t.region !== UNCH && t.region >= 0; };
 const gauss = (r) => (r() + r() + r() + r() - 2) * 0.87;
 
@@ -1001,6 +1002,7 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     { cols: ['#c8d6d4', '#e6ecec', '#9fb3b0'], top: 0.0105 }, // Intelligence: pale glass and steel
     { cols: ['#e3a090', '#efd29a', '#a9cfd6', '#c9b0e0'], top: 0.0065 }, // Creation: warm colour
     { cols: ['#f2f5f2', '#dfeee4', '#ffffff'], top: 0.012 }, // The Future: white towers
+    { cols: ['#b8e6e0', '#e8f4f2', '#9fd3ff'], top: 0.0045 }, // the robots' island colonies: prefab and sea-glass
   ];
   const lists = { tower: [], setback: [], block: [], house: [], landmark: [] };
   const _q = new THREE.Quaternion(), _y = new THREE.Quaternion(), _x = new THREE.Vector3();
@@ -1036,7 +1038,7 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
         const u = (i + 0.5) * G, v = (j + 0.5) * G, rc = Math.hypot(u, v);
         if (rc > rad) continue;
         const d = at(u, v);
-        if (!onLand(d, 0.003)) continue;
+        if (!onAnyLand(d, 0.003)) continue;
         const col = () => new THREE.Color(P.cols[Math.floor(r() * P.cols.length)]);
         if (landmarkColor && i === 0 && j === 0) { // the heart of town: the product's landmark
           place('landmark', d, t1, t2, new THREE.Vector3(inner * 0.85, top * 1.35, inner * 0.85), landmarkColor);
@@ -1075,36 +1077,37 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
   // The building sites are fixed (the same for everyone, forever); each day's plan says which continents grow next.
   {
     const rs = rng(9090);
-    const sites = REGIONS.map(() => []);
+    const sites = [...REGIONS.map(() => []), []]; // the last list: the Uncharted Isles, for the robots' colonies
     const taken = PLACES.map((p) => ({ dir: p.dir, rad: p.rad }));
     for (let k = 0; k < 40000 && taken.length < TOWN_MAX + 40; k++) {
       const f = landFaces[Math.floor(rs() * landFaces.length)];
-      if (f.region === UNCH || f.region < 0 || f.h < 0.03) continue;
+      if (f.region < 0 || f.h < 0.03) continue;
       const c = f.c.clone().normalize();
       if (taken.some((p) => p.dir.angleTo(c) < (p.rad + 0.0125) * 1.6)) continue;
       taken.push({ dir: c, rad: 0.0125 });
-      sites[f.region].push({ c, seed: Math.floor(rs() * 1e9) });
+      sites[f.region === UNCH ? REGIONS.length : f.region].push({ c, seed: Math.floor(rs() * 1e9) });
     }
     const SIZES = { small: [0.0085, 0.5], medium: [0.0105, 0.65], large: [0.0125, 0.8] };
-    const regionIx = (v) => (typeof v === 'number' ? v : REGIONS.findIndex((R) => R.id === v || R.name === v));
+    const regionIx = (v) => (typeof v === 'number' ? v : v === 'uncharted' ? UNCH : REGIONS.findIndex((R) => R.id === v || R.name === v));
     const autoPlan = (day) => { // the world's own plan, when no one has written one for that day
       const rp = rng(day * 7919 + 13);
       const n = 2 + Math.floor(rp() * 2);
       return { towns: Array.from({ length: n }, () => ({ region: Math.floor(rp() * REGIONS.length), size: ['small', 'medium', 'medium', 'large'][Math.floor(rp() * 4)] })) };
     };
     const planned = new Map((GROWTH && GROWTH.days || []).map((d) => [d.day, d]));
-    const next = REGIONS.map(() => 0);
+    const next = sites.map(() => 0);
     const BASE = 16; // each continent started with this many towns of its own
     const raise = (region, size, born, name) => {
-      const site = sites[region] && sites[region][next[region]];
+      const si = region === UNCH ? REGIONS.length : region;
+      const site = sites[si] && sites[si][next[si]];
       if (!site || PLACES.length >= TOWN_MAX) return null;
-      next[region]++;
+      next[si]++;
       const [rad, k] = SIZES[size] || SIZES.medium;
       const age = WORLD_DAY - born;
-      const top = PAINT_T[region].top * k * (0.8 + 0.2 * Math.min(1, age / 40)); // towns keep growing taller for a month or so
+      const top = PAINT_T[region === UNCH ? 5 : region].top * k * (0.8 + 0.2 * Math.min(1, age / 40)); // towns keep growing taller for a month or so
       const rr = rng(site.seed);
-      buildTown(site.c, region, rad, top, null, rr, born === WORLD_DAY && WORLD_DAY > 0);
-      const place = { dir: site.c, region, rad, born, name: name || '' };
+      buildTown(site.c, region === UNCH ? 5 : region, rad, top, null, rr, born === WORLD_DAY && WORLD_DAY > 0);
+      const place = { dir: site.c, region, rad, born, name: name || '', colony: region === UNCH };
       PLACES.push(place);
       towns.lightsDots.push({ d: site.c, n: Math.round(60 + rad * 9000), spread: rad * 0.8, b: 0.7 });
       return place;
@@ -1115,8 +1118,14 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
       const plan = planned.get(day) || autoPlan(day);
       const made = (plan.towns || []).slice(0, 5).map((t) => {
         const ri = regionIx(t.region);
-        return ri >= 0 ? raise(ri, t.size, day, typeof t.name === 'string' ? t.name.slice(0, 40) : '') : null;
+        return ri >= 0 ? raise(ri, ri === UNCH ? 'small' : t.size, day, typeof t.name === 'string' ? t.name.slice(0, 40) : '') : null;
       }).filter(Boolean);
+      // every third day from day 4, the robots sail out and found a colony on the Uncharted Isles
+      if (day >= 4 && (day - 4) % 3 === 0 && !made.some((p) => p.colony)) {
+        const names = ['Landfall', 'First Light', 'Saltwire', 'Harbour Zero', 'Driftmark', 'Tidecount', 'Far Relay', 'Brightshoal', 'Kelp Array', 'Lantern Reef'];
+        const col = raise(UNCH, 'small', day, names[Math.floor((day - 4) / 3) % names.length]);
+        if (col) made.push(col);
+      }
       towns.days.push({ day, headline: typeof plan.headline === 'string' ? plan.headline.slice(0, 160) : '', made, by: planned.has(day) ? 'claude' : 'world' });
     }
   }
@@ -1361,7 +1370,8 @@ const robotParts = (() => {
     }
   });
   for (let i = 0; i < nWalk; i++) {
-    const home = PLACES[Math.floor(r() * PLACES.length)];
+    const homes = PLACES.filter((p) => !p.colony);
+    const home = homes[Math.floor(r() * homes.length)];
     const type = r() < 0.4 ? 'hover' : (r() < 0.5 ? 'walker' : 'tracked');
     robots.push({ kind: 'walk', job: 'walk', type, from: home, to: home, t: 1, wait: r() * 3, speed: (type === 'hover' ? 0.018 : 0.012) + r() * 0.008, phase: r() * 10, q: null, angle: 1,
       carry: r() < 0.65, d: nearDir(home.dir, home.rad * 1.08, r), yaw: r() * 6, col: new THREE.Color(PAINT[Math.floor(r() * PAINT.length)]), name: named('walk'), react: -99 });
@@ -1445,7 +1455,7 @@ function stepRobots(dt, t) {
         if (rb.wait <= 0) { // off to the next town, usually a neighbour on the same continent
           // off to a nearby town on the same continent
           const same = PLACES.filter((c) => c.region === rb.to.region && c !== rb.to && c.dir.angleTo(rb.to.dir) < 0.35);
-          const pool = same.length ? same : PLACES.filter((c) => c !== rb.to && c.dir.angleTo(rb.to.dir) < 0.6);
+          const pool = same.length ? same : PLACES.filter((c) => c !== rb.to && !c.colony && c.dir.angleTo(rb.to.dir) < 0.6);
           rb.from = rb.to;
           rb.to = pool[Math.floor(Math.random() * pool.length)];
           rb.start = rb.d.clone();
@@ -1506,7 +1516,7 @@ function stepRobots(dt, t) {
     arms.setMatrixAt(i * 2 + 1, armMatrix(_rB, -1, swingL, _rM, rb.type));
     if (rb.kind === 'walk' && rb.carry) {
       _rL.makeRotationY(t * 0.8 + rb.phase).setPosition(0, (rb.type === 'walker' ? 1.62 : 1.48) + Math.sin(t * 2 + rb.phase) * 0.02, 0);
-      cube.setColorAt(nCube, RES_COL[(rb.from && rb.from.region) || 0]);
+      cube.setColorAt(nCube, RES_COL[(rb.from && rb.from.region) || 0] || RES_COL[0]);
       cube.setMatrixAt(nCube++, _rM.multiplyMatrices(_rB, _rL));
     }
     // sparks at the tool's tip
@@ -3621,6 +3631,7 @@ panelBody.addEventListener('click', (e) => {
   if (go) {
     if (go.dataset.go === 'notify') openContact({ type: 'General enquiry', message: 'Please let me know when new courses and documents arrive at The Exchange.' });
     else if (go.dataset.go === 'core') enterCore();
+    else if (go.dataset.go === 'civ') openCiv();
     else if (go.dataset.go === 'land') landAt(+go.dataset.region);
     else if (go.dataset.go === 'book') openContact({ type: 'Book expertise' });
     else if (go.dataset.go === 'mindaloo') openSpecial('mindaloo');
@@ -3673,6 +3684,7 @@ const MENU = [
   { title: 'Explore the world', items: [
     ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, sub: r.era, color: r.color, go: () => selectRegion(i) })),
     { id: 'civ', name: 'The Civilisation', sub: `Day ${WORLD_DAY}: the robots’ world`, color: '#C9B8FF', go: () => openCiv() },
+    { id: 'nova', name: 'Their World', sub: 'The planet the robots build', color: '#C9B8FF', go: () => openNova() },
     { id: 'core', name: 'Karma Core', sub: 'The heart of the world', color: CORE.color, go: () => enterCore() },
     { id: 'ocean', name: 'Ocean of Data', sub: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
     { id: 'realm', name: 'Realm', sub: 'A connected world', color: '#7FD8FF', go: () => openSpecial('realm') },
@@ -3723,6 +3735,7 @@ const TOUR = [
   ...REGIONS.map((r, i) => ({ id: r.id, name: r.name, kick: r.era, color: r.color, land: i, go: () => selectRegion(i, { dur: 2600 }) })),
   { id: 'mindaloo', name: 'Mindaloo AC', kick: 'The first AC', color: '#D9CCFF', go: () => openSpecial('mindaloo') },
   { id: 'civ', name: 'The Civilisation', kick: `Day ${WORLD_DAY}`, color: '#C9B8FF', go: () => openCiv() },
+  { id: 'nova', name: 'Their World', kick: 'Built by the robots', color: '#C9B8FF', go: () => openNova() },
   { id: 'shop', name: 'The Exchange', kick: 'Shop', color: SHOP_COLOR, go: () => openShop() },
   { id: 'core', name: 'Karma Core', kick: 'The heart of the world', color: CORE.color, go: () => enterCore() },
   { id: 'ocean', name: 'Ocean of Data', kick: 'Between everything', color: OCEAN.color, go: () => selectOcean(latLon(-30, -60)) },
@@ -4666,7 +4679,8 @@ function updateLabels() {
     if (selected && selected.kind === 'mindaloo' && l.el.classList.contains('mindaloo')) vis = 0; // you're right there: no need for its name tag
     // fade out at the screen edges and clear of the top bar and the Explore button, so labels never clip or overlap the UI
     const s = vis > 0.005 ? toScreen(p) : null;
-    if (s) {
+    if (s && s.z > 1) vis = 0; // behind you
+    if (s && vis > 0) {
       const W = innerWidth, H = innerHeight, top = isSmall() ? (tour.on ? 128 : 74) : 84, bottom = isSmall() ? (panel.classList.contains('open') ? (panel.classList.contains('peek') ? 170 : H * 0.64) : 120) : 96;
       const edge = Math.min(s.x - 46, W - s.x - 46, s.y - top, H - bottom - s.y);
       vis *= THREE.MathUtils.clamp(edge / 36, 0, 1);
@@ -4937,6 +4951,7 @@ const civ = (() => {
   const today = GROWTH && (GROWTH.days || []).find((d) => d.day === WORLD_DAY);
   const regions = REGIONS.map((R, ri) => ({ ri, towns: 0, pop: 0, make: 0, built: 0 }));
   PLACES.forEach((p) => {
+    if (p.colony) { p.pop = 60 + Math.max(0, WORLD_DAY - p.born) * 25; return; }
     const age = WORLD_DAY - (p.born ?? -60);
     p.pop = Math.round((p.product ? 5200 : p.rad * 300000) * Math.min(1.6, 0.35 + Math.max(0, age) / 30) + 40);
     const g = regions[p.region];
@@ -4973,7 +4988,7 @@ const civ = (() => {
     const cand = PLACES.filter((p) => p.region === event.ri);
     event.place = cand.find((p) => p.born === WORLD_DAY - 1) || cand[Math.floor(rt() * cand.length)];
   }
-  const pop = regions.reduce((s, g) => s + g.pop, 0);
+  const pop = regions.reduce((s, g) => s + g.pop, 0) + PLACES.filter((p) => p.colony).reduce((s, p) => s + p.pop, 0);
   return { regions, trades, event, pop };
 })();
 // courier cargo: the colour of the goods of the continent it set out from
@@ -5041,7 +5056,7 @@ function civHtml() {
     + `<section><h3>Today</h3><p class="civ-event">${esc(civ.event.text)}</p></section>`
     + `<section><h3>The continents</h3><ul class="civ-regions">${civ.regions.map((g) => `<li style="--c:${REGIONS[g.ri].color}"><button type="button" class="jump" data-region="${g.ri}">${esc(REGIONS[g.ri].name)}</button><span>${g.towns} towns · ${fmtN(g.pop)} robots</span><span>makes <i style="--k:${RES_COL[g.ri].getStyle()}"></i>${esc(RES[g.ri].many)} · ${fmtN(g.make)} a day</span></li>`).join('')}</ul></section>`
     + `<section><h3>Today’s trades</h3><ul class="civ-trades">${civ.trades.map((tr) => `<li><i style="--k:${RES_COL[tr.from].getStyle()}"></i>${esc(REGIONS[tr.from].name)} → ${esc(REGIONS[tr.to].name)}<span>${fmtN(tr.qty)} ${esc(RES[tr.from].many)}</span></li>`).join('')}</ul><p class="sub">Couriers carry them between towns, glowing in their colour.</p></section>`
-    + `<section><h3>Recent history</h3><ol class="civ-history">${recent.map((d) => `<li><span class="yr">Day ${d.day}</span><div>${esc(d.headline || (d.made.length ? `${d.made.length} new town${d.made.length > 1 ? 's' : ''}: ${[...new Set(d.made.map((p) => REGIONS[p.region].name))].join(', ')}` : 'A quiet day of finishing touches.'))}${d.made.filter((p) => p.name).length ? `<small>${esc(d.made.map((p) => p.name).filter(Boolean).join(' · '))}</small>` : ''}</div></li>`).join('')}</ol></section>`;
+    + `<section><h3>Recent history</h3><ol class="civ-history">${recent.map((d) => `<li><span class="yr">Day ${d.day}</span><div>${esc(d.headline || (d.made.length ? `${d.made.length} new town${d.made.length > 1 ? 's' : ''}: ${[...new Set(d.made.map((p) => (p.colony ? UNCHARTED.name : REGIONS[p.region].name)))].join(', ')}` : 'A quiet day of finishing touches.'))}${d.made.filter((p) => p.name).length ? `<small>${esc(d.made.map((p) => p.name).filter(Boolean).join(' · '))}</small>` : ''}</div></li>`).join('')}</ol></section>`;
 }
 function openCiv() {
   exitCore();
@@ -5049,6 +5064,111 @@ function openCiv() {
   selected = { kind: 'civ' };
   openPanel(civHtml(), '#C9B8FF');
   setDock('civ');
+}
+
+/* ------------------------------------------------------------------ beyond the world: the robots' station, and their own planet */
+// Their station in orbit gains a module every other day. Their own world, far out in the sky, lights up a little more
+// every day: TD1 builds this world with AC; the robots are building that one for themselves.
+const station = (() => {
+  const g = new THREE.Group();
+  const modules = Math.min(16, 2 + Math.floor(WORLD_DAY / 2));
+  const R = 0.11;
+  const hull = new THREE.MeshStandardMaterial({ color: 0xdfe3ec, roughness: 0.5, metalness: 0.4, emissive: 0x6a5aa8, emissiveIntensity: 0.25 });
+  const glow = new THREE.MeshBasicMaterial({ color: 0xc9b8ff });
+  const box = new THREE.BoxGeometry(0.034, 0.016, 0.02);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    if (i < modules) {
+      const m = new THREE.Mesh(box, hull);
+      m.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
+      m.rotation.y = -a;
+      g.add(m);
+    } else if (i === modules) { // the next module, still a glowing frame
+      const f = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.8 }));
+      f.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
+      f.rotation.y = -a;
+      g.add(f);
+    }
+  }
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 12), hull);
+  g.add(hub);
+  for (let k = 0; k < 4; k++) { // spokes
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, R, 6), hull);
+    s.rotation.z = Math.PI / 2;
+    s.rotation.y = (k / 4) * Math.PI * 2;
+    s.position.set(Math.cos((k / 4) * Math.PI * 2) * R / 2, 0, -Math.sin((k / 4) * Math.PI * 2) * R / 2);
+    g.add(s);
+  }
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), glow);
+  beacon.position.y = 0.03;
+  g.add(beacon);
+  const pivot = new THREE.Group();
+  pivot.rotation.set(0.35, 0, 0.5);
+  pivot.add(g);
+  g.position.set(0, 0, 1.72);
+  g.rotation.x = 0.4;
+  scene.add(pivot);
+  return { g, pivot, beacon, modules };
+})();
+const nova = (() => {
+  const lit = Math.min(1, 0.04 + WORLD_DAY / 120); // how much of their world is built
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 64, 40),
+    new THREE.ShaderMaterial({
+      uniforms: { uTime: U.uTime, uSun: { value: sunDir }, uLit: { value: lit } },
+      vertexShader: `varying vec3 vN; varying vec3 vP; varying vec3 vV;
+        void main(){ vP = position; vec4 wp = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal);
+          vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }`,
+      fragmentShader: `uniform float uTime; uniform vec3 uSun; uniform float uLit; varying vec3 vN; varying vec3 vP; varying vec3 vV;
+        ${GLSL_NOISE}
+        void main(){
+          vec3 p = normalize(vP);
+          float land = smoothstep(0.48, 0.52, fbm(p * 2.2 + 3.0));
+          vec3 rock = mix(vec3(0.05, 0.06, 0.09), vec3(0.16, 0.13, 0.2), land);
+          float sun = max(dot(normalize(vN), uSun), 0.0);
+          vec3 col = rock * (0.12 + sun * 1.1);
+          // the robots' cities: a grid of light spreading out from where they landed
+          float reach = smoothstep(uLit * 1.15, uLit * 1.15 - 0.12, (1.0 - dot(p, normalize(vec3(0.3, 0.8, 0.5)))) * 0.5 + fbm(p * 5.0) * 0.18);
+          vec2 g = abs(fract(vec2(atan(p.z, p.x) * 18.0, asin(p.y) * 18.0)) - 0.5);
+          float grid = (1.0 - smoothstep(0.0, 0.06, min(g.x, g.y))) * land;
+          float dots = step(0.82, fbm(p * 40.0)) * land;
+          col += vec3(0.75, 0.62, 1.0) * (grid * 0.7 + dots * 1.4) * reach * (0.5 + 0.5 * (1.0 - sun));
+          float rim = pow(1.0 - max(dot(normalize(vN), vV), 0.0), 3.0);
+          col += vec3(0.55, 0.45, 1.0) * rim * 0.5;
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    }),
+  );
+  m.position.set(5.6, 1.9, -6.4);
+  scene.add(m);
+  return { m, lit };
+})();
+function stepBeyond(t) {
+  station.pivot.rotation.y = t * 0.05;
+  station.g.rotation.y = t * 0.3;
+  station.beacon.visible = Math.sin(t * 3) > 0;
+  nova.m.rotation.y = t * 0.02;
+}
+addLabel('<span class="nm">Their World</span><span class="era">Built by the robots</span>', 'moon nova', () => nova.m.position.clone().add(camAxis(1).multiplyScalar(0.45)), () => openNova(), { surface: false });
+addLabel('<span class="nm">Robot Station</span><span class="era">In orbit</span>', 'moon station', () => station.g.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(0.12)), () => openStation(), { surface: false });
+function openNova() {
+  exitCore();
+  score.place('moon');
+  score.chime(83);
+  selected = { kind: 'nova' };
+  flyTo(nova.m.position.clone(), nova.m.position.length() + 1.4, 3200);
+  openPanel(header({ name: 'Their World', era: `Day ${WORLD_DAY} · ${Math.round(nova.lit * 100)}% built`, color: '#C9B8FF', tagline: 'The planet the robots are building for themselves.', intro: 'TD1 builds TD1.WORLD with AC. Out here, the robots are building a world of their own: no brief, no product, just what they decide to make. Every day its lights reach a little further. Come back tomorrow and see.' })
+    + `<section><div class="civ-stats"><div><b>${Math.round(nova.lit * 100)}%</b><span>lit up</span></div><div><b>${station.modules}</b><span>station modules</span></div><div><b>${PLACES.filter((p) => p.colony).length}</b><span>island colonies</span></div></div></section>`
+    + '<section><button type="button" class="cta" data-go="civ">See their civilisation</button></section>', '#C9B8FF');
+  setDock('nova');
+}
+function openStation() {
+  exitCore();
+  score.chime(81);
+  selected = { kind: 'station' };
+  flyTo(station.g.getWorldPosition(new THREE.Vector3()), fitDist(0.9, 2.6), 2600);
+  openPanel(header({ name: 'Robot Station', era: `${station.modules} of 16 modules`, color: '#C9B8FF', tagline: 'Their first step off the world.', intro: 'The robots’ own station, built one module every other day from parts the Future sends up by rocket. The glowing frame is the module they’re working on now. When the ring closes, they head for their own world.' }), '#C9B8FF');
+  setDock('station');
 }
 
 /* ------------------------------------------------------------------ the growing world */
@@ -5078,7 +5198,7 @@ function dayNews() {
   const today = towns.days[towns.days.length - 1];
   if (!today) return '';
   if (today.headline) return today.headline;
-  const names = [...new Set(today.made.map((p) => REGIONS[p.region].name))];
+  const names = [...new Set(today.made.map((p) => (p.colony ? UNCHARTED.name : REGIONS[p.region].name)))];
   const n = today.made.length;
   return n ? `Overnight the robots broke ground on ${n} new town${n > 1 ? 's' : ''} in ${REGION_LIST(names)}.` : 'The robots are finishing what they started.';
 }
@@ -5110,6 +5230,7 @@ function loop() {
   U.uTime.value = t;
   stepGrowth();
   stepFireworks(t, dtFrame);
+  stepBeyond(t);
   const inVR = renderer.xr.isPresenting;
   stepQuality(now, inVR);
   camera.getWorldPosition(camWorld);

@@ -18,6 +18,7 @@ const key = process.env.ANTHROPIC_API_KEY;
 if (!key) { console.log('No ANTHROPIC_API_KEY: the world follows its own plan today.'); process.exit(0); }
 
 const built = Object.fromEntries(REGIONS.map((r) => [r.id, 0]));
+built.uncharted = 0; // the robots' island colonies over the sea
 growth.days.forEach((d) => (d.towns || []).forEach((t) => { if (t.region in built) built[t.region]++; }));
 const recent = growth.days.slice(-7).map((d) => `Day ${d.day}: ${d.headline}`).join('\n') || '(nothing yet: this is the first night)';
 
@@ -37,6 +38,7 @@ and the dream of building a world of their own. Each line under 100 characters. 
 const user = `A new day is starting: day ${day}.
 Continents (id: name, what it is about, towns you have planned there so far):
 ${REGIONS.map((r) => `- ${r.id}: ${r.name}. ${r.tagline} ${r.intro || ''} (${built[r.id]} planned)`).join('\n')}
+- uncharted: The Uncharted Isles, where the robots found small island colonies of their own over the sea. Small towns only. (${built.uncharted} planned)
 Recent world news:
 ${recent}
 Earlier town names: ${growth.days.flatMap((d) => (d.towns || []).map((t) => t.name)).join(', ') || 'none'}`;
