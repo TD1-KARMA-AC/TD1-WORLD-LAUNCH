@@ -1097,6 +1097,17 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
     const planned = new Map((GROWTH && GROWTH.days || []).map((d) => [d.day, d]));
     const next = sites.map(() => 0);
     const BASE = 16; // each continent started with this many towns of its own
+    const NAMES = [ // the world's own names for its towns, in each continent's voice
+      [['Ochre', 'Flint', 'Dune', 'Mesa', 'Ember', 'Rune', 'Cairn'], ['stead', 'gate', 'well', 'hold', 'rest', 'fall', ' Deep']],
+      [['Archive', 'Lumen', 'Echo', 'Recall', 'Ledger', 'Quill', 'Vesper'], [' Hollow', ' Rise', ' Vale', 'mere', 'wick', ' Row', 'den']],
+      [['Vector', 'Tensor', 'Logic', 'Kernel', 'Signal', 'Neuron', 'Gradient'], [' Park', ' Point', 'ton', ' Heights', ' Yard', ' Field', ' Cross']],
+      [['Paint', 'Canvas', 'Loom', 'Prism', 'Chorus', 'Muse', 'Sketch'], ['well', ' Quarter', 'wick', ' Lane', 'ford', ' Row', ' Commons']],
+      [['Nova', 'Horizon', 'Zenith', 'Aurora', 'Halo', 'Apex', 'Lumin'], [' City', ' Spire', 'port', ' Ring', ' Reach', ' Gate', ' Rise']],
+    ];
+    const autoName = (region, seed) => {
+      const rn = rng(seed + 1), set = NAMES[region];
+      return set ? set[0][Math.floor(rn() * set[0].length)] + set[1][Math.floor(rn() * set[1].length)] : '';
+    };
     const raise = (region, size, born, name) => {
       const si = region === UNCH ? REGIONS.length : region;
       const site = sites[si] && sites[si][next[si]];
@@ -1107,7 +1118,7 @@ const towns = { meshes: [], lightsDots: [], parkTrees: [] };
       const top = PAINT_T[region === UNCH ? 5 : region].top * k * (0.8 + 0.2 * Math.min(1, age / 40)); // towns keep growing taller for a month or so
       const rr = rng(site.seed);
       buildTown(site.c, region === UNCH ? 5 : region, rad, top, null, rr, born === WORLD_DAY && WORLD_DAY > 0);
-      const place = { dir: site.c, region, rad, born, name: name || '', colony: region === UNCH };
+      const place = { dir: site.c, region, rad, born, name: name || autoName(region, site.seed), colony: region === UNCH };
       PLACES.push(place);
       towns.lightsDots.push({ d: site.c, n: Math.round(60 + rad * 9000), spread: rad * 0.8, b: 0.7 });
       return place;
@@ -2977,7 +2988,7 @@ function stepGround(inVR) {
   const near = walk.on ? 0.00004 : THREE.MathUtils.clamp(alt * 0.22, 0.0012, 0.05);
   if (Math.abs(near - camera.near) / camera.near > 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
   // a word of help the first times you get close
-  if (!inVR && introDone && !flight && performance.now() - lastInteract < 1500) {
+  if (!inVR && introDone && !flight && !walk.on && performance.now() - lastInteract < 1500) {
     if (landedHint === 0 && alt < 0.6 && alt > 0.2) { landedHint = 1; toast(isTouch ? 'Keep pinching to fly down to the surface' : 'Keep zooming in to fly down to the surface', 3000); }
     if (landedHint === 1 && alt < 0.03) { landedHint = 2; toast(isTouch ? 'Drag to move · Twist two fingers to turn · Pinch to climb' : 'Drag to move · Right-drag to turn · Scroll to climb', 4200); }
   }

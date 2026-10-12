@@ -113,3 +113,17 @@ rise through the day while robots work on them. Today's towns wear a "New" name 
   GitHub only runs scheduled jobs from the default branch, so the workflow file must be on that branch too.
 - Days without a plan follow the world's own seeded plan, so the world keeps growing even with no key.
 - `#day=30` (or `#dev&day=30.5`) previews the world on any day; the fraction is the time of day.
+
+## The robots' civilisation
+
+- **Street level.** "Walk here" at drone height sets you down at human eye height. Drag to look; WASD/arrows or the
+  thumb pad to walk (shift or a full push runs); scroll out, pinch out or "Fly up" to rise. On phones, "360" follows
+  the phone's motion so you can turn around to look.
+- **They talk.** Close up, robots talk over their radios (a beam joins the two) and think out loud. The nightly
+  architect writes the day's conversations (`talk` in `world/growth.json`); the world's own seeded talk fills in.
+- **Civilisation.** Towns have populations; each continent makes goods; daily trades send them around (couriers'
+  cargo glows in the goods' colour); a daily event (festival with fireworks, market, discovery, launch). Tap the day in
+  the corner for the Civilisation panel.
+- **Beyond.** From day 4 the robots found island colonies every third day; their orbital station gains a module every
+  other day; Their World, far out in the sky, lights up a little more each day.
+- Everything runs in the visitor's browser. The only running cost is the one nightly Claude request.
