@@ -139,6 +139,9 @@ const MIN_D = 1.45, MAX_D = 10;
 const ALT_MIN = 0.006; // the lowest you can fly, above sea level
 const GROUND_CLEAR = 0.0045; // and above the land
 const LAND_TILT = 1.16; // radians: how far the view tips up to the horizon at the lowest height
+// Street level: at the world's scale a house is about six metres tall, so a person's eyes sit about here.
+const EYE = 0.00031, WALK_SPEED = 0.0009; // walking pace is a brisk 5 m/s; run is three times that
+const walk = { on: false, dir: new THREE.Vector3(), head: new THREE.Vector3(), pitch: 0.06, move: new THREE.Vector2(), keys: new Set(), anim: null, pinch0: 0 };
 const landK = (dist) => THREE.MathUtils.smoothstep(0.42 - (dist - 1), 0, 0.42 - ALT_MIN * 1.3); // 0 in orbit, 1 at the ground
 function zoomBy(k) { // k > 1 zooms out; works in height above the ground, so it slows as you near the surface
   const alt = Math.max(ALT_MIN, spin.target - 1);
@@ -1420,7 +1423,8 @@ function stepRobots(dt, t) {
   JOBS.forEach((j) => { tools[j].count = 0; });
   let nCube = 0;
   const sp = sparks.geometry.attributes.position, ss = sparks.geometry.attributes.aSize;
-  _rS.setScalar(ROBOT_H);
+  // true size when you're down among them (about your height), bigger from the air so you can still spot them
+  _rS.setScalar(ROBOT_H * (walk.on ? 0.27 : 0.27 + 0.73 * THREE.MathUtils.smoothstep(camWorld.length() - 1, 0.0015, 0.01)));
   robots.forEach((rb, i) => {
     let swingR = 0, swingL = 0, bob = 0, yawWobble = 0, spark = 0;
     const greeting = t - rb.react < REACT_S;
@@ -2947,7 +2951,7 @@ function stepGround(inVR) {
   giant.visible = SKY_FADE.value > 0.3;
   clouds.material.side = alt < 0.045 ? THREE.DoubleSide : THREE.FrontSide;
   // the near plane follows the height, so things right in front of you aren't clipped
-  const near = THREE.MathUtils.clamp(alt * 0.22, 0.0012, 0.05);
+  const near = walk.on ? 0.00004 : THREE.MathUtils.clamp(alt * 0.22, 0.0012, 0.05);
   if (Math.abs(near - camera.near) / camera.near > 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
   // a word of help the first times you get close
   if (!inVR && introDone && !flight && performance.now() - lastInteract < 1500) {
@@ -3007,7 +3011,7 @@ addEventListener('pointermove', (e) => {
   parallax.my = (e.clientY / innerHeight) * 2 - 1;
 });
 function applyParallax(t) {
-  if (reduceMotion || !introDone) return; // the opening shot frames itself
+  if (reduceMotion || !introDone || walk.on) return; // the opening shot frames itself; on the street your eyes are your own
   // while you're touching (and a moment after), nothing else moves the view
   const hands = spin.dragging || spin.pointers.size > 0 || flight || performance.now() - lastInteract < 1800;
   parallax.amp += ((hands ? 0 : 1) - parallax.amp) * (hands ? 0.2 : 0.015);
@@ -3033,6 +3037,7 @@ let flight = null;
 let lastInteract = performance.now();
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 function flyTo(dir, dist = 2.15, dur = 1700) {
+  if (walk.on) endWalk(true);
   const fromDir = camera.position.clone().normalize();
   const toDir = dir.clone().normalize();
   // keep the camera off the exact poles so "up" stays stable
@@ -3378,6 +3383,116 @@ function landAt(ri) {
   $('#intro').classList.add('gone');
   landNear(town.dir);
 }
+/* ------------------------------------------------------------------ street level: walk the world at human size */
+const _wP = new THREE.Vector3(), _wT = new THREE.Vector3(), _wS = new THREE.Vector3(), _wQ = new THREE.Quaternion(), _wM = new THREE.Matrix4();
+function walkPose(outPos, outQ) {
+  outPos.copy(walk.dir).multiplyScalar(surfaceRadius(walk.dir) + EYE);
+  _wT.copy(walk.head).multiplyScalar(Math.cos(walk.pitch)).addScaledVector(walk.dir, Math.sin(walk.pitch)).add(outPos);
+  _wM.lookAt(outPos, _wT, walk.dir);
+  outQ.setFromRotationMatrix(_wM);
+}
+function walkStep(f, s, dist) { // move along the ground; you can't walk into the sea
+  const side = _wS.crossVectors(walk.head, walk.dir).normalize();
+  const step = _wT.copy(walk.head).multiplyScalar(f).addScaledVector(side, s);
+  if (step.lengthSq() > 1) step.normalize();
+  const next = walk.dir.clone().addScaledVector(step, dist).normalize();
+  if (!onLand(next, 0.0004)) return;
+  walk.dir.copy(next);
+  walk.head.addScaledVector(walk.dir, -walk.head.dot(walk.dir)).normalize();
+}
+function startWalk(dir, heading) {
+  if (!dir || !onLand(dir, 0.0004)) { toast('Find some land to stand on first', 2400); return; }
+  cancelFlight();
+  closePanel();
+  closeMenu();
+  walk.dir.copy(dir).normalize();
+  walk.head.copy(heading).addScaledVector(walk.dir, -heading.dot(walk.dir)).normalize();
+  walk.pitch = 0.06;
+  walk.on = true;
+  spin.enabled = false;
+  spin.w.set(0, 0, 0);
+  walk.anim = { t0: performance.now(), p: camera.position.clone(), q: camera.quaternion.clone(), dur: reduceMotion ? 1 : 2000 };
+  document.body.classList.add('walking');
+  score.chime(74);
+  toast(isTouch ? 'Drag to look around · Walk with the pad · Pinch out to fly up' : 'Drag to look · W A S D or arrows to walk · Shift to run · Scroll out to fly up', 4600);
+}
+function endWalk(silent) {
+  if (!walk.on) return;
+  walk.on = false;
+  walk.anim = null;
+  walk.move.set(0, 0);
+  walk.keys.clear();
+  document.body.classList.remove('walking');
+  padKnob.style.transform = '';
+  spin.enabled = true;
+  if (!silent) flyTo(walk.dir.clone(), surfaceRadius(walk.dir) + 0.0095, 1600);
+}
+function stepWalk(dt, now) {
+  if (!walk.anim) {
+    const k = walk.keys;
+    let f = (k.has('w') || k.has('arrowup') ? 1 : 0) - (k.has('s') || k.has('arrowdown') ? 1 : 0);
+    let s = (k.has('d') || k.has('arrowright') ? 1 : 0) - (k.has('a') || k.has('arrowleft') ? 1 : 0);
+    f -= walk.move.y;
+    s += walk.move.x;
+    if (f || s) {
+      const run = k.has('shift') || walk.move.length() > 0.92;
+      walkStep(f, s, WALK_SPEED * (run ? 3 : 1) * Math.min(1, Math.hypot(f, s)) * dt);
+      lastInteract = now;
+    }
+  }
+  walkPose(_wP, _wQ);
+  if (walk.anim) {
+    const k = Math.min(1, (now - walk.anim.t0) / walk.anim.dur), e = ease(k);
+    camera.position.lerpVectors(walk.anim.p, _wP, e);
+    camera.quaternion.slerpQuaternions(walk.anim.q, _wQ, e);
+    if (k >= 1) walk.anim = null;
+  } else {
+    camera.position.copy(_wP);
+    camera.quaternion.copy(_wQ);
+  }
+  camera.up.copy(walk.dir);
+}
+// "Walk here": stand on the ground just ahead of where you're looking, facing the same way
+function walkHere() {
+  const d = camera.position.clone().normalize();
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const head = fwd.addScaledVector(d, -fwd.dot(d)).normalize();
+  let spot = null;
+  for (let k = 0; k < 10 && !spot; k++) { const c = d.clone().addScaledVector(head, 0.006 - k * 0.0007).normalize(); if (onLand(c, 0.0004)) spot = c; }
+  startWalk(spot, head);
+}
+const walkBtn = $('#walk-btn'), padEl = $('#walk-pad'), padKnob = padEl.querySelector('i');
+walkBtn.addEventListener('click', walkHere);
+$('#walk-up').addEventListener('click', () => endWalk());
+{ // the thumb pad: push to walk, push all the way to run
+  let id = null;
+  const set = (e) => {
+    const r = padEl.getBoundingClientRect();
+    const v = new THREE.Vector2((e.clientX - r.left - r.width / 2) / (r.width / 2), (e.clientY - r.top - r.height / 2) / (r.height / 2));
+    if (v.length() > 1) v.normalize();
+    walk.move.copy(v);
+    padKnob.style.transform = `translate(${v.x * 34}px, ${v.y * 34}px)`;
+  };
+  padEl.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); id = e.pointerId; padEl.setPointerCapture(id); set(e); });
+  padEl.addEventListener('pointermove', (e) => { if (e.pointerId === id) set(e); });
+  const up = (e) => { if (e.pointerId !== id) return; id = null; walk.move.set(0, 0); padKnob.style.transform = ''; };
+  padEl.addEventListener('pointerup', up);
+  padEl.addEventListener('pointercancel', up);
+}
+addEventListener('keydown', (e) => {
+  if (!walk.on || e.target.closest?.('input, textarea, select')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'escape') { endWalk(); return; }
+  if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { walk.keys.add(k); e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+addEventListener('keyup', (e) => walk.keys.delete(e.key.toLowerCase()));
+addEventListener('blur', () => walk.keys.clear());
+function walkUi() { // offer "Walk here" once you're down at drone height
+  if ((walkUi.n = (walkUi.n || 0) + 1) % 10) return;
+  const show = introDone && !walk.on && !flight && camera.position.length() - 1 < 0.03;
+  if (show !== walkUi.shown) { walkUi.shown = show; walkBtn.classList.toggle('on', show); }
+}
+
 // Fly down to stand just outside a town, looking at it.
 function landNear(dir) {
   const town = { dir };
@@ -3608,7 +3723,7 @@ $('#tour-down').addEventListener('click', () => {
   } else if (st.land !== undefined) landAt(st.land);
 });
 addEventListener('keydown', (e) => {
-  if (!tour.on || e.target.closest('input, textarea, select')) return;
+  if (!tour.on || e.target.closest?.('input, textarea, select')) return;
   if (e.key === 'ArrowRight') $('#tour-next').click();
   else if (e.key === 'ArrowLeft' && tour.i > 0) tourStop(tour.i - 1);
 });
@@ -3723,6 +3838,12 @@ cv.addEventListener('wheel', (e) => {
   e.preventDefault();
   lastInteract = performance.now();
   $('#intro').classList.add('gone');
+  if (walk.on) { // scroll in to step forward, scroll out to fly back up
+    if (walk.anim) return;
+    walk.wheel = (walk.wheel || 0) + e.deltaY;
+    if (walk.wheel > 260) { walk.wheel = 0; endWalk(); } else if (e.deltaY < 0) { walk.wheel = 0; walkStep(1, 0, Math.min(0.004, -e.deltaY * 0.00002)); }
+    return;
+  }
   if (!spin.enabled) return;
   zoomAt(Math.exp(e.deltaY * 0.0016), e.clientX, e.clientY);
 }, { passive: false });
@@ -3823,6 +3944,21 @@ cv.addEventListener('pointermove', (e) => {
   const prev = spin.pointers.get(e.pointerId);
   if (!prev) return;
   const now = performance.now();
+  if (walk.on) { // down on the street: drag to look around, pinch out to fly back up
+    if (spin.pointers.size === 2) {
+      prev.x = e.clientX; prev.y = e.clientY;
+      if (!walk.pinch0) walk.pinch0 = pinchDist();
+      else if (pinchDist() < walk.pinch0 * 0.65) { walk.pinch0 = 0; endWalk(); }
+      return;
+    }
+    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    prev.x = e.clientX; prev.y = e.clientY;
+    if (walk.anim) return;
+    walk.head.applyAxisAngle(walk.dir, dx * 0.0042).normalize();
+    walk.pitch = THREE.MathUtils.clamp(walk.pitch + dy * 0.0032, -1.1, 1.25);
+    lastInteract = now;
+    return;
+  }
   if (spin.pointers.size === 2) { // pinch to zoom toward your fingers, twist to turn
     prev.x = e.clientX; prev.y = e.clientY;
     const d = pinchDist(), a = pinchAngle(), m = pinchMid();
@@ -3857,6 +3993,7 @@ cv.addEventListener('pointermove', (e) => {
 });
 const release = (e) => {
   if (!spin.pointers.has(e.pointerId)) return;
+  if (spin.pointers.size <= 2) walk.pinch0 = 0;
   spin.pointers.delete(e.pointerId);
   const now = performance.now();
   if (spin.pointers.size === 1) { // lifted one finger of two: carry on with the other
@@ -4424,7 +4561,7 @@ function updateHud() {
   const lat = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)) / DEG;
   const lon = Math.atan2(-d.z, d.x) / DEG;
   hudEls.pos.textContent = `${fmtLat(lat)} ${fmtLon(lon)}`;
-  hudEls.alt.textContent = `${Math.round((camera.position.length() - 1) * 6371).toLocaleString('en-AU')} km`;
+  hudEls.alt.textContent = walk.on ? 'Street level' : `${Math.round((camera.position.length() - 1) * 6371).toLocaleString('en-AU')} km`;
   const tr = terrain(d.x, d.y, d.z);
   hudEls.over.textContent = tr.h > 0 ? (tr.region === UNCH ? UNCHARTED.name : REGIONS[tr.region].name) : OCEAN.name;
   // local time down there, on the world's own clock
@@ -4646,7 +4783,17 @@ function dayNews() {
   return n ? `Overnight the robots broke ground on ${n} new town${n > 1 ? 's' : ''} in ${REGION_LIST(names)}.` : 'The robots are finishing what they started.';
 }
 function announceDay() {
+  let last = 0;
+  try { last = +localStorage.getItem('td1-day') || 0; localStorage.setItem('td1-day', String(WORLD_DAY)); } catch (e) { /* private browsing: no memory, no recap */ }
   if (tour.on) return;
+  if (last && last < WORLD_DAY) { // welcome back: what the robots built while you were away
+    const fresh = PLACES.filter((p) => p.born > last);
+    const n = fresh.length;
+    toast(`Welcome back. Since day ${last} the robots have built ${n} new town${n === 1 ? '' : 's'}. Day ${WORLD_DAY} · ${dayNews()}`, 7000);
+    const newest = fresh[fresh.length - 1];
+    if (newest && !selected) setTimeout(() => { if (!selected && !walk.on && !flight && performance.now() - lastInteract > 2500) flyTo(newest.dir, fitDist(0.55, 1.9), 3200); }, 1800);
+    return;
+  }
   toast(`Day ${WORLD_DAY} · ${dayNews()}`, 6000);
 }
 // today's new towns wear a name tag; tap it to fly down and watch them being built
@@ -4669,9 +4816,11 @@ function loop() {
 
   if (inVR) stepVR(dtFrame, t);
   else if (!introDone) { if (gateOpen) stepIntro(now); else stepGate(t); }
+  else if (walk.on) stepWalk(dtFrame, now);
   else if (flight) stepFlight(now);
   else stepSpin(dtFrame, t, now);
   tourUi();
+  walkUi();
 
   if (!reduceMotion) { // the sun circles the world: day and night
     sunAt(SUN0 + sunShift + t * DAY_RATE, sunDir);
@@ -4829,7 +4978,7 @@ if (/blacktest/.test(location.hash)) { // for testing: one object that outputs i
   planet.add(bad);
 }
 if (/dev/.test(location.hash) || /td1dev/.test(location.search)) {
-  window.td1 = { THREE, PLACES, TOWN_MAX, renderer, composer, scene, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
+  window.td1 = { THREE, PLACES, TOWN_MAX, land, walk, renderer, composer, scene, camera, spin, planet, sunDir, latLon, flyTo, syncSpin, cities, landAt, selectRegion, surf: surfaceRadius, greetRobot, MSAA, safe, mindaloo, robots, ships, flocks, sats, comet, skip: () => { enterWorld(false, false); cine.skip = true; }, setSun: (rad) => { sunShift = rad; }, get introDone() { return introDone; } };
 }
 
 /* ------------------------------------------------------------------ no WebGL: still a usable site */
