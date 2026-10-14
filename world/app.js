@@ -270,10 +270,14 @@ const WORLD_EPOCH = Date.UTC(2026, 9, 11, 16); // midnight, 12 Oct 2026, in Pert
 const _dayHash = location.hash.match(/day=(\d+(?:\.\d+)?)/); // #day=30 previews the world on day 30
 const worldClock = () => (_dayHash ? +_dayHash[1] : Math.max(1, (Date.now() - WORLD_EPOCH) / 86400000 + 1));
 const WORLD_DAY = Math.floor(worldClock());
+// The nightly plan is read straight from GitHub, so a new day never needs a new Netlify deploy (no build credits);
+// the copy shipped with the site is the fallback.
+const GROWTH_LIVE = 'https://raw.githubusercontent.com/TD1-KARMA-AC/TD1-WORLD-LAUNCH/TD1-World-Live/world/growth.json';
+const getJson = (url) => fetch(url, { cache: 'no-cache' }).then((res) => (res.ok ? res.json() : null)).catch(() => null);
 const GROWTH = await Promise.race([
-  fetch('world/growth.json', { cache: 'no-cache' }).then((res) => (res.ok ? res.json() : null)).catch(() => null),
-  new Promise((res) => setTimeout(() => res(null), 2500)),
-]);
+  getJson(GROWTH_LIVE).then((g) => g || getJson('world/growth.json')),
+  new Promise((res) => setTimeout(() => res(null), 3000)),
+]) || await Promise.race([getJson('world/growth.json'), new Promise((res) => setTimeout(() => res(null), 1500))]);
 const PLACES = []; // every town on the world: { dir, region, rad, product }
 const townFrame = (c) => { // the same east/north axes the shader uses
   const t1 = new THREE.Vector3().crossVectors(c, Math.abs(c.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
@@ -3630,6 +3634,8 @@ function focusCity(i) {
 }
 
 panelBody.addEventListener('click', (e) => {
+  const lm = e.target.closest('[data-landmark]');
+  if (lm) { novaLandmarks[+lm.dataset.landmark].go(); return; }
   const cgo = e.target.closest('[data-city-go]');
   if (cgo) { const ci = +cgo.dataset.cityGo; selectRegion(cities[ci].region, { noFly: true }); focusCity(ci); return; }
   const city = e.target.closest('[data-city]');
@@ -5326,6 +5332,43 @@ function stepShowcase(t) {
 }
 const nearNova = () => camera.position.distanceTo(nova.m.position) < 3;
 showcase.minis.forEach((o) => addLabel(`<span class="nm">${esc(o.name)}</span><span class="era">Their tribute</span>`, 'moon nova-mini', () => o.m.getWorldPosition(new THREE.Vector3()).add(camAxis(1).multiplyScalar(o.r + 0.05)), () => openNova(), { surface: false, show: nearNova }));
+// And the great landmarks of TD1, rebuilt by the robots around their landing site: the NeuroBlocks marketplace,
+// The Exchange, Karma Core and The Beacon. Each one takes you to the real thing.
+const novaLandmarks = (() => {
+  const R = 0.32, centre = new THREE.Vector3(0.3, 0.8, 0.5).normalize();
+  const t1 = new THREE.Vector3().crossVectors(centre, new THREE.Vector3(0, 0, 1)).normalize(), t2 = new THREE.Vector3().crossVectors(centre, t1);
+  const up = new THREE.Vector3(0, 1, 0);
+  const glowMat = (c) => new THREE.MeshBasicMaterial({ color: c });
+  const stone = new THREE.MeshStandardMaterial({ color: 0xe8e4f2, roughness: 0.45, metalness: 0.3 });
+  const make = {
+    market: (c) => { const g = new THREE.Group(); for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.012), i % 2 ? glowMat(c) : stone); b.position.set(((i % 3) - 1) * 0.013, Math.floor(i / 3) * 0.013 + 0.006, 0); g.add(b); } return g; },
+    shop: (c) => { const g = new THREE.Group(); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.004, 0.03, 8), stone); p.position.y = 0.015; const r = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.003, 8, 24), glowMat(c)); r.position.y = 0.032; g.add(p, r); return g; },
+    core: (c) => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.01, 12), stone); b.position.y = 0.005; const o = new THREE.Mesh(new THREE.SphereGeometry(0.012, 20, 14), glowMat(c)); o.position.y = 0.022; g.add(b, o); return g; },
+    contact: (c) => { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.008, 0.05, 10), stone); t.position.y = 0.025; const l = new THREE.Mesh(new THREE.SphereGeometry(0.006, 12, 10), glowMat(c)); l.position.y = 0.053; g.add(t, l); return g; },
+  };
+  const list = [
+    { id: 'market', name: 'NeuroBlocks', sub: 'Marketplace', color: '#B38DFF', go: () => { location.href = 'Neuroblock/'; } },
+    { id: 'shop', name: 'The Exchange', sub: 'Shop', color: SHOP_COLOR, go: () => openShop() },
+    { id: 'core', name: 'Karma Core', sub: 'The heart', color: CORE.color, go: () => enterCore() },
+    { id: 'contact', name: 'The Beacon', sub: 'Talk to TD1', color: BEACON_COLOR, go: () => openContact() },
+  ];
+  list.forEach((L, i) => {
+    const a = (i / list.length) * Math.PI * 2 + 0.4;
+    const d = centre.clone().addScaledVector(t1, Math.cos(a) * 0.32).addScaledVector(t2, Math.sin(a) * 0.32).normalize();
+    const g = make[L.id](new THREE.Color(L.color));
+    g.position.copy(d).multiplyScalar(R * 0.995);
+    g.quaternion.setFromUnitVectors(up, d);
+    nova.m.add(g);
+    L.obj = g;
+    L.top = d.clone().multiplyScalar(R + 0.07);
+  });
+  return list;
+})();
+novaLandmarks.forEach((L) => addLabel(`<span class="nm">${esc(L.name)}</span><span class="era">${esc(L.sub)}</span>`, 'moon nova-mini', () => nova.m.localToWorld(L.top.clone()), () => L.go(), { surface: false, show: nearNova }));
+function landmarksHtml() {
+  return `<section><h3>Landmarks</h3><p class="sub">The robots rebuilt TD1’s great places around their landing site. Each one opens the real thing.</p>
+    <ul class="civ-trades showcase">${novaLandmarks.map((L, i) => `<li><i style="--k:${L.color}"></i><button type="button" class="city-go" data-landmark="${i}">${esc(L.name)}</button><span>${esc(L.sub)}</span></li>`).join('')}</ul></section>`;
+}
 function showcaseHtml() {
   return `<section><h3>Monuments to TD1 <span class="count">${showcase.built} of ${cities.length}</span></h3>
     <p class="sub">What the robots chose to build first on their own world: a monument to every product TD1 makes. One more is finished each day. Tap one to visit its town.</p>
@@ -5351,6 +5394,7 @@ function openNova() {
   flyTo(nova.m.position.clone(), nova.m.position.length() + 1.4, 3200);
   openPanel(header({ name: 'Their World', era: `Day ${WORLD_DAY} · ${Math.round(nova.lit * 100)}% built`, color: '#C9B8FF', tagline: 'The planet the robots are building for themselves.', intro: 'TD1 builds TD1.WORLD with AC. Out here, the robots are building a world of their own, and the first thing they chose to build was a monument to every product their makers make, with TD1’s own worlds circling in miniature. Every day its lights reach further and another monument is finished. Come back tomorrow and see.' })
     + `<section><div class="civ-stats"><div><b>${Math.round(nova.lit * 100)}%</b><span>lit up</span></div><div><b>${showcase.built}</b><span>monuments to TD1</span></div><div><b>${PLACES.filter((p) => p.colony).length}</b><span>island colonies</span></div></div></section>`
+    + landmarksHtml()
     + showcaseHtml()
     + '<section><button type="button" class="cta" data-go="civ">See their civilisation</button></section>', '#C9B8FF');
   setDock('nova');
