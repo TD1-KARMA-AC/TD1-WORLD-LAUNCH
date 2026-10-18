@@ -190,7 +190,7 @@ export const AC_PATH = [
 ];
 
 // The Exchange: TD1's shop, served live from the TD1WORLD Shopify store.
-//   domain          the store's myshopify address
+//   domain          the store's address (its custom domain works for the catalogue too)
 //   storefrontToken optional. Products and collections load without one (Shopify's tokenless Storefront access);
 //                   add a public Storefront token later if you want more (Shopify admin → Apps → Headless).
 //   storeUrl        where "Open the full store" and product links go
