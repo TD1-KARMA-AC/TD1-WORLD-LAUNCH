@@ -3191,9 +3191,22 @@ function acHtml(withLink) {
 const shopCache = {};
 let shopTab = SHOP.sections[0].id;
 const money = (a) => { try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(+a.amount); } catch (e) { return `${a.amount} ${a.currencyCode}`; } };
+// Prices in the visitor's own currency: Shopify converts them for the visitor's country, the same way the store does.
+// The country comes from the browser's language region (en-AU → AU), or failing that its time zone.
+const VISITOR_COUNTRY = (() => {
+  for (const l of navigator.languages || [navigator.language || '']) { const m = /-([A-Z]{2})$/i.exec(l || ''); if (m) return m[1].toUpperCase(); }
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* no time zone: store default */ }
+  const TZ = { Australia: 'AU', 'Pacific/Auckland': 'NZ', 'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Asia/Singapore': 'SG', 'Asia/Tokyo': 'JP', 'Asia/Kolkata': 'IN', 'America/Toronto': 'CA', 'America/Vancouver': 'CA' };
+  for (const k in TZ) if (tz.startsWith(k)) return TZ[k];
+  if (tz.startsWith('America/')) return 'US';
+  if (tz.startsWith('Europe/')) return 'DE';
+  return '';
+})();
 async function loadSection(sec) {
   if (shopCache[sec.id]) return shopCache[sec.id];
-  const query = `query($h: String!) { collection(handle: $h) { products(first: 24) { nodes {
+  const ctx = VISITOR_COUNTRY ? ` @inContext(country: ${VISITOR_COUNTRY})` : '';
+  const query = `query($h: String!)${ctx} { collection(handle: $h) { products(first: 24) { nodes {
       title handle onlineStoreUrl featuredImage { url altText }
       priceRange { minVariantPrice { amount currencyCode } } } } } }`;
   const headers = { 'Content-Type': 'application/json' };
@@ -3205,6 +3218,13 @@ async function loadSection(sec) {
   });
   if (!res.ok) throw new Error(`Shopify answered ${res.status}`);
   const json = await res.json();
+  if (json.errors && ctx && !shopCache.retried) { // a country the store doesn't recognise: ask again in the store's own currency
+    shopCache.retried = true;
+    const res2 = await fetch(`https://${SHOP.domain}/api/2025-01/graphql.json`, { method: 'POST', headers, body: JSON.stringify({ query: query.replace(ctx, ''), variables: { h: sec.handle } }) });
+    if (!res2.ok) throw new Error(`Shopify answered ${res2.status}`);
+    const j2 = await res2.json();
+    return (shopCache[sec.id] = j2.data?.collection?.products?.nodes || []);
+  }
   return (shopCache[sec.id] = json.data?.collection?.products?.nodes || []);
 }
 const shopLive = () => Boolean(SHOP.domain);
