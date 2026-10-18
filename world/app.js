@@ -3227,6 +3227,7 @@ async function renderShop() {
   box.innerHTML = '<p class="sub">Loading…</p>';
   try {
     const items = await loadSection(sec);
+    if (!items.length && sec.id === 'clothing' && SHOP.featured) throw new Error('nothing listed yet');
     if (shopTab !== sec.id) return;
     box.innerHTML = items.length
       ? `<ul class="goods">${items.map((p) => `<li><a href="${esc(p.onlineStoreUrl || `${SHOP.storeUrl}/products/${p.handle}`)}" target="_blank" rel="noopener">
@@ -3234,8 +3235,11 @@ async function renderShop() {
           <b>${esc(p.title)}</b><span>${esc(money(p.priceRange.minVariantPrice))}</span></a></li>`).join('')}</ul>`
       : `<div class="shop-empty"><b>${esc(sec.name)} are on their way.</b><span>${esc(sec.text)}</span>
         <button type="button" class="cta" data-go="notify">Tell me when they land</button></div>`;
-  } catch (e) { // can't reach the store from here: send them straight to it instead
-    box.innerHTML = `<div class="shop-empty"><b>Browse ${esc(sec.name)} in the TD1WORLD store.</b><span>${esc(sec.text)}</span>
+  } catch (e) { // can't reach the live catalogue: show what we know is in the store, and send them straight to it
+    box.innerHTML = sec.id === 'clothing' && SHOP.featured && SHOP.featured.length
+      ? `<ul class="goods">${SHOP.featured.map((p) => `<li><a href="${esc(`${SHOP.storeUrl}/products/${p.handle}`)}" target="_blank" rel="noopener">
+          <img src="${esc(p.image)}&width=400" alt="${esc(p.title)}" loading="lazy"><b>${esc(p.title)}</b><span>${esc(p.note)}</span></a></li>`).join('')}</ul>`
+      : `<div class="shop-empty"><b>Browse ${esc(sec.name)} in the TD1WORLD store.</b><span>${esc(sec.text)}</span>
       ${SHOP.storeUrl ? `<a class="cta" href="${esc(SHOP.storeUrl)}/collections/${esc(sec.handle)}" target="_blank" rel="noopener">Open ${esc(sec.name)} ↗</a>` : ''}</div>`;
   }
 }

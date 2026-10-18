@@ -75,7 +75,7 @@ docs/archive/         old setup and fix notes (kept, not served)
 
 - [ ] Netlify has credit and the site deploys from `TD1-World-Live` (or merge it into `main`).
 - [ ] Netlify → Forms → `enquiry`: turn on email notifications so enquiries reach you. If the form can't send, it falls back to an email to `td1@td1.world` (`ENQUIRY.email`).
-- [ ] Shop: the TD1WORLD store (`td1world.myshopify.com`) is connected. Clothing shows the **Shop** collection. Create **courses** and **documents** collections in Shopify and those tabs fill themselves. Prices show in the store's currency (currently USD).
+- [ ] Shop: the TD1WORLD store (https://shop.td1.world) is connected; if its catalogue can't be reached, the Winter Tee and Wrist Wraps show from `SHOP.featured` in `world/data.js`. Clothing shows the **Shop** collection. Create **courses** and **documents** collections in Shopify and those tabs fill themselves. Prices show in the store's currency (currently USD).
 - [ ] Optional: a Calendly or Cal.com link in `ENQUIRY.bookingUrl`, and your real expertise list in `ENQUIRY.expertise`.
 - [ ] Open it on a phone and on the Quest 3, then check the opening with sound, flying down, tapping a robot, the shop and the contact form.
 

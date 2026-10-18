@@ -197,9 +197,14 @@ export const AC_PATH = [
 // Each tab shows the products in the Shopify collection with that handle. Create collections called
 // "courses" and "documents" in Shopify and they'll appear here automatically.
 export const SHOP = {
-  domain: 'td1world.myshopify.com',
+  domain: 'shop.td1.world', // the TD1WORLD Shopify store
   storefrontToken: '',
-  storeUrl: 'https://td1world.myshopify.com',
+  storeUrl: 'https://shop.td1.world',
+  // shown straight away if the live catalogue can't be reached (prices come from the store itself, in the visitor's currency)
+  featured: [
+    { title: 'TD1WORLD Engineered Winter Tee', handle: 'td1world-engineered-winter-tee', image: 'https://cdn.shopify.com/s/files/1/0812/6503/3432/files/IMG-0708.png?v=1792335027', note: 'Heavyweight winter training tee. First run: only 150 made.' },
+    { title: 'TD1WORLD Wrist Wraps', handle: 'td1world-wrist-wraps', image: 'https://cdn.shopify.com/s/files/1/0812/6503/3432/files/TD1WORLD-Wrist-Wraps.png?v=1792332251', note: 'Firm, adjustable wrist support. Classic or Stealth Black.' },
+  ],
   sections: [
     { id: 'clothing', name: 'Clothing', handle: 'shop', text: 'TD1WORLD training gear, built for this.' },
     { id: 'courses', name: 'Courses', handle: 'courses', text: 'Learn to build with AI, agents and autonomous systems.' },
