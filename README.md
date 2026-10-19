@@ -112,7 +112,7 @@ rise through the day while robots work on them. Today's towns wear a "New" name 
 - `.github/workflows/grow.yml` runs it at 00:05 Perth time. Add the repository secret `ANTHROPIC_API_KEY` to switch it on.
   GitHub only runs scheduled jobs from the default branch, so the workflow file must be on that branch too.
 - Days without a plan follow the world's own seeded plan, so the world keeps growing even with no key.
-- The site reads the plan live from GitHub (raw file on the TD1-World-Live branch), falling back to its own copy, and
+- The site reads the plan live from GitHub (raw file on the main branch), falling back to its own copy, and
   `netlify.toml` skips deploys for commits that only change `world/growth.json`, so a new day costs no Netlify build.
 - `#day=30` (or `#dev&day=30.5`) previews the world on any day; the fraction is the time of day.
 

@@ -272,7 +272,7 @@ const worldClock = () => (_dayHash ? +_dayHash[1] : Math.max(1, (Date.now() - WO
 const WORLD_DAY = Math.floor(worldClock());
 // The nightly plan is read straight from GitHub, so a new day never needs a new Netlify deploy (no build credits);
 // the copy shipped with the site is the fallback.
-const GROWTH_LIVE = 'https://raw.githubusercontent.com/TD1-KARMA-AC/TD1-WORLD-LAUNCH/TD1-World-Live/world/growth.json';
+const GROWTH_LIVE = 'https://raw.githubusercontent.com/TD1-KARMA-AC/TD1-WORLD-LAUNCH/main/world/growth.json';
 const getJson = (url) => fetch(url, { cache: 'no-cache' }).then((res) => (res.ok ? res.json() : null)).catch(() => null);
 const GROWTH = await Promise.race([
   getJson(GROWTH_LIVE).then((g) => g || getJson('world/growth.json')),
