@@ -4,7 +4,8 @@
   command = ""
   # The nightly world plan (world/growth.json) is read live from GitHub, so a commit that only changes it
   # needs no deploy: skip the build and save the credits.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)world/growth.json'"
+  # When there's no previous build to compare with (Netlify then sets both refs to the same commit), always build.
+  ignore = "if [ \"$CACHED_COMMIT_REF\" = \"$COMMIT_REF\" ]; then exit 1; fi; git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)world/growth.json'"
 
 # This is not a Next.js site, but the project was once detected as one and Netlify still loads the
 # Next.js Runtime, which rejects a publish directory equal to the base. Tell the runtime to stand down.
