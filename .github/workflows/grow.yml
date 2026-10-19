@@ -1,0 +1,32 @@
+# Every night just after midnight in Perth, Claude plans what TD1.WORLD builds next (scripts/grow.mjs).
+# Needs the repository secret ANTHROPIC_API_KEY. Without it the job does nothing and the world follows its own plan.
+# GitHub only runs scheduled jobs from the default branch, so this file must also be on that branch.
+name: Grow the world
+on:
+  schedule:
+    - cron: '5 16 * * *' # 00:05 in Perth
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  grow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Ask the architect
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/grow.mjs
+      - name: Save tomorrow's plan
+        run: |
+          if git diff --quiet world/growth.json; then echo "Nothing new."; exit 0; fi
+          git config user.name "td1-world-architect"
+          git config user.email "td1-world-architect@users.noreply.github.com"
+          git add world/growth.json
+          git commit -m "World day plan"
+          git push
